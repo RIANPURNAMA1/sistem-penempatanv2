@@ -25,9 +25,9 @@ const STEPS = [
   { id: 9, label: 'Dokumen', icon: Paperclip },
 ]
 
-const BoolSelect = ({ value, onChange, label }: { value: any; onChange: (v: boolean) => void; label?: string }) => (
-  <Select value={value === true || value === 1 ? 'ya' : value === false || value === 0 ? 'tidak' : ''} onValueChange={v => onChange(v === 'ya')}>
-    <SelectTrigger><SelectValue placeholder={label || 'Pilih...'} /></SelectTrigger>
+const BoolSelect = ({ value, onChange, label, error }: { value: any; onChange: (v: boolean) => void; label?: string; error?: boolean }) => (
+  <Select value={value === true || value === 1 ? 'ya' : value === false ? 'tidak' : ''} onValueChange={v => onChange(v === 'ya')}>
+    <SelectTrigger error={error}><SelectValue placeholder={label || 'Pilih...'} /></SelectTrigger>
     <SelectContent><SelectItem value="ya">Ya</SelectItem><SelectItem value="tidak">Tidak</SelectItem></SelectContent>
   </Select>
 )
@@ -69,12 +69,16 @@ const ssw_options = [
   'Driver'
 ];
 
+const REQUIRED_DOCS = ['sertifikat_jft', 'sertifikat_ssw', 'pas_foto', 'foto_full_body', 'video_perkenalan', 'kk', 'ktp', 'ijazah', 'akte']
+
 export default function FormulirPage() {
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [uploadingKey, setUploadingKey] = useState<string | null>(null)
   const [profil, setProfil] = useState<any>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [form, setForm] = useState<any>({
     pendidikan: [
       { jenjang: 'SD', nama_sekolah: '', bulan_masuk: '', tahun_masuk: '', bulan_lulus: '', tahun_lulus: '' },
@@ -94,8 +98,12 @@ export default function FormulirPage() {
     api.get('/kandidat/my-profile').then(r => {
       const d = r.data.data
       setProfil(d)
+      const convertBool = (v: any) => v === true || v === 1 || v === '1' ? true : v === false || v === 0 || v === '0' ? false : null
       setForm((p: any) => ({
         ...p, ...d,
+        pernah_ke_jepang: convertBool(d.pernah_ke_jepang),
+        keluarga_di_jepang: convertBool(d.keluarga_di_jepang),
+        kenalan_di_jepang: convertBool(d.kenalan_di_jepang),
         pendidikan: d.pendidikan?.length ? d.pendidikan : p.pendidikan,
         pengalaman: d.pengalaman?.length ? d.pengalaman : p.pengalaman,
         keluarga: d.keluarga?.length ? d.keluarga : p.keluarga,
@@ -105,22 +113,140 @@ export default function FormulirPage() {
     })
   }, [])
 
-  const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((p: any) => ({ ...p, [key]: e.target.value }))
-  const setBool = (key: string) => (v: boolean) => setForm((p: any) => ({ ...p, [key]: v }))
-  const setSel = (key: string) => (v: string) => setForm((p: any) => ({ ...p, [key]: v }))
+    setTouched((t: any) => ({ ...t, [key]: true }))
+    if (errors[key]) setErrors((er: any) => { const n = {...er}; delete n[key]; return n })
+  }
+  const setBool = (key: string) => (v: boolean) => {
+    setForm((p: any) => ({ ...p, [key]: v }))
+    setTouched((t: any) => ({ ...t, [key]: true }))
+    if (errors[key]) setErrors((er: any) => { const n = {...er}; delete n[key]; return n })
+  }
+  const setSel = (key: string) => (v: string) => {
+    setForm((p: any) => ({ ...p, [key]: v }))
+    setTouched((t: any) => ({ ...t, [key]: true }))
+    if (errors[key]) setErrors((er: any) => { const n = {...er}; delete n[key]; return n })
+  }
 
-  const setPendidikan = (i: number, key: string, v: string) =>
+  const setPendidikan = (i: number, key: string, v: string) => {
     setForm((p: any) => { const arr = [...p.pendidikan]; arr[i] = { ...arr[i], [key]: v }; return { ...p, pendidikan: arr } })
-
-  const setPengalaman = (i: number, key: string, v: any) =>
+    setTouched((t: any) => ({ ...t, [`pendidikan_${i}_${key}`]: true }))
+    if (errors[`pendidikan_${i}_${key}`]) setErrors((er: any) => { const n = {...er}; delete n[`pendidikan_${i}_${key}`]; return n })
+  }
+  const setPengalaman = (i: number, key: string, v: any) => {
     setForm((p: any) => { const arr = [...p.pengalaman]; arr[i] = { ...arr[i], [key]: v }; return { ...p, pengalaman: arr } })
+  }
+  const setKeluarga = (i: number, key: string, v: string) => {
+    setForm((p: any) => { const arr = [...p.keluarga]; arr[i] = { ...arr[i], [key]: v }; return { ...p, keluarga: arr } })
+  }
+
+  const validateStep = (stepNum: number): boolean => {
+    const newErrors: Record<string, string> = {}
+    const isEmpty = (val: any) => val === undefined || val === null || val === ''
+    
+    if (stepNum === 1) {
+      if (isEmpty(form.nama_katakana)) newErrors.nama_katakana = 'Nama Katakana wajib diisi'
+      if (isEmpty(form.nama_romaji)) newErrors.nama_romaji = 'Nama Romaji wajib diisi'
+      if (isEmpty(form.tempat_lahir)) newErrors.tempat_lahir = 'Tempat lahir wajib diisi'
+      if (isEmpty(form.tanggal_lahir)) newErrors.tanggal_lahir = 'Tanggal lahir wajib diisi'
+      if (isEmpty(form.umur)) newErrors.umur = 'Umur wajib diisi'
+      if (isEmpty(form.jenis_kelamin)) newErrors.jenis_kelamin = 'Jenis kelamin wajib dipilih'
+      if (isEmpty(form.status_pernikahan)) newErrors.status_pernikahan = 'Status pernikahan wajib dipilih'
+      if (isEmpty(form.agama)) newErrors.agama = 'Agama wajib dipilih'
+      if (isEmpty(form.tinggi_badan)) newErrors.tinggi_badan = 'Tinggi badan wajib diisi'
+      if (isEmpty(form.berat_badan)) newErrors.berat_badan = 'Berat badan wajib diisi'
+      if (isEmpty(form.golongan_darah)) newErrors.golongan_darah = 'Golongan darah wajib dipilih'
+      if (isEmpty(form.tangan_dominan)) newErrors.tangan_dominan = 'Tangan dominan wajib dipilih'
+      if (isEmpty(form.ukuran_baju)) newErrors.ukuran_baju = 'Ukuran baju wajib dipilih'
+      if (isEmpty(form.nomor_hp)) newErrors.nomor_hp = 'Nomor HP wajib diisi'
+      if (isEmpty(form.email_kontak)) newErrors.email_kontak = 'Email wajib diisi'
+      if (isEmpty(form.alamat_lengkap)) newErrors.alamat_lengkap = 'Alamat lengkap wajib diisi'
+      if (isEmpty(form.kontak_ortu_nama)) newErrors.kontak_ortu_nama = 'Nama orang tua/wali wajib diisi'
+      if (isEmpty(form.kontak_ortu_hp)) newErrors.kontak_ortu_hp = 'No. HP orang tua wajib diisi'
+    }
+    
+    if (stepNum === 2) {
+      if (form.sudah_vaksin === undefined || form.sudah_vaksin === null || form.sudah_vaksin === '') newErrors.sudah_vaksin = 'Pilih sudah/tidak vaksin'
+      if (isEmpty(form.kondisi_kesehatan)) newErrors.kondisi_kesehatan = 'Kondisi kesehatan wajib dipilih'
+      if (form.berkacamata === undefined || form.berkacamata === null || form.berkacamata === '') newErrors.berkacamata = 'Pilih ya/tidak'
+      if (form.lensa_kontak === undefined || form.lensa_kontak === null || form.lensa_kontak === '') newErrors.lensa_kontak = 'Pilih ya/tidak'
+      if (form.buta_warna === undefined || form.buta_warna === null || form.buta_warna === '') newErrors.buta_warna = 'Pilih ya/tidak'
+      if (form.bertato === undefined || form.bertato === null || form.bertato === '') newErrors.bertato = 'Pilih ya/tidak'
+      if (form.merokok === undefined || form.merokok === null || form.merokok === '') newErrors.merokok = 'Pilih ya/tidak'
+      if (form.minum_alkohol === undefined || form.minum_alkohol === null || form.minum_alkohol === '') newErrors.minum_alkohol = 'Pilih ya/tidak'
+      if (isEmpty(form.riwayat_penyakit)) newErrors.riwayat_penyakit = 'Riwayat penyakit wajib diisi (isi "Tidak ada" jika tidak ada)'
+    }
+    
+    if (stepNum === 3) {
+      const jenjangWajib = ['SD', 'SMP']
+      form.pendidikan.forEach((p: any, i: number) => {
+        if (jenjangWajib.includes(p.jenjang)) {
+          if (isEmpty(p.nama_sekolah)) newErrors[`pendidikan_${i}_nama_sekolah`] = `Nama ${p.jenjang} wajib diisi`
+          if (isEmpty(p.bulan_masuk)) newErrors[`pendidikan_${i}_bulan_masuk`] = 'Bulan masuk wajib dipilih'
+          if (isEmpty(p.tahun_masuk)) newErrors[`pendidikan_${i}_tahun_masuk`] = 'Tahun masuk wajib dipilih'
+          if (isEmpty(p.bulan_lulus)) newErrors[`pendidikan_${i}_bulan_lulus`] = 'Bulan lulus wajib dipilih'
+          if (isEmpty(p.tahun_lulus)) newErrors[`pendidikan_${i}_tahun_lulus`] = 'Tahun lulus wajib dipilih'
+        }
+      })
+    }
+    
+    if (stepNum === 5) {
+      if (isEmpty(form.level_jlpt)) newErrors.level_jlpt = 'Level JLPT wajib dipilih'
+      if (isEmpty(form.level_jft)) newErrors.level_jft = 'Level JFT wajib dipilih'
+      if (isEmpty(form.lama_belajar_jepang)) newErrors.lama_belajar_jepang = 'Lama belajar Jepang wajib diisi'
+      if (isEmpty(form.level_bahasa_jepang)) newErrors.level_bahasa_jepang = 'Level bahasa Jepang wajib dipilih'
+      if (form.sertifikat_ssw?.length === 0) newErrors.sertifikat_ssw = 'Pilih minimal 1 sertifikat SSW'
+    }
+    
+    if (stepNum === 6) {
+      if (isEmpty(form.penghasilan_keluarga)) newErrors.penghasilan_keluarga = 'Penghasilan keluarga wajib diisi'
+      const ayah = form.keluarga.find((k: any) => k.hubungan === 'Ayah')
+      const ibu = form.keluarga.find((k: any) => k.hubungan === 'Ibu')
+      if (!ayah || isEmpty(ayah.nama)) newErrors.keluarga_ayah_nama = 'Nama Ayah wajib diisi'
+      if (ayah && isEmpty(ayah.usia)) newErrors.keluarga_ayah_usia = 'Usia Ayah wajib diisi'
+      if (ayah && isEmpty(ayah.pekerjaan)) newErrors.keluarga_ayah_pekerjaan = 'Pekerjaan Ayah wajib diisi'
+      if (!ibu || isEmpty(ibu.nama)) newErrors.keluarga_ibu_nama = 'Nama Ibu wajib diisi'
+      if (ibu && isEmpty(ibu.usia)) newErrors.keluarga_ibu_usia = 'Usia Ibu wajib diisi'
+      if (ibu && isEmpty(ibu.pekerjaan)) newErrors.keluarga_ibu_pekerjaan = 'Pekerjaan Ibu wajib diisi'
+    }
+    
+    if (stepNum === 7) {
+      if (form.pernah_ke_jepang === undefined || form.pernah_ke_jepang === null || form.pernah_ke_jepang === '') newErrors.pernah_ke_jepang = 'Pilih ya/tidak'
+      if (form.keluarga_di_jepang === undefined || form.keluarga_di_jepang === null || form.keluarga_di_jepang === '') newErrors.keluarga_di_jepang = 'Pilih ya/tidak'
+      if (form.kenalan_di_jepang === undefined || form.kenalan_di_jepang === null || form.kenalan_di_jepang === '') newErrors.kenalan_di_jepang = 'Pilih ya/tidak'
+    }
+    
+    if (stepNum === 8) {
+      if (isEmpty(form.tujuan_ke_jepang)) newErrors.tujuan_ke_jepang = 'Tujuan ke Jepang wajib diisi'
+      if (isEmpty(form.alasan_ke_jepang)) newErrors.alasan_ke_jepang = 'Alasan ingin ke Jepang wajib diisi'
+      if (isEmpty(form.cita_cita_setelah_jepang)) newErrors.cita_cita_setelah_jepang = 'Cita-cita wajib diisi'
+      if (isEmpty(form.rencana_pengiriman_uang)) newErrors.rencana_pengiriman_uang = 'Rencana pengiriman uang wajib diisi'
+      if (isEmpty(form.kelebihan_diri)) newErrors.kelebihan_diri = 'Kelebihan diri wajib diisi'
+      if (isEmpty(form.kekurangan_diri)) newErrors.kekurangan_diri = 'Kekurangan diri wajib diisi'
+      if (isEmpty(form.hobi)) newErrors.hobi = 'Hobi wajib diisi'
+      if (isEmpty(form.keahlian)) newErrors.keahlian = 'Keahlian wajib diisi'
+      if (form.bersedia_shift === undefined || form.bersedia_shift === null || form.bersedia_shift === '') newErrors.bersedia_shift = 'Pilih ya/tidak'
+      if (form.bersedia_lembur === undefined || form.bersedia_lembur === null || form.bersedia_lembur === '') newErrors.bersedia_lembur = 'Pilih ya/tidak'
+      if (form.bersedia_hari_libur === undefined || form.bersedia_hari_libur === null || form.bersedia_hari_libur === '') newErrors.bersedia_hari_libur = 'Pilih ya/tidak'
+      if (isEmpty(form.lama_tinggal_jepang)) newErrors.lama_tinggal_jepang = 'Lama tinggal wajib dipilih'
+      if (isEmpty(form.lama_kerja_perusahaan)) newErrors.lama_kerja_perusahaan = 'Lama kerja di perusahaan wajib dipilih'
+      if (isEmpty(form.rencana_pulang)) newErrors.rencana_pulang = 'Rencana pulang wajib dipilih'
+      if (isEmpty(form.sumber_biaya)) newErrors.sumber_biaya = 'Sumber biaya wajib dipilih'
+      if (isEmpty(form.biaya_disiapkan)) newErrors.biaya_disiapkan = 'Biaya yang disiapkan wajib dipilih'
+    }
+    
+    if (stepNum === 9) {
+      const missing = REQUIRED_DOCS.filter(d => !form.dokumen?.find((doc: any) => doc.jenis_dokumen === d))
+      if (missing.length > 0) newErrors.dokumen = `${missing.length} dokumen belum diupload`
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const addPengalaman = () => setForm((p: any) => ({ ...p, pengalaman: [...p.pengalaman, { nama_perusahaan: '', alamat_perusahaan: '', posisi: '', bulan_masuk: '', tahun_masuk: '', bulan_keluar: '', tahun_keluar: '', masih_bekerja: false, deskripsi_pekerjaan: '' }] }))
   const removePengalaman = (i: number) => setForm((p: any) => ({ ...p, pengalaman: p.pengalaman.filter((_: any, idx: number) => idx !== i) }))
-
-  const setKeluarga = (i: number, key: string, v: string) =>
-    setForm((p: any) => { const arr = [...p.keluarga]; arr[i] = { ...arr[i], [key]: v }; return { ...p, keluarga: arr } })
 
   const addKeluarga = (hubungan: string) => {
     const existing = form.keluarga.filter((k: any) => k.hubungan === hubungan).length
@@ -230,51 +356,57 @@ export default function FormulirPage() {
             <div className="space-y-4">
               <p className="form-section-title flex items-center gap-2"><User size={18} /> DATA DIRI（個人情報）</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5"><Label>Nama (Katakana)</Label><Input value={form.nama_katakana || ''} onChange={set('nama_katakana')} placeholder="カタカナ" /></div>
-                <div className="space-y-1.5"><Label>Nama (Romaji)</Label><Input value={form.nama_romaji || ''} onChange={set('nama_romaji')} placeholder="NAMA ROMAJI" /></div>
-                <div className="space-y-1.5"><Label>Tempat Lahir</Label><Input value={form.tempat_lahir || ''} onChange={set('tempat_lahir')} placeholder="Bandung" /></div>
-                <div className="space-y-1.5"><Label>Tanggal Lahir</Label><Input type="date" value={form.tanggal_lahir?.split('T')[0] || ''} onChange={set('tanggal_lahir')} /></div>
-                <div className="space-y-1.5"><Label>Umur</Label><Input type="number" value={form.umur || ''} onChange={set('umur')} placeholder="25" /></div>
-                <div className="space-y-1.5"><Label>Jenis Kelamin</Label>
+                <div className="space-y-1.5"><Label className="required">Nama (Katakana) *</Label><Input value={form.nama_katakana || ''} onChange={set('nama_katakana')} placeholder="カタカナ" error={!!errors.nama_katakana} />{errors.nama_katakana && <p className="text-xs text-red-500">{errors.nama_katakana}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Nama (Romaji) *</Label><Input value={form.nama_romaji || ''} onChange={set('nama_romaji')} placeholder="NAMA ROMAJI" error={!!errors.nama_romaji} />{errors.nama_romaji && <p className="text-xs text-red-500">{errors.nama_romaji}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Tempat Lahir *</Label><Input value={form.tempat_lahir || ''} onChange={set('tempat_lahir')} placeholder="Bandung" error={!!errors.tempat_lahir} />{errors.tempat_lahir && <p className="text-xs text-red-500">{errors.tempat_lahir}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Tanggal Lahir *</Label><Input type="date" value={form.tanggal_lahir?.split('T')[0] || ''} onChange={set('tanggal_lahir')} error={!!errors.tanggal_lahir} />{errors.tanggal_lahir && <p className="text-xs text-red-500">{errors.tanggal_lahir}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Umur *</Label><Input type="number" value={form.umur || ''} onChange={set('umur')} placeholder="25" error={!!errors.umur} />{errors.umur && <p className="text-xs text-red-500">{errors.umur}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Jenis Kelamin *</Label>
                   <Select value={form.jenis_kelamin || ''} onValueChange={setSel('jenis_kelamin')}>
-                    <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                    <SelectTrigger error={!!errors.jenis_kelamin}><SelectValue placeholder="Pilih..." /></SelectTrigger>
                     <SelectContent><SelectItem value="Laki-laki">Laki-laki</SelectItem><SelectItem value="Perempuan">Perempuan</SelectItem></SelectContent>
                   </Select>
+                  {errors.jenis_kelamin && <p className="text-xs text-red-500">{errors.jenis_kelamin}</p>}
                 </div>
-                <div className="space-y-1.5"><Label>Status Pernikahan</Label>
+                <div className="space-y-1.5"><Label className="required">Status Pernikahan *</Label>
                   <Select value={form.status_pernikahan || ''} onValueChange={setSel('status_pernikahan')}>
-                    <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                    <SelectTrigger error={!!errors.status_pernikahan}><SelectValue placeholder="Pilih..." /></SelectTrigger>
                     <SelectContent><SelectItem value="Menikah">Menikah</SelectItem><SelectItem value="Belum Menikah">Belum Menikah</SelectItem></SelectContent>
                   </Select>
+                  {errors.status_pernikahan && <p className="text-xs text-red-500">{errors.status_pernikahan}</p>}
                 </div>
                 {form.status_pernikahan === 'Menikah' && <div className="space-y-1.5"><Label>Jumlah Anak</Label><Input type="number" value={form.jumlah_anak || 0} onChange={set('jumlah_anak')} /></div>}
-                <div className="space-y-1.5"><Label>Agama</Label>
+                <div className="space-y-1.5"><Label className="required">Agama *</Label>
                   <Select value={form.agama || ''} onValueChange={setSel('agama')}>
-                    <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                    <SelectTrigger error={!!errors.agama}><SelectValue placeholder="Pilih..." /></SelectTrigger>
                     <SelectContent>
                       {['Islam','Kristen','Katolik','Hindu','Buddha','Konghucu','Lainnya'].map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  {errors.agama && <p className="text-xs text-red-500">{errors.agama}</p>}
                 </div>
-                <div className="space-y-1.5"><Label>Tinggi Badan (cm)</Label><Input type="number" value={form.tinggi_badan || ''} onChange={set('tinggi_badan')} placeholder="165" /></div>
-                <div className="space-y-1.5"><Label>Berat Badan (kg)</Label><Input type="number" value={form.berat_badan || ''} onChange={set('berat_badan')} placeholder="60" /></div>
-                <div className="space-y-1.5"><Label>Golongan Darah</Label>
+                <div className="space-y-1.5"><Label className="required">Tinggi Badan (cm) *</Label><Input type="number" value={form.tinggi_badan || ''} onChange={set('tinggi_badan')} placeholder="165" error={!!errors.tinggi_badan} />{errors.tinggi_badan && <p className="text-xs text-red-500">{errors.tinggi_badan}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Berat Badan (kg) *</Label><Input type="number" value={form.berat_badan || ''} onChange={set('berat_badan')} placeholder="60" error={!!errors.berat_badan} />{errors.berat_badan && <p className="text-xs text-red-500">{errors.berat_badan}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Golongan Darah *</Label>
                   <Select value={form.golongan_darah || ''} onValueChange={setSel('golongan_darah')}>
-                    <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                    <SelectTrigger error={!!errors.golongan_darah}><SelectValue placeholder="Pilih..." /></SelectTrigger>
                     <SelectContent>{['A','B','AB','O','Tidak Tahu'].map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
                   </Select>
+                  {errors.golongan_darah && <p className="text-xs text-red-500">{errors.golongan_darah}</p>}
                 </div>
-                <div className="space-y-1.5"><Label>Tangan Dominan</Label>
+                <div className="space-y-1.5"><Label className="required">Tangan Dominan *</Label>
                   <Select value={form.tangan_dominan || ''} onValueChange={setSel('tangan_dominan')}>
-                    <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                    <SelectTrigger error={!!errors.tangan_dominan}><SelectValue placeholder="Pilih..." /></SelectTrigger>
                     <SelectContent><SelectItem value="Kanan">Kanan</SelectItem><SelectItem value="Kiri">Kiri</SelectItem></SelectContent>
                   </Select>
+                  {errors.tangan_dominan && <p className="text-xs text-red-500">{errors.tangan_dominan}</p>}
                 </div>
-                <div className="space-y-1.5"><Label>Ukuran Baju</Label>
+                <div className="space-y-1.5"><Label className="required">Ukuran Baju *</Label>
                   <Select value={form.ukuran_baju || ''} onValueChange={setSel('ukuran_baju')}>
-                    <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                    <SelectTrigger error={!!errors.ukuran_baju}><SelectValue placeholder="Pilih..." /></SelectTrigger>
                     <SelectContent>{['S','M','L','XL','XXL','Lainnya'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                   </Select>
+                  {errors.ukuran_baju && <p className="text-xs text-red-500">{errors.ukuran_baju}</p>}
                 </div>
                 <div className="space-y-1.5"><Label>Lingkar Pinggang (cm)</Label><Input type="number" value={form.lingkar_pinggang || ''} onChange={set('lingkar_pinggang')} placeholder="80" /></div>
                 <div className="space-y-1.5"><Label>Panjang Telapak Kaki (cm)</Label><Input type="number" step="0.5" value={form.panjang_telapak_kaki || ''} onChange={set('panjang_telapak_kaki')} placeholder="25.5" /></div>
@@ -283,11 +415,11 @@ export default function FormulirPage() {
               <Separator className="my-2" />
               <p className="font-semibold text-sm">📍 KONTAK & ALAMAT</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5"><Label>Nomor HP</Label><Input value={form.nomor_hp || ''} onChange={set('nomor_hp')} placeholder="08xx-xxxx-xxxx" /></div>
-                <div className="space-y-1.5"><Label>Email Kontak</Label><Input type="email" value={form.email_kontak || ''} onChange={set('email_kontak')} placeholder="email@..." /></div>
-                <div className="col-span-2 space-y-1.5"><Label>Alamat Lengkap</Label><Textarea value={form.alamat_lengkap || ''} onChange={set('alamat_lengkap')} placeholder="Jl. ..." rows={3} /></div>
-                <div className="space-y-1.5"><Label>Nama Orang Tua / Wali</Label><Input value={form.kontak_ortu_nama || ''} onChange={set('kontak_ortu_nama')} placeholder="Nama" /></div>
-                <div className="space-y-1.5"><Label>No. HP Orang Tua</Label><Input value={form.kontak_ortu_hp || ''} onChange={set('kontak_ortu_hp')} placeholder="08xx-xxxx-xxxx" /></div>
+                <div className="space-y-1.5"><Label className="required">Nomor HP *</Label><Input value={form.nomor_hp || ''} onChange={set('nomor_hp')} placeholder="08xx-xxxx-xxxx" error={!!errors.nomor_hp} />{errors.nomor_hp && <p className="text-xs text-red-500">{errors.nomor_hp}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Email Kontak *</Label><Input type="email" value={form.email_kontak || ''} onChange={set('email_kontak')} placeholder="email@..." error={!!errors.email_kontak} />{errors.email_kontak && <p className="text-xs text-red-500">{errors.email_kontak}</p>}</div>
+                <div className="col-span-2 space-y-1.5"><Label className="required">Alamat Lengkap *</Label><Textarea value={form.alamat_lengkap || ''} onChange={set('alamat_lengkap')} placeholder="Jl. ..." rows={3} className={errors.alamat_lengkap ? 'border-red-500' : ''} />{errors.alamat_lengkap && <p className="text-xs text-red-500">{errors.alamat_lengkap}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Nama Orang Tua / Wali *</Label><Input value={form.kontak_ortu_nama || ''} onChange={set('kontak_ortu_nama')} placeholder="Nama" error={!!errors.kontak_ortu_nama} />{errors.kontak_ortu_nama && <p className="text-xs text-red-500">{errors.kontak_ortu_nama}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">No. HP Orang Tua *</Label><Input value={form.kontak_ortu_hp || ''} onChange={set('kontak_ortu_hp')} placeholder="08xx-xxxx-xxxx" error={!!errors.kontak_ortu_hp} />{errors.kontak_ortu_hp && <p className="text-xs text-red-500">{errors.kontak_ortu_hp}</p>}</div>
               </div>
             </div>
           )}
@@ -297,23 +429,24 @@ export default function FormulirPage() {
             <div className="space-y-4">
               <p className="form-section-title flex items-center gap-2"><Heart size={18} /> KONDISI FISIK & KESEHATAN</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5"><Label>Sudah Vaksin?</Label><BoolSelect value={form.sudah_vaksin} onChange={setBool('sudah_vaksin')} /></div>
-                <div className="space-y-1.5"><Label>Kondisi Kesehatan Saat Ini</Label>
+                <div className="space-y-1.5"><Label className="required">Sudah Vaksin? *</Label><BoolSelect value={form.sudah_vaksin} onChange={setBool('sudah_vaksin')} error={!!errors.sudah_vaksin} />{errors.sudah_vaksin && <p className="text-xs text-red-500">{errors.sudah_vaksin}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Kondisi Kesehatan Saat Ini *</Label>
                   <Select value={form.kondisi_kesehatan || ''} onValueChange={setSel('kondisi_kesehatan')}>
-                    <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                    <SelectTrigger error={!!errors.kondisi_kesehatan}><SelectValue placeholder="Pilih..." /></SelectTrigger>
                     <SelectContent><SelectItem value="Sehat">Sehat</SelectItem><SelectItem value="Tidak Sehat">Tidak Sehat</SelectItem></SelectContent>
                   </Select>
+                  {errors.kondisi_kesehatan && <p className="text-xs text-red-500">{errors.kondisi_kesehatan}</p>}
                 </div>
                 <div className="space-y-1.5"><Label>Penglihatan Kanan</Label><Input value={form.penglihatan_kanan || ''} onChange={set('penglihatan_kanan')} placeholder="Normal / Minus -2.5" /></div>
                 <div className="space-y-1.5"><Label>Penglihatan Kiri</Label><Input value={form.penglihatan_kiri || ''} onChange={set('penglihatan_kiri')} placeholder="Normal / Minus -1.5" /></div>
-                <div className="space-y-1.5"><Label>Berkacamata?</Label><BoolSelect value={form.berkacamata} onChange={setBool('berkacamata')} /></div>
-                <div className="space-y-1.5"><Label>Menggunakan Lensa Kontak?</Label><BoolSelect value={form.lensa_kontak} onChange={setBool('lensa_kontak')} /></div>
-                <div className="space-y-1.5"><Label>Buta Warna?</Label><BoolSelect value={form.buta_warna} onChange={setBool('buta_warna')} /></div>
-                <div className="space-y-1.5"><Label>Bertato?</Label><BoolSelect value={form.bertato} onChange={setBool('bertato')} /></div>
-                <div className="space-y-1.5"><Label>Merokok?</Label><BoolSelect value={form.merokok} onChange={setBool('merokok')} /></div>
-                <div className="space-y-1.5"><Label>Minum Alkohol?</Label><BoolSelect value={form.minum_alkohol} onChange={setBool('minum_alkohol')} /></div>
+                <div className="space-y-1.5"><Label className="required">Berkacamata? *</Label><BoolSelect value={form.berkacamata} onChange={setBool('berkacamata')} error={!!errors.berkacamata} />{errors.berkacamata && <p className="text-xs text-red-500">{errors.berkacamata}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Menggunakan Lensa Kontak? *</Label><BoolSelect value={form.lensa_kontak} onChange={setBool('lensa_kontak')} error={!!errors.lensa_kontak} />{errors.lensa_kontak && <p className="text-xs text-red-500">{errors.lensa_kontak}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Buta Warna? *</Label><BoolSelect value={form.buta_warna} onChange={setBool('buta_warna')} error={!!errors.buta_warna} />{errors.buta_warna && <p className="text-xs text-red-500">{errors.buta_warna}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Bertato? *</Label><BoolSelect value={form.bertato} onChange={setBool('bertato')} error={!!errors.bertato} />{errors.bertato && <p className="text-xs text-red-500">{errors.bertato}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Merokok? *</Label><BoolSelect value={form.merokok} onChange={setBool('merokok')} error={!!errors.merokok} />{errors.merokok && <p className="text-xs text-red-500">{errors.merokok}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Minum Alkohol? *</Label><BoolSelect value={form.minum_alkohol} onChange={setBool('minum_alkohol')} error={!!errors.minum_alkohol} />{errors.minum_alkohol && <p className="text-xs text-red-500">{errors.minum_alkohol}</p>}</div>
                 {form.minum_alkohol && <div className="col-span-2 space-y-1.5"><Label>Intensitas Minum Alkohol</Label><Input value={form.intensitas_alkohol || ''} onChange={set('intensitas_alkohol')} placeholder="Misal: 1-2x seminggu" /></div>}
-                <div className="col-span-2 space-y-1.5"><Label>Riwayat Penyakit / Cedera</Label><Textarea value={form.riwayat_penyakit || ''} onChange={set('riwayat_penyakit')} placeholder="Cedera, patah tulang, penyakit kronis, dll. Isi 'Tidak ada' jika tidak ada." rows={3} /></div>
+                <div className="col-span-2 space-y-1.5"><Label className="required">Riwayat Penyakit / Cedera *</Label><Textarea value={form.riwayat_penyakit || ''} onChange={set('riwayat_penyakit')} placeholder="Cedera, patah tulang, penyakit kronis, dll. Isi 'Tidak ada' jika tidak ada." rows={3} className={errors.riwayat_penyakit ? 'border-red-500' : ''} />{errors.riwayat_penyakit && <p className="text-xs text-red-500">{errors.riwayat_penyakit}</p>}</div>
               </div>
             </div>
           )}
@@ -322,23 +455,29 @@ export default function FormulirPage() {
           {step === 3 && (
             <div className="space-y-6">
               <p className="form-section-title">🎓 PENDIDIKAN（学歴）</p>
-              {form.pendidikan.map((p: any, i: number) => (
+              {form.pendidikan.map((p: any, i: number) => {
+                const wajib = ['SD', 'SMP'].includes(p.jenjang)
+                return (
                 <div key={i} className="border border-border rounded-lg p-4 space-y-3">
-                  <p className="font-semibold text-sm text-muted-foreground">{p.jenjang}</p>
+                  <p className="font-semibold text-sm text-muted-foreground">{p.jenjang} {wajib && <span className="text-red-500">*</span>}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="col-span-2 space-y-1.5"><Label>Nama Sekolah / Universitas</Label><Input value={p.nama_sekolah || ''} onChange={e => setPendidikan(i, 'nama_sekolah', e.target.value)} placeholder={`Nama ${p.jenjang}`} /></div>
+                    <div className="col-span-2 space-y-1.5"><Label className={wajib ? 'required' : ''}>Nama Sekolah / Universitas {wajib && '*'}</Label><Input value={p.nama_sekolah || ''} onChange={e => setPendidikan(i, 'nama_sekolah', e.target.value)} placeholder={`Nama ${p.jenjang}`} error={!!errors[`pendidikan_${i}_nama_sekolah`]} />{errors[`pendidikan_${i}_nama_sekolah`] && <p className="text-xs text-red-500">{errors[`pendidikan_${i}_nama_sekolah`]}</p>}</div>
                     {(p.jenjang === 'SMA/SMK' || p.jenjang === 'Perguruan Tinggi') && (
                       <div className="col-span-2 space-y-1.5"><Label>Jurusan</Label><Input value={p.jurusan || ''} onChange={e => setPendidikan(i, 'jurusan', e.target.value)} placeholder="Jurusan / Prodi" /></div>
                     )}
-                    <div className="space-y-1.5"><Label>Bulan & Tahun Masuk</Label>
+                    <div className="space-y-1.5"><Label className={wajib ? 'required' : ''}>Bulan & Tahun Masuk {wajib && '*'}</Label>
                       <YearMonthPicker monthVal={p.bulan_masuk} yearVal={p.tahun_masuk} onMonthChange={(v: string) => setPendidikan(i, 'bulan_masuk', v)} onYearChange={(v: string) => setPendidikan(i, 'tahun_masuk', v)} />
+                      {errors[`pendidikan_${i}_bulan_masuk`] && <p className="text-xs text-red-500">{errors[`pendidikan_${i}_bulan_masuk`]}</p>}
+                      {errors[`pendidikan_${i}_tahun_masuk`] && <p className="text-xs text-red-500">{errors[`pendidikan_${i}_tahun_masuk`]}</p>}
                     </div>
-                    <div className="space-y-1.5"><Label>Bulan & Tahun Lulus</Label>
+                    <div className="space-y-1.5"><Label className={wajib ? 'required' : ''}>Bulan & Tahun Lulus {wajib && '*'}</Label>
                       <YearMonthPicker monthVal={p.bulan_lulus} yearVal={p.tahun_lulus} onMonthChange={(v: string) => setPendidikan(i, 'bulan_lulus', v)} onYearChange={(v: string) => setPendidikan(i, 'tahun_lulus', v)} placeholder="Bulan Lulus" />
+                      {errors[`pendidikan_${i}_bulan_lulus`] && <p className="text-xs text-red-500">{errors[`pendidikan_${i}_bulan_lulus`]}</p>}
+                      {errors[`pendidikan_${i}_tahun_lulus`] && <p className="text-xs text-red-500">{errors[`pendidikan_${i}_tahun_lulus`]}</p>}
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
 
@@ -390,38 +529,42 @@ export default function FormulirPage() {
             <div className="space-y-4">
               <p className="form-section-title"><Star size={18} /> KEMAMPUAN & SERTIFIKAT</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5"><Label>Level JLPT</Label>
+                <div className="space-y-1.5"><Label className="required">Level JLPT *</Label>
                   <Select value={form.level_jlpt || ''} onValueChange={setSel('level_jlpt')}>
-                    <SelectTrigger><SelectValue placeholder="Pilih level..." /></SelectTrigger>
+                    <SelectTrigger error={!!errors.level_jlpt}><SelectValue placeholder="Pilih level..." /></SelectTrigger>
                     <SelectContent>{['N1','N2','N3','N4','N5','Belum ada'].map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
                   </Select>
+                  {errors.level_jlpt && <p className="text-xs text-red-500">{errors.level_jlpt}</p>}
                 </div>
-                <div className="space-y-1.5"><Label>Level JFT</Label>
+                <div className="space-y-1.5"><Label className="required">Level JFT *</Label>
                   <Select value={form.level_jft || ''} onValueChange={setSel('level_jft')}>
-                    <SelectTrigger><SelectValue placeholder="Pilih level..." /></SelectTrigger>
+                    <SelectTrigger error={!!errors.level_jft}><SelectValue placeholder="Pilih level..." /></SelectTrigger>
                     <SelectContent>{['A1','A2','B1','B2','Belum ada'].map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
                   </Select>
+                  {errors.level_jft && <p className="text-xs text-red-500">{errors.level_jft}</p>}
                 </div>
-                <div className="space-y-1.5"><Label>Lama Belajar Bahasa Jepang</Label><Input value={form.lama_belajar_jepang || ''} onChange={set('lama_belajar_jepang')} placeholder="6 bulan, 1 tahun, dll." /></div>
-                <div className="space-y-1.5"><Label>Level Bahasa Jepang</Label>
+                <div className="space-y-1.5"><Label className="required">Lama Belajar Bahasa Jepang *</Label><Input value={form.lama_belajar_jepang || ''} onChange={set('lama_belajar_jepang')} placeholder="6 bulan, 1 tahun, dll." error={!!errors.lama_belajar_jepang} />{errors.lama_belajar_jepang && <p className="text-xs text-red-500">{errors.lama_belajar_jepang}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Level Bahasa Jepang *</Label>
                   <Select value={form.level_bahasa_jepang || ''} onValueChange={setSel('level_bahasa_jepang')}>
-                    <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                    <SelectTrigger error={!!errors.level_bahasa_jepang}><SelectValue placeholder="Pilih..." /></SelectTrigger>
                     <SelectContent><SelectItem value="Dasar">Dasar</SelectItem><SelectItem value="Menengah">Menengah</SelectItem><SelectItem value="Lancar">Lancar</SelectItem></SelectContent>
                   </Select>
+                  {errors.level_bahasa_jepang && <p className="text-xs text-red-500">{errors.level_bahasa_jepang}</p>}
                 </div>
                 <div className="space-y-1.5"><Label>ID Prometric (opsional)</Label><Input value={form.id_prometric || ''} onChange={set('id_prometric')} /></div>
                 <div className="space-y-1.5"><Label>Password Prometric (opsional)</Label><Input value={form.password_prometric || ''} onChange={set('password_prometric')} /></div>
               </div>
               <div className="space-y-2">
-                <Label>Sertifikat SSW yang Dimiliki</Label>
+                <Label className="required">Sertifikat SSW yang Dimiliki *</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {ssw_options.map(s => (
-                    <label key={s} className="flex items-center gap-2 p-2.5 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                    <label key={s} className={`flex items-center gap-2 p-2.5 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors ${errors.sertifikat_ssw ? 'border-red-500' : 'border-border'}`}>
                       <input type="checkbox" className="rounded" checked={form.sertifikat_ssw?.includes(s) || false} onChange={() => toggleSSW(s)} />
                       <span className="text-sm">{s}</span>
                     </label>
                   ))}
                 </div>
+                {errors.sertifikat_ssw && <p className="text-xs text-red-500">{errors.sertifikat_ssw}</p>}
               </div>
             </div>
           )}
@@ -431,17 +574,19 @@ export default function FormulirPage() {
             <div className="space-y-4">
               <p className="form-section-title">👨‍👩‍👧 DATA KELUARGA（家族構成）</p>
               <div className="space-y-1.5 sm:col-span-2">
-                <Label>Penghasilan Keluarga / Bulan (Rp)</Label>
-                <Input type="number" value={form.penghasilan_keluarga || ''} onChange={set('penghasilan_keluarga')} placeholder="5000000" />
+                <Label className="required">Penghasilan Keluarga / Bulan (Rp) *</Label>
+                <Input type="number" value={form.penghasilan_keluarga || ''} onChange={set('penghasilan_keluarga')} placeholder="5000000" error={!!errors.penghasilan_keluarga} />
+                {errors.penghasilan_keluarga && <p className="text-xs text-red-500">{errors.penghasilan_keluarga}</p>}
               </div>
               <Separator />
               {['Ayah', 'Ibu', 'Kakak', 'Adik'].map(hubungan => {
                 const members = form.keluarga.filter((k: any) => k.hubungan === hubungan)
                 const canAdd = hubungan === 'Kakak' || hubungan === 'Adik'
+                const isRequired = hubungan === 'Ayah' || hubungan === 'Ibu'
                 return (
                   <div key={hubungan} className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <p className="font-semibold text-sm">{hubungan}</p>
+                      <p className="font-semibold text-sm">{hubungan} {isRequired && '*'}</p>
                       {canAdd && <Button variant="outline" size="sm" onClick={() => addKeluarga(hubungan)}><Plus size={13} className="mr-1" />Tambah {hubungan}</Button>}
                     </div>
                     {members.map((m: any, mi: number) => {
@@ -453,15 +598,15 @@ export default function FormulirPage() {
                             {canAdd && members.length > 0 && <Button variant="ghost" size="icon" className="h-6 w-6 hover:text-destructive" onClick={() => removeKeluarga(globalIdx)}><Trash2 size={12} /></Button>}
                           </div>
                           <div className="grid grid-cols-3 gap-3">
-                            <div className="col-span-3 sm:col-span-1 space-y-1.5"><Label>Nama</Label><Input value={m.nama || ''} onChange={e => setKeluarga(globalIdx, 'nama', e.target.value)} /></div>
-                            <div className="space-y-1.5"><Label>Usia</Label><Input type="number" value={m.usia || ''} onChange={e => setKeluarga(globalIdx, 'usia', e.target.value)} /></div>
-                            <div className="space-y-1.5"><Label>Pekerjaan</Label><Input value={m.pekerjaan || ''} onChange={e => setKeluarga(globalIdx, 'pekerjaan', e.target.value)} /></div>
+                            <div className="col-span-3 sm:col-span-1 space-y-1.5"><Label className={isRequired ? 'required' : ''}>{isRequired ? 'Nama *' : 'Nama'}</Label><Input value={m.nama || ''} onChange={e => setKeluarga(globalIdx, 'nama', e.target.value)} error={isRequired && !!errors[`keluarga_${hubungan.toLowerCase()}_nama`]} />{isRequired && errors[`keluarga_${hubungan.toLowerCase()}_nama`] && <p className="text-xs text-red-500">{errors[`keluarga_${hubungan.toLowerCase()}_nama`]}</p>}</div>
+                            <div className="space-y-1.5"><Label className={isRequired ? 'required' : ''}>{isRequired ? 'Usia *' : 'Usia'}</Label><Input type="number" value={m.usia || ''} onChange={e => setKeluarga(globalIdx, 'usia', e.target.value)} error={isRequired && !!errors[`keluarga_${hubungan.toLowerCase()}_usia`]} />{isRequired && errors[`keluarga_${hubungan.toLowerCase()}_usia`] && <p className="text-xs text-red-500">{errors[`keluarga_${hubungan.toLowerCase()}_usia`]}</p>}</div>
+                            <div className="space-y-1.5"><Label className={isRequired ? 'required' : ''}>{isRequired ? 'Pekerjaan *' : 'Pekerjaan'}</Label><Input value={m.pekerjaan || ''} onChange={e => setKeluarga(globalIdx, 'pekerjaan', e.target.value)} error={isRequired && !!errors[`keluarga_${hubungan.toLowerCase()}_pekerjaan`]} />{isRequired && errors[`keluarga_${hubungan.toLowerCase()}_pekerjaan`] && <p className="text-xs text-red-500">{errors[`keluarga_${hubungan.toLowerCase()}_pekerjaan`]}</p>}</div>
                           </div>
                         </div>
                       )
                     })}
                     {members.length === 0 && hubungan !== 'Kakak' && hubungan !== 'Adik' && (
-                      <p className="text-sm text-muted-foreground italic">Data tidak diisi</p>
+                      <p className="text-sm text-red-500 italic">Data {hubungan} wajib diisi</p>
                     )}
                     {members.length === 0 && canAdd && (
                       <p className="text-sm text-muted-foreground italic">Belum ada. Klik tombol untuk menambah.</p>
@@ -477,14 +622,14 @@ export default function FormulirPage() {
             <div className="space-y-4">
               <p className="form-section-title">🇯🇵 INFORMASI JEPANG</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5"><Label>Pernah ke Jepang?</Label><BoolSelect value={form.pernah_ke_jepang} onChange={setBool('pernah_ke_jepang')} /></div>
-                <div className="space-y-1.5"><Label>Punya Keluarga di Jepang?</Label><BoolSelect value={form.keluarga_di_jepang} onChange={setBool('keluarga_di_jepang')} /></div>
+                <div className="space-y-1.5"><Label className="required">Pernah ke Jepang? *</Label><BoolSelect value={form.pernah_ke_jepang} onChange={setBool('pernah_ke_jepang')} error={!!errors.pernah_ke_jepang} />{errors.pernah_ke_jepang && <p className="text-xs text-red-500">{errors.pernah_ke_jepang}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Punya Keluarga di Jepang? *</Label><BoolSelect value={form.keluarga_di_jepang} onChange={setBool('keluarga_di_jepang')} error={!!errors.keluarga_di_jepang} />{errors.keluarga_di_jepang && <p className="text-xs text-red-500">{errors.keluarga_di_jepang}</p>}</div>
                 {form.keluarga_di_jepang && <>
                   <div className="space-y-1.5"><Label>Hubungan (opsional)</Label><Input value={form.hubungan_keluarga_jepang || ''} onChange={set('hubungan_keluarga_jepang')} placeholder="Kakak, Ayah, dll." /></div>
                   <div className="space-y-1.5"><Label>Status Kerabat di Jepang (opsional)</Label><Input value={form.status_kerabat_jepang || ''} onChange={set('status_kerabat_jepang')} placeholder="TG, Magang, dll." /></div>
                   <div className="col-span-2 space-y-1.5"><Label>Kontak Keluarga di Jepang (opsional)</Label><Input value={form.kontak_keluarga_jepang || ''} onChange={set('kontak_keluarga_jepang')} /></div>
                 </>}
-                <div className="space-y-1.5"><Label>Punya Kenalan di Jepang?</Label><BoolSelect value={form.kenalan_di_jepang} onChange={setBool('kenalan_di_jepang')} /></div>
+                <div className="space-y-1.5"><Label className="required">Punya Kenalan di Jepang? *</Label><BoolSelect value={form.kenalan_di_jepang} onChange={setBool('kenalan_di_jepang')} error={!!errors.kenalan_di_jepang} />{errors.kenalan_di_jepang && <p className="text-xs text-red-500">{errors.kenalan_di_jepang}</p>}</div>
                 {form.kenalan_di_jepang && <div className="col-span-2 space-y-1.5"><Label>Detail Kenalan (Nama, Alamat, Kontak)</Label><Textarea value={form.kenalan_jepang_detail || ''} onChange={set('kenalan_jepang_detail')} rows={3} /></div>}
               </div>
             </div>
@@ -495,48 +640,53 @@ export default function FormulirPage() {
             <div className="space-y-4">
               <p className="form-section-title">🎯 MOTIVASI, TUJUAN & POIN PENDUKUNG</p>
               <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-1.5"><Label>Tujuan ke Jepang</Label><Textarea value={form.tujuan_ke_jepang || ''} onChange={set('tujuan_ke_jepang')} rows={3} placeholder="Tuliskan tujuan Anda pergi ke Jepang..." /></div>
-                <div className="space-y-1.5"><Label>Alasan Ingin ke Jepang</Label><Textarea value={form.alasan_ke_jepang || ''} onChange={set('alasan_ke_jepang')} rows={3} /></div>
-                <div className="space-y-1.5"><Label>Cita-cita Setelah Pulang dari Jepang</Label><Textarea value={form.cita_cita_setelah_jepang || ''} onChange={set('cita_cita_setelah_jepang')} rows={3} /></div>
-                <div className="space-y-1.5"><Label>Rencana Pengiriman Uang/Bulan ke Indonesia (Rp)</Label><Input type="number" value={form.rencana_pengiriman_uang || ''} onChange={set('rencana_pengiriman_uang')} placeholder="3000000" /></div>
-                <div className="space-y-1.5"><Label>Kelebihan Diri</Label><Textarea value={form.kelebihan_diri || ''} onChange={set('kelebihan_diri')} rows={3} /></div>
-                <div className="space-y-1.5"><Label>Kekurangan Diri</Label><Textarea value={form.kekurangan_diri || ''} onChange={set('kekurangan_diri')} rows={3} /></div>
-                <div className="space-y-1.5"><Label>Hobi</Label><Textarea value={form.hobi || ''} onChange={set('hobi')} rows={2} /></div>
-                <div className="space-y-1.5"><Label>Keahlian</Label><Textarea value={form.keahlian || ''} onChange={set('keahlian')} rows={2} /></div>
+                <div className="space-y-1.5"><Label className="required">Tujuan ke Jepang *</Label><Textarea value={form.tujuan_ke_jepang || ''} onChange={set('tujuan_ke_jepang')} rows={3} placeholder="Tuliskan tujuan Anda pergi ke Jepang..." className={errors.tujuan_ke_jepang ? 'border-red-500' : ''} />{errors.tujuan_ke_jepang && <p className="text-xs text-red-500">{errors.tujuan_ke_jepang}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Alasan Ingin ke Jepang *</Label><Textarea value={form.alasan_ke_jepang || ''} onChange={set('alasan_ke_jepang')} rows={3} className={errors.alasan_ke_jepang ? 'border-red-500' : ''} />{errors.alasan_ke_jepang && <p className="text-xs text-red-500">{errors.alasan_ke_jepang}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Cita-cita Setelah Pulang dari Jepang *</Label><Textarea value={form.cita_cita_setelah_jepang || ''} onChange={set('cita_cita_setelah_jepang')} rows={3} className={errors.cita_cita_setelah_jepang ? 'border-red-500' : ''} />{errors.cita_cita_setelah_jepang && <p className="text-xs text-red-500">{errors.cita_cita_setelah_jepang}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Rencana Pengiriman Uang/Bulan ke Indonesia (Rp) *</Label><Input type="number" value={form.rencana_pengiriman_uang || ''} onChange={set('rencana_pengiriman_uang')} placeholder="3000000" error={!!errors.rencana_pengiriman_uang} />{errors.rencana_pengiriman_uang && <p className="text-xs text-red-500">{errors.rencana_pengiriman_uang}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Kelebihan Diri *</Label><Textarea value={form.kelebihan_diri || ''} onChange={set('kelebihan_diri')} rows={3} className={errors.kelebihan_diri ? 'border-red-500' : ''} />{errors.kelebihan_diri && <p className="text-xs text-red-500">{errors.kelebihan_diri}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Kekurangan Diri *</Label><Textarea value={form.kekurangan_diri || ''} onChange={set('kekurangan_diri')} rows={3} className={errors.kekurangan_diri ? 'border-red-500' : ''} />{errors.kekurangan_diri && <p className="text-xs text-red-500">{errors.kekurangan_diri}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Hobi *</Label><Textarea value={form.hobi || ''} onChange={set('hobi')} rows={2} className={errors.hobi ? 'border-red-500' : ''} />{errors.hobi && <p className="text-xs text-red-500">{errors.hobi}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Keahlian *</Label><Textarea value={form.keahlian || ''} onChange={set('keahlian')} rows={2} className={errors.keahlian ? 'border-red-500' : ''} />{errors.keahlian && <p className="text-xs text-red-500">{errors.keahlian}</p>}</div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                <div className="space-y-1.5"><Label>Bersedia Kerja Shift?</Label><BoolSelect value={form.bersedia_shift} onChange={setBool('bersedia_shift')} /></div>
-                <div className="space-y-1.5"><Label>Bersedia Lembur?</Label><BoolSelect value={form.bersedia_lembur} onChange={setBool('bersedia_lembur')} /></div>
-                <div className="space-y-1.5"><Label>Bersedia Kerja Hari Libur?</Label><BoolSelect value={form.bersedia_hari_libur} onChange={setBool('bersedia_hari_libur')} /></div>
-                <div className="space-y-1.5"><Label>Lama Ingin Tinggal di Jepang</Label>
+                <div className="space-y-1.5"><Label className="required">Bersedia Kerja Shift? *</Label><BoolSelect value={form.bersedia_shift} onChange={setBool('bersedia_shift')} error={!!errors.bersedia_shift} />{errors.bersedia_shift && <p className="text-xs text-red-500">{errors.bersedia_shift}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Bersedia Lembur? *</Label><BoolSelect value={form.bersedia_lembur} onChange={setBool('bersedia_lembur')} error={!!errors.bersedia_lembur} />{errors.bersedia_lembur && <p className="text-xs text-red-500">{errors.bersedia_lembur}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Bersedia Kerja Hari Libur? *</Label><BoolSelect value={form.bersedia_hari_libur} onChange={setBool('bersedia_hari_libur')} error={!!errors.bersedia_hari_libur} />{errors.bersedia_hari_libur && <p className="text-xs text-red-500">{errors.bersedia_hari_libur}</p>}</div>
+                <div className="space-y-1.5"><Label className="required">Lama Ingin Tinggal di Jepang *</Label>
                   <Select value={form.lama_tinggal_jepang || ''} onValueChange={setSel('lama_tinggal_jepang')}>
-                    <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                    <SelectTrigger error={!!errors.lama_tinggal_jepang}><SelectValue placeholder="Pilih..." /></SelectTrigger>
                     <SelectContent><SelectItem value="2-3 tahun">2-3 tahun</SelectItem><SelectItem value="3-5 tahun">3-5 tahun</SelectItem></SelectContent>
                   </Select>
+                  {errors.lama_tinggal_jepang && <p className="text-xs text-red-500">{errors.lama_tinggal_jepang}</p>}
                 </div>
-                <div className="space-y-1.5"><Label>Lama Ingin Bekerja di Perusahaan</Label>
+                <div className="space-y-1.5"><Label className="required">Lama Ingin Bekerja di Perusahaan *</Label>
                   <Select value={form.lama_kerja_perusahaan || ''} onValueChange={setSel('lama_kerja_perusahaan')}>
-                    <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                    <SelectTrigger error={!!errors.lama_kerja_perusahaan}><SelectValue placeholder="Pilih..." /></SelectTrigger>
                     <SelectContent><SelectItem value="1-2 tahun">1-2 tahun</SelectItem><SelectItem value="2-3 tahun">2-3 tahun</SelectItem><SelectItem value="3-5 tahun">3-5 tahun</SelectItem></SelectContent>
                   </Select>
+                  {errors.lama_kerja_perusahaan && <p className="text-xs text-red-500">{errors.lama_kerja_perusahaan}</p>}
                 </div>
-                <div className="space-y-1.5"><Label>Rencana Pulang ke Indonesia (5 tahun)</Label>
+                <div className="space-y-1.5"><Label className="required">Rencana Pulang ke Indonesia (5 tahun) *</Label>
                   <Select value={form.rencana_pulang || ''} onValueChange={setSel('rencana_pulang')}>
-                    <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                    <SelectTrigger error={!!errors.rencana_pulang}><SelectValue placeholder="Pilih..." /></SelectTrigger>
                     <SelectContent><SelectItem value="1-2 kali">1-2 kali</SelectItem><SelectItem value="3-4 kali">3-4 kali</SelectItem><SelectItem value="Lainnya">Lainnya</SelectItem></SelectContent>
                   </Select>
+                  {errors.rencana_pulang && <p className="text-xs text-red-500">{errors.rencana_pulang}</p>}
                 </div>
-                <div className="space-y-1.5"><Label>Sumber Biaya Keberangkatan</Label>
+                <div className="space-y-1.5"><Label className="required">Sumber Biaya Keberangkatan *</Label>
                   <Select value={form.sumber_biaya || ''} onValueChange={setSel('sumber_biaya')}>
-                    <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                    <SelectTrigger error={!!errors.sumber_biaya}><SelectValue placeholder="Pilih..." /></SelectTrigger>
                     <SelectContent><SelectItem value="Dana Pribadi">Dana Pribadi</SelectItem><SelectItem value="Dana Talang LPK">Dana Talang LPK</SelectItem></SelectContent>
                   </Select>
+                  {errors.sumber_biaya && <p className="text-xs text-red-500">{errors.sumber_biaya}</p>}
                 </div>
-                <div className="space-y-1.5"><Label>Biaya yang Disiapkan</Label>
+                <div className="space-y-1.5"><Label className="required">Biaya yang Disiapkan *</Label>
                   <Select value={form.biaya_disiapkan || ''} onValueChange={setSel('biaya_disiapkan')}>
-                    <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                    <SelectTrigger error={!!errors.biaya_disiapkan}><SelectValue placeholder="Pilih..." /></SelectTrigger>
                     <SelectContent><SelectItem value="10-20 Juta">10-20 Juta</SelectItem><SelectItem value="20-30 Juta">20-30 Juta</SelectItem><SelectItem value="40-50 Juta">40-50 Juta</SelectItem><SelectItem value="Lainnya">Lainnya</SelectItem></SelectContent>
                   </Select>
+                  {errors.biaya_disiapkan && <p className="text-xs text-red-500">{errors.biaya_disiapkan}</p>}
                 </div>
               </div>
             </div>
@@ -545,25 +695,37 @@ export default function FormulirPage() {
           {/* Step 9: Dokumen */}
           {step === 9 && (
             <div className="space-y-4">
-              <p className="form-section-title">📎 UPLOAD DOKUMEN PENDUKUNG</p>
-              <p className="text-sm text-muted-foreground -mt-2 mb-4">Format: JPG, PNG, PDF, MP4. Maks 50MB per file.</p>
+              <p className="form-section-title">📎 UPLOAD DOKUMEN PENDUKUNG <span className="text-red-500">*</span></p>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 mb-4">
+                <p className="font-medium mb-1">Batas ukuran file:</p>
+                <ul className="text-xs space-y-0.5 ml-2">
+                  <li>• Dokumen (Sertifikat, KK, KTP, Ijazah, Akte): Maks 2MB</li>
+                  <li>• Foto Full Body: Maks 3MB</li>
+                  <li>• Video Perkenalan: Maks 20MB</li>
+                </ul>
+              </div>
+              <p className="text-sm text-muted-foreground -mt-2">Format: JPG, PNG, PDF, MP4. Semua dokumen wajib diupload.</p>
+              {errors.dokumen && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 mb-4">{errors.dokumen}</div>}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {dokumenTypes.map(dt => {
                   const uploaded = form.dokumen?.find((d: any) => d.jenis_dokumen === dt.key)
                   const isUploading = uploadingKey === dt.key
+                  const maxSize = dt.key === 'video_perkenalan' ? '20MB' : dt.key === 'foto_full_body' ? '3MB' : '2MB'
                   return (
                     <div key={dt.key} className={`border rounded-lg p-4 transition-colors ${uploaded ? 'border-emerald-200 bg-emerald-50/50' : 'border-border'}`}>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           {uploaded ? <CheckCircle size={14} className="text-emerald-500 shrink-0" /> : <FileText size={14} className="text-muted-foreground shrink-0" />}
-                          <span className="text-sm font-medium">{dt.label}</span>
+                          <span className="text-sm font-medium">{dt.label} *</span>
                         </div>
+                        <span className="text-xs text-muted-foreground">Maks {maxSize}</span>
                       </div>
                       {uploaded && <p className="text-xs text-muted-foreground mb-2 truncate">{uploaded.nama_file}</p>}
                       <label className="cursor-pointer">
                         <input type="file" className="hidden" disabled={isUploading || isSubmitted}
+                          accept={dt.key === 'video_perkenalan' ? 'video/*' : 'image/jpeg,image/png,application/pdf'}
                           onChange={e => e.target.files?.[0] && handleUpload(dt.key, e.target.files[0])} />
-                        <div className={`flex items-center gap-2 text-xs px-3 py-1.5 border border-border rounded-md w-fit transition-colors ${isSubmitted ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted cursor-pointer'}`}>
+                        <div className={`flex items-center gap-2 text-xs px-3 py-1.5 border rounded-md w-fit transition-colors ${isSubmitted ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted cursor-pointer'} ${!uploaded ? 'border-red-300 bg-red-50' : 'border-border'}`}>
                           {isUploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
                           {uploaded ? 'Ganti' : 'Upload'}
                         </div>
@@ -588,11 +750,25 @@ export default function FormulirPage() {
             Simpan
           </Button>
           {step < STEPS.length ? (
-            <Button onClick={() => setStep(s => Math.min(STEPS.length, s + 1))}>
+            <Button onClick={() => {
+              if (validateStep(step)) {
+                setStep(s => Math.min(STEPS.length, s + 1))
+                setErrors({})
+              } else {
+                toast({ title: 'Lengkapi semua field yang wajib diisi', description: 'Field dengan tanda * wajib diisi', variant: 'destructive' as any })
+              }
+            }}>
               Lanjut<ChevronRight size={16} className="ml-1" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={submitting || isSubmitted} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button onClick={async () => {
+              const allStepsValid = [1,2,3,5,6,7,8,9].every(s => validateStep(s))
+              if (!allStepsValid) {
+                toast({ title: 'Lengkapi semua field yang wajib diisi', description: 'Semua field wajib diisi sebelum mengirim', variant: 'destructive' as any })
+                return
+              }
+              handleSubmit()
+            }} disabled={submitting || isSubmitted} className="bg-emerald-600 hover:bg-emerald-700">
               {submitting ? <Loader2 size={14} className="mr-2 animate-spin" /> : <Send size={14} className="mr-2" />}
               {isSubmitted ? 'Sudah Terkirim' : 'Kirim Formulir'}
             </Button>

@@ -56,6 +56,11 @@
   .step-indicator {
     @apply flex items-center gap-1 text-xs font-mono text-muted-foreground;
   }
+
+  label.required::after {
+    content: " *";
+    color: #ef4444;
+  }
 }
 
 /* Custom scrollbar */

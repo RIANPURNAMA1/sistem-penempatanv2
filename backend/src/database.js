@@ -180,6 +180,7 @@ const migrations = [
       FOREIGN KEY (kandidat_id) REFERENCES kandidat_profil(id) ON DELETE CASCADE
     )`
   },
+
   {
     name: 'create_kandidat_pengalaman_kerja',
     check: async (conn) => {
@@ -261,6 +262,22 @@ const migrations = [
       return cols.length > 0;
     },
     sql: `ALTER TABLE kandidat_profil ADD COLUMN catatan_progres TEXT`
+  },
+  {
+    name: 'add_pendidikan_terakhir',
+    check: async (conn) => {
+      const [cols] = await conn.query('SHOW COLUMNS FROM kandidat_profil LIKE "pendidikan_terakhir"');
+      return cols.length > 0;
+    },
+    sql: `ALTER TABLE kandidat_profil ADD COLUMN pendidikan_terakhir VARCHAR(50)`
+  },
+  {
+    name: 'update_jenis_dokumen_varchar',
+    check: async (conn) => {
+      const [cols] = await conn.query("SHOW COLUMNS FROM kandidat_dokumen LIKE 'jenis_dokumen'");
+      return cols.length > 0 && cols[0].Type.startsWith('varchar');
+    },
+    sql: `ALTER TABLE kandidat_dokumen MODIFY COLUMN jenis_dokumen VARCHAR(50) NOT NULL`
   },
   {
     name: 'seed_default_cabang',

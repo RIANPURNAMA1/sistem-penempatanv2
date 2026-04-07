@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS kandidat_profil (
   tempat_lahir VARCHAR(100),
   tanggal_lahir DATE,
   umur INT,
+  pendidikan_terakhir ENUM('SD', 'SMP', 'SMA/SMK', 'Perguruan Tinggi'),
   jenis_kelamin ENUM('Laki-laki', 'Perempuan'),
   status_pernikahan ENUM('Menikah', 'Belum Menikah'),
   jumlah_anak INT DEFAULT 0,
@@ -198,11 +199,7 @@ CREATE TABLE IF NOT EXISTS kandidat_keluarga (
 CREATE TABLE IF NOT EXISTS kandidat_dokumen (
   id INT PRIMARY KEY AUTO_INCREMENT,
   kandidat_id INT NOT NULL,
-  jenis_dokumen ENUM(
-    'sertifikat_jft', 'sertifikat_ssw', 'pas_foto', 
-    'foto_full_body', 'video_perkenalan', 'kk', 
-    'ktp', 'ijazah', 'akte', 'lainnya'
-  ) NOT NULL,
+  jenis_dokumen VARCHAR(50) NOT NULL,
   nama_file VARCHAR(255),
   path_file VARCHAR(500),
   ukuran_file INT,
@@ -211,12 +208,18 @@ CREATE TABLE IF NOT EXISTS kandidat_dokumen (
   FOREIGN KEY (kandidat_id) REFERENCES kandidat_profil(id) ON DELETE CASCADE
 );
 
+-- ============ UPDATE JENIS DOKUMEN ============
+ALTER TABLE kandidat_dokumen MODIFY COLUMN jenis_dokumen VARCHAR(50) NOT NULL;
+
 -- ============ TABEL PENGHASILAN KELUARGA ============
 ALTER TABLE kandidat_profil ADD COLUMN penghasilan_keluarga BIGINT DEFAULT 0;
 
 -- ============ KOLOM PROGRES KANDIDAT ============
 ALTER TABLE kandidat_profil ADD COLUMN status_progres ENUM('Job Matching', 'Pending', 'lamar ke perusahaan', 'Interview', 'Jadwalkan Interview Ulang', 'Lulus interview', 'Gagal Interview', 'Pemberkasan', 'Berangkat', 'Ditolak') DEFAULT 'Job Matching';
 ALTER TABLE kandidat_profil ADD COLUMN catatan_progres TEXT;
+
+-- ============ KOLOM PENDIDIKAN TERAKHIR ============
+ALTER TABLE kandidat_profil ADD COLUMN pendidikan_terakhir ENUM('SD', 'SMP', 'SMA/SMK', 'Perguruan Tinggi');
 
 -- ============ INDEX ============
 CREATE INDEX idx_users_email ON users(email);

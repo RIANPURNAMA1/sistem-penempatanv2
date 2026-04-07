@@ -129,6 +129,7 @@ export default function KandidatDetailPage() {
               <InfoRow label="Tempat, Tanggal Lahir" value={data.tempat_lahir && data.tanggal_lahir ? `${data.tempat_lahir}, ${formatDate(data.tanggal_lahir)}` : data.tempat_lahir} />
               <InfoRow label="Umur" value={data.umur ? `${data.umur} tahun` : null} />
               <InfoRow label="Jenis Kelamin" value={data.jenis_kelamin} />
+              <InfoRow label="Pendidikan Terakhir" value={data.pendidikan_terakhir} />
               <InfoRow label="Status Pernikahan" value={data.status_pernikahan} />
               {data.status_pernikahan === 'Menikah' && <InfoRow label="Jumlah Anak" value={data.jumlah_anak} />}
               <InfoRow label="Agama" value={data.agama} />
@@ -236,7 +237,7 @@ export default function KandidatDetailPage() {
               <InfoRow label="Keluarga di Jepang" value={bool(data.keluarga_di_jepang)} />
               <InfoRow label="Level JLPT" value={data.level_jlpt} />
               <InfoRow label="Level JFT" value={data.level_jft} />
-              <InfoRow label="Sertifikat SSW" value={data.sertifikat_ssw} />
+              <InfoRow label="Bidang SSW" value={data.sertifikat_ssw} />
               <InfoRow label="Lama Belajar Jepang" value={data.lama_belajar_jepang} />
               <InfoRow label="Level Bahasa Jepang" value={data.level_bahasa_jepang} />
             </CardContent>
@@ -270,17 +271,46 @@ export default function KandidatDetailPage() {
             <Card>
               <CardContent className="pt-6">
                 <SectionTitle icon={Upload} title="Dokumen Pendukung" />
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {data.dokumen.map((d: any) => (
-                    <a key={d.id} href={`/${d.path_file}`} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors group text-xs">
-                      <FileText size={14} className="text-muted-foreground shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-medium capitalize">{d.jenis_dokumen.replace(/_/g, ' ')}</p>
-                        <p className="text-muted-foreground truncate">{d.nama_file}</p>
-                      </div>
-                    </a>
-                  ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {data.dokumen.map((d: any) => {
+                    const labelMap: Record<string, string> = {
+                      'sertifikat_jft': 'Sertifikat JFT',
+                      'pas_foto': 'Pas Foto',
+                      'foto_full_body': 'Foto Full Body',
+                      'video_perkenalan': 'Video Perkenalan',
+                      'kk': 'Kartu Keluarga (KK)',
+                      'ktp': 'KTP',
+                      'ijazah': 'Ijazah',
+                      'akte': 'Akte Kelahiran',
+                      'lainnya': 'Dokumen Lainnya',
+                    }
+                    let label = labelMap[d.jenis_dokumen] || d.jenis_dokumen.replace(/_/g, ' ')
+                    let isSSW = d.jenis_dokumen.startsWith('ssw_')
+                    if (isSSW) {
+                      const sswArray = data.sertifikat_ssw ? data.sertifikat_ssw.split(',').map((s: string) => s.trim()) : []
+                      const idx = parseInt(d.jenis_dokumen.split('_')[1]) - 1
+                      const bidangSSW = sswArray[idx] || `SSW #${idx + 1}`
+                      label = `SSW - ${bidangSSW}`
+                    }
+                    return (
+                      <a key={d.id} href={`/${d.path_file}`} target="_blank" rel="noopener noreferrer"
+                        className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors group text-xs ${isSSW ? 'border-blue-300 bg-blue-50 shadow-sm' : 'border-border hover:border-primary/50'}`}>
+                        {isSSW ? (
+                          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white shrink-0">
+                            <span className="text-xs font-bold">SSW</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted shrink-0">
+                            <FileText size={16} className="text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className={`font-medium text-sm ${isSSW ? 'text-blue-700' : ''}`}>{label}</p>
+                          <p className="text-muted-foreground text-xs truncate mt-0.5">{d.nama_file}</p>
+                        </div>
+                      </a>
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>

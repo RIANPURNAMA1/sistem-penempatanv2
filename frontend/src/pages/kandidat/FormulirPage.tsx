@@ -26,7 +26,7 @@ const STEPS = [
 ]
 
 const BoolSelect = ({ value, onChange, label, error }: { value: any; onChange: (v: boolean) => void; label?: string; error?: boolean }) => (
-  <Select value={value === true || value === 1 ? 'ya' : value === false ? 'tidak' : ''} onValueChange={v => onChange(v === 'ya')}>
+  <Select value={value === true || value === 1 ? 'ya' : value === false || value === 0 ? 'tidak' : ''} onValueChange={v => onChange(v === 'ya')}>
     <SelectTrigger error={error}><SelectValue placeholder={label || 'Pilih...'} /></SelectTrigger>
     <SelectContent><SelectItem value="ya">Ya</SelectItem><SelectItem value="tidak">Tidak</SelectItem></SelectContent>
   </Select>
@@ -50,14 +50,14 @@ const YearMonthPicker = ({ monthVal, yearVal, onMonthChange, onYearChange, place
 
 const dokumenTypes = [
   { key: 'sertifikat_jft', label: 'Sertifikat JFT' },
-  { key: 'sertifikat_ssw', label: 'Sertifikat SSW' },
   { key: 'pas_foto', label: 'Pas Foto' },
   { key: 'foto_full_body', label: 'Foto Full Body' },
   { key: 'video_perkenalan', label: 'Video Perkenalan' },
   { key: 'kk', label: 'Kartu Keluarga (KK)' },
   { key: 'ktp', label: 'KTP' },
   { key: 'ijazah', label: 'Ijazah' },
-  { key: 'akte', label: 'Akta Kelahiran' },
+  { key: 'akte', label: 'Akte Kelahiran' },
+  { key: 'lainnya', label: 'Dokumen Lainnya' },
 ]
 
 const ssw_options = [
@@ -69,7 +69,7 @@ const ssw_options = [
   'Driver'
 ];
 
-const REQUIRED_DOCS = ['sertifikat_jft', 'sertifikat_ssw', 'pas_foto', 'foto_full_body', 'video_perkenalan', 'kk', 'ktp', 'ijazah', 'akte']
+const REQUIRED_DOCS = ['pas_foto', 'foto_full_body', 'video_perkenalan', 'kk', 'ktp', 'ijazah', 'akte']
 
 export default function FormulirPage() {
   const [step, setStep] = useState(1)
@@ -79,7 +79,9 @@ export default function FormulirPage() {
   const [profil, setProfil] = useState<any>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const [sertifikatSsw, setSertifikatSsw] = useState<any[]>([{ id: null, nama_file: '', file: null }])
   const [form, setForm] = useState<any>({
+    pendidikan_terakhir: '',
     pendidikan: [
       { jenjang: 'SD', nama_sekolah: '', bulan_masuk: '', tahun_masuk: '', bulan_lulus: '', tahun_lulus: '' },
       { jenjang: 'SMP', nama_sekolah: '', bulan_masuk: '', tahun_masuk: '', bulan_lulus: '', tahun_lulus: '' },
@@ -104,6 +106,16 @@ export default function FormulirPage() {
         pernah_ke_jepang: convertBool(d.pernah_ke_jepang),
         keluarga_di_jepang: convertBool(d.keluarga_di_jepang),
         kenalan_di_jepang: convertBool(d.kenalan_di_jepang),
+        sudah_vaksin: convertBool(d.sudah_vaksin),
+        berkacamata: convertBool(d.berkacamata),
+        lensa_kontak: convertBool(d.lensa_kontak),
+        buta_warna: convertBool(d.buta_warna),
+        bertato: convertBool(d.bertato),
+        merokok: convertBool(d.merokok),
+        minum_alkohol: convertBool(d.minum_alkohol),
+        bersedia_shift: convertBool(d.bersedia_shift),
+        bersedia_lembur: convertBool(d.bersedia_lembur),
+        bersedia_hari_libur: convertBool(d.bersedia_hari_libur),
         pendidikan: d.pendidikan?.length ? d.pendidikan : p.pendidikan,
         pengalaman: d.pengalaman?.length ? d.pengalaman : p.pengalaman,
         keluarga: d.keluarga?.length ? d.keluarga : p.keluarga,
@@ -169,12 +181,12 @@ export default function FormulirPage() {
     if (stepNum === 2) {
       if (form.sudah_vaksin === undefined || form.sudah_vaksin === null || form.sudah_vaksin === '') newErrors.sudah_vaksin = 'Pilih sudah/tidak vaksin'
       if (isEmpty(form.kondisi_kesehatan)) newErrors.kondisi_kesehatan = 'Kondisi kesehatan wajib dipilih'
-      if (form.berkacamata === undefined || form.berkacamata === null || form.berkacamata === '') newErrors.berkacamata = 'Pilih ya/tidak'
-      if (form.lensa_kontak === undefined || form.lensa_kontak === null || form.lensa_kontak === '') newErrors.lensa_kontak = 'Pilih ya/tidak'
-      if (form.buta_warna === undefined || form.buta_warna === null || form.buta_warna === '') newErrors.buta_warna = 'Pilih ya/tidak'
-      if (form.bertato === undefined || form.bertato === null || form.bertato === '') newErrors.bertato = 'Pilih ya/tidak'
-      if (form.merokok === undefined || form.merokok === null || form.merokok === '') newErrors.merokok = 'Pilih ya/tidak'
-      if (form.minum_alkohol === undefined || form.minum_alkohol === null || form.minum_alkohol === '') newErrors.minum_alkohol = 'Pilih ya/tidak'
+      if (form.berkacamata === undefined || form.berkacamata === null || form.berkacamata === '' || form.berkacamata === 0) newErrors.berkacamata = 'Pilih ya/tidak'
+      if (form.lensa_kontak === undefined || form.lensa_kontak === null || form.lensa_kontak === '' || form.lensa_kontak === 0) newErrors.lensa_kontak = 'Pilih ya/tidak'
+      if (form.buta_warna === undefined || form.buta_warna === null || form.buta_warna === '' || form.buta_warna === 0) newErrors.buta_warna = 'Pilih ya/tidak'
+      if (form.bertato === undefined || form.bertato === null || form.bertato === '' || form.bertato === 0) newErrors.bertato = 'Pilih ya/tidak'
+      if (form.merokok === undefined || form.merokok === null || form.merokok === '' || form.merokok === 0) newErrors.merokok = 'Pilih ya/tidak'
+      if (form.minum_alkohol === undefined || form.minum_alkohol === null || form.minum_alkohol === '' || form.minum_alkohol === 0) newErrors.minum_alkohol = 'Pilih ya/tidak'
       if (isEmpty(form.riwayat_penyakit)) newErrors.riwayat_penyakit = 'Riwayat penyakit wajib diisi (isi "Tidak ada" jika tidak ada)'
     }
     
@@ -193,10 +205,8 @@ export default function FormulirPage() {
     
     if (stepNum === 5) {
       if (isEmpty(form.level_jlpt)) newErrors.level_jlpt = 'Level JLPT wajib dipilih'
-      if (isEmpty(form.level_jft)) newErrors.level_jft = 'Level JFT wajib dipilih'
       if (isEmpty(form.lama_belajar_jepang)) newErrors.lama_belajar_jepang = 'Lama belajar Jepang wajib diisi'
       if (isEmpty(form.level_bahasa_jepang)) newErrors.level_bahasa_jepang = 'Level bahasa Jepang wajib dipilih'
-      if (form.sertifikat_ssw?.length === 0) newErrors.sertifikat_ssw = 'Pilih minimal 1 sertifikat SSW'
     }
     
     if (stepNum === 6) {
@@ -212,28 +222,17 @@ export default function FormulirPage() {
     }
     
     if (stepNum === 7) {
-      if (form.pernah_ke_jepang === undefined || form.pernah_ke_jepang === null || form.pernah_ke_jepang === '') newErrors.pernah_ke_jepang = 'Pilih ya/tidak'
-      if (form.keluarga_di_jepang === undefined || form.keluarga_di_jepang === null || form.keluarga_di_jepang === '') newErrors.keluarga_di_jepang = 'Pilih ya/tidak'
-      if (form.kenalan_di_jepang === undefined || form.kenalan_di_jepang === null || form.kenalan_di_jepang === '') newErrors.kenalan_di_jepang = 'Pilih ya/tidak'
     }
     
     if (stepNum === 8) {
       if (isEmpty(form.tujuan_ke_jepang)) newErrors.tujuan_ke_jepang = 'Tujuan ke Jepang wajib diisi'
       if (isEmpty(form.alasan_ke_jepang)) newErrors.alasan_ke_jepang = 'Alasan ingin ke Jepang wajib diisi'
-      if (isEmpty(form.cita_cita_setelah_jepang)) newErrors.cita_cita_setelah_jepang = 'Cita-cita wajib diisi'
+      if (isEmpty(form.cita_cita_setelah_jepang)) newErrors.cita_cita_setelah_jepang = 'Cita-cita setelah pulang wajib diisi'
       if (isEmpty(form.rencana_pengiriman_uang)) newErrors.rencana_pengiriman_uang = 'Rencana pengiriman uang wajib diisi'
       if (isEmpty(form.kelebihan_diri)) newErrors.kelebihan_diri = 'Kelebihan diri wajib diisi'
       if (isEmpty(form.kekurangan_diri)) newErrors.kekurangan_diri = 'Kekurangan diri wajib diisi'
       if (isEmpty(form.hobi)) newErrors.hobi = 'Hobi wajib diisi'
       if (isEmpty(form.keahlian)) newErrors.keahlian = 'Keahlian wajib diisi'
-      if (form.bersedia_shift === undefined || form.bersedia_shift === null || form.bersedia_shift === '') newErrors.bersedia_shift = 'Pilih ya/tidak'
-      if (form.bersedia_lembur === undefined || form.bersedia_lembur === null || form.bersedia_lembur === '') newErrors.bersedia_lembur = 'Pilih ya/tidak'
-      if (form.bersedia_hari_libur === undefined || form.bersedia_hari_libur === null || form.bersedia_hari_libur === '') newErrors.bersedia_hari_libur = 'Pilih ya/tidak'
-      if (isEmpty(form.lama_tinggal_jepang)) newErrors.lama_tinggal_jepang = 'Lama tinggal wajib dipilih'
-      if (isEmpty(form.lama_kerja_perusahaan)) newErrors.lama_kerja_perusahaan = 'Lama kerja di perusahaan wajib dipilih'
-      if (isEmpty(form.rencana_pulang)) newErrors.rencana_pulang = 'Rencana pulang wajib dipilih'
-      if (isEmpty(form.sumber_biaya)) newErrors.sumber_biaya = 'Sumber biaya wajib dipilih'
-      if (isEmpty(form.biaya_disiapkan)) newErrors.biaya_disiapkan = 'Biaya yang disiapkan wajib dipilih'
     }
     
     if (stepNum === 9) {
@@ -259,6 +258,9 @@ export default function FormulirPage() {
     sertifikat_ssw: p.sertifikat_ssw.includes(val) ? p.sertifikat_ssw.filter((s: string) => s !== val) : [...p.sertifikat_ssw, val]
   }))
 
+  const addSertifikatSsw = () => setSertifikatSsw(p => [...p, { id: null, nama_file: '', file: null }])
+  const removeSertifikatSsw = (i: number) => setSertifikatSsw(p => p.filter((_: any, idx: number) => idx !== i))
+
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -283,19 +285,30 @@ export default function FormulirPage() {
     } finally { setSubmitting(false) }
   }
 
-  const handleUpload = async (jenis: string, file: File) => {
+  const handleUpload = async (jenis: string, file: File, sswIndex?: number) => {
     setUploadingKey(jenis)
     const fd = new FormData()
     fd.append('file', file)
     fd.append('jenis_dokumen', jenis)
     try {
-      await api.post('/kandidat/upload-dokumen', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      await api.post('/kandidat/upload-dokumen', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 })
       toast({ title: 'Dokumen berhasil diupload', variant: 'success' as any })
-      setForm((p: any) => {
-        const docs = p.dokumen ? p.dokumen.filter((d: any) => d.jenis_dokumen !== jenis) : []
-        return { ...p, dokumen: [...docs, { jenis_dokumen: jenis, nama_file: file.name }] }
-      })
-    } catch { toast({ title: 'Upload gagal', variant: 'destructive' }) }
+      if (sswIndex !== undefined) {
+        setSertifikatSsw((p: any) => {
+          const arr = [...p]
+          arr[sswIndex] = { ...arr[sswIndex], nama_file: file.name, file }
+          return arr
+        })
+      } else {
+        setForm((p: any) => {
+          const docs = p.dokumen ? p.dokumen.filter((d: any) => d.jenis_dokumen !== jenis) : []
+          return { ...p, dokumen: [...docs, { jenis_dokumen: jenis, nama_file: file.name }] }
+        })
+      }
+    } catch (err: any) {
+      console.error('Upload error:', err)
+      toast({ title: `Upload gagal: ${err.response?.data?.message || err.message}`, variant: 'destructive' })
+    }
     finally { setUploadingKey(null) }
   }
 
@@ -454,7 +467,19 @@ export default function FormulirPage() {
           {/* Step 3: Pendidikan */}
           {step === 3 && (
             <div className="space-y-6">
-              <p className="form-section-title">🎓 PENDIDIKAN（学歴）</p>
+              <p className="form-section-title"><GraduationCap className="inline mr-2 h-4 w-4" />PENDIDIKAN（学歴）</p>
+              <div className="border border-border rounded-lg p-4 space-y-3 bg-muted/30">
+                <p className="font-semibold text-sm text-muted-foreground">Pendidikan Terakhir</p>
+                <Select value={form.pendidikan_terakhir || ''} onValueChange={v => setForm((p: any) => ({ ...p, pendidikan_terakhir: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Pilih pendidikan terakhir..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SD">SD</SelectItem>
+                    <SelectItem value="SMP">SMP</SelectItem>
+                    <SelectItem value="SMA/SMK">SMA/SMK</SelectItem>
+                    <SelectItem value="Perguruan Tinggi">Perguruan Tinggi</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               {form.pendidikan.map((p: any, i: number) => {
                 const wajib = ['SD', 'SMP'].includes(p.jenjang)
                 return (
@@ -485,7 +510,7 @@ export default function FormulirPage() {
           {step === 4 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <p className="form-section-title mb-0 border-0 pb-0">💼 PENGALAMAN KERJA（職歴）</p>
+                <p className="form-section-title mb-0 border-0 pb-0"><Briefcase className="inline mr-2 h-4 w-4" />PENGALAMAN KERJA（職歴）</p>
                 <Button variant="outline" size="sm" onClick={addPengalaman}><Plus size={14} className="mr-1" />Tambah</Button>
               </div>
               {form.pengalaman.length === 0 && (
@@ -536,12 +561,11 @@ export default function FormulirPage() {
                   </Select>
                   {errors.level_jlpt && <p className="text-xs text-red-500">{errors.level_jlpt}</p>}
                 </div>
-                <div className="space-y-1.5"><Label className="required">Level JFT *</Label>
+                <div className="space-y-1.5"><Label>Level JFT (opsional)</Label>
                   <Select value={form.level_jft || ''} onValueChange={setSel('level_jft')}>
-                    <SelectTrigger error={!!errors.level_jft}><SelectValue placeholder="Pilih level..." /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Pilih level..." /></SelectTrigger>
                     <SelectContent>{['A1','A2','B1','B2','Belum ada'].map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
                   </Select>
-                  {errors.level_jft && <p className="text-xs text-red-500">{errors.level_jft}</p>}
                 </div>
                 <div className="space-y-1.5"><Label className="required">Lama Belajar Bahasa Jepang *</Label><Input value={form.lama_belajar_jepang || ''} onChange={set('lama_belajar_jepang')} placeholder="6 bulan, 1 tahun, dll." error={!!errors.lama_belajar_jepang} />{errors.lama_belajar_jepang && <p className="text-xs text-red-500">{errors.lama_belajar_jepang}</p>}</div>
                 <div className="space-y-1.5"><Label className="required">Level Bahasa Jepang *</Label>
@@ -555,16 +579,15 @@ export default function FormulirPage() {
                 <div className="space-y-1.5"><Label>Password Prometric (opsional)</Label><Input value={form.password_prometric || ''} onChange={set('password_prometric')} /></div>
               </div>
               <div className="space-y-2">
-                <Label className="required">Sertifikat SSW yang Dimiliki *</Label>
+                <Label>Sertifikat SSW yang Dimiliki (opsional)</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {ssw_options.map(s => (
-                    <label key={s} className={`flex items-center gap-2 p-2.5 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors ${errors.sertifikat_ssw ? 'border-red-500' : 'border-border'}`}>
+                    <label key={s} className="flex items-center gap-2 p-2.5 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
                       <input type="checkbox" className="rounded" checked={form.sertifikat_ssw?.includes(s) || false} onChange={() => toggleSSW(s)} />
                       <span className="text-sm">{s}</span>
                     </label>
                   ))}
                 </div>
-                {errors.sertifikat_ssw && <p className="text-xs text-red-500">{errors.sertifikat_ssw}</p>}
               </div>
             </div>
           )}
@@ -572,7 +595,7 @@ export default function FormulirPage() {
           {/* Step 6: Keluarga */}
           {step === 6 && (
             <div className="space-y-4">
-              <p className="form-section-title">👨‍👩‍👧 DATA KELUARGA（家族構成）</p>
+              <p className="form-section-title"><Users className="inline mr-2 h-4 w-4" />DATA KELUARGA（家族構成）</p>
               <div className="space-y-1.5 sm:col-span-2">
                 <Label className="required">Penghasilan Keluarga / Bulan (Rp) *</Label>
                 <Input type="number" value={form.penghasilan_keluarga || ''} onChange={set('penghasilan_keluarga')} placeholder="5000000" error={!!errors.penghasilan_keluarga} />
@@ -620,7 +643,7 @@ export default function FormulirPage() {
           {/* Step 7: Informasi Jepang */}
           {step === 7 && (
             <div className="space-y-4">
-              <p className="form-section-title">🇯🇵 INFORMASI JEPANG</p>
+              <p className="form-section-title"><Globe className="inline mr-2 h-4 w-4" />INFORMASI JEPANG</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5"><Label className="required">Pernah ke Jepang? *</Label><BoolSelect value={form.pernah_ke_jepang} onChange={setBool('pernah_ke_jepang')} error={!!errors.pernah_ke_jepang} />{errors.pernah_ke_jepang && <p className="text-xs text-red-500">{errors.pernah_ke_jepang}</p>}</div>
                 <div className="space-y-1.5"><Label className="required">Punya Keluarga di Jepang? *</Label><BoolSelect value={form.keluarga_di_jepang} onChange={setBool('keluarga_di_jepang')} error={!!errors.keluarga_di_jepang} />{errors.keluarga_di_jepang && <p className="text-xs text-red-500">{errors.keluarga_di_jepang}</p>}</div>
@@ -638,7 +661,7 @@ export default function FormulirPage() {
           {/* Step 8: Motivasi */}
           {step === 8 && (
             <div className="space-y-4">
-              <p className="form-section-title">🎯 MOTIVASI, TUJUAN & POIN PENDUKUNG</p>
+              <p className="form-section-title"><Target className="inline mr-2 h-4 w-4" />MOTIVASI, TUJUAN & POIN PENDUKUNG</p>
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-1.5"><Label className="required">Tujuan ke Jepang *</Label><Textarea value={form.tujuan_ke_jepang || ''} onChange={set('tujuan_ke_jepang')} rows={3} placeholder="Tuliskan tujuan Anda pergi ke Jepang..." className={errors.tujuan_ke_jepang ? 'border-red-500' : ''} />{errors.tujuan_ke_jepang && <p className="text-xs text-red-500">{errors.tujuan_ke_jepang}</p>}</div>
                 <div className="space-y-1.5"><Label className="required">Alasan Ingin ke Jepang *</Label><Textarea value={form.alasan_ke_jepang || ''} onChange={set('alasan_ke_jepang')} rows={3} className={errors.alasan_ke_jepang ? 'border-red-500' : ''} />{errors.alasan_ke_jepang && <p className="text-xs text-red-500">{errors.alasan_ke_jepang}</p>}</div>
@@ -695,7 +718,7 @@ export default function FormulirPage() {
           {/* Step 9: Dokumen */}
           {step === 9 && (
             <div className="space-y-4">
-              <p className="form-section-title">📎 UPLOAD DOKUMEN PENDUKUNG <span className="text-red-500">*</span></p>
+              <p className="form-section-title"><FileText className="inline mr-2 h-4 w-4" />UPLOAD DOKUMEN PENDUKUNG <span className="text-red-500">*</span></p>
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 mb-4">
                 <p className="font-medium mb-1">Batas ukuran file:</p>
                 <ul className="text-xs space-y-0.5 ml-2">
@@ -730,6 +753,60 @@ export default function FormulirPage() {
                           {uploaded ? 'Ganti' : 'Upload'}
                         </div>
                       </label>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Dynamic SSW Certificate Uploads */}
+              <div className="border-t border-border pt-4 mt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-medium text-sm">Sertifikat SSW (Opsional)</p>
+                  <Button variant="outline" size="sm" onClick={addSertifikatSsw} disabled={isSubmitted}>
+                    <Plus size={14} className="mr-1" />Tambah
+                  </Button>
+                </div>
+                {sertifikatSsw.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
+                    <p className="text-sm">Belum ada sertifikat SSW</p>
+                    <Button variant="outline" size="sm" className="mt-3" onClick={addSertifikatSsw}><Plus size={14} className="mr-1" />Tambah Sertifikat</Button>
+                  </div>
+                )}
+                {sertifikatSsw.map((s: any, i: number) => {
+                  const sswKey = `ssw_${i + 1}`
+                  const uploaded = form.dokumen?.find((d: any) => d.jenis_dokumen === sswKey)
+                  const isUploading = uploadingKey === sswKey
+                  return (
+                    <div key={i} className="border border-border rounded-lg p-4 mb-3 last:mb-0">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="font-semibold text-sm">Sertifikat SSW #{i + 1}</p>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => removeSertifikatSsw(i)}><Trash2 size={13} /></Button>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className={`flex items-center justify-center w-16 h-16 border rounded-lg ${uploaded ? 'border-emerald-200 bg-emerald-50' : 'border-border'}`}>
+                          {uploaded ? (
+                            <CheckCircle size={20} className="text-emerald-500" />
+                          ) : (
+                            <FileText size={20} className="text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          {uploaded ? (
+                            <p className="text-sm font-medium truncate">{uploaded.nama_file}</p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">Belum ada file</p>
+                          )}
+                          <label className="cursor-pointer mt-2 inline-block">
+                            <input type="file" className="hidden" disabled={isUploading || isSubmitted}
+                              accept="image/jpeg,image/png,application/pdf"
+                              onChange={e => e.target.files?.[0] && handleUpload(sswKey, e.target.files[0], i)} />
+                            <div className={`flex items-center gap-2 text-xs px-3 py-1.5 border rounded-md transition-colors ${isSubmitted ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted cursor-pointer'} ${!uploaded ? 'border-red-300 bg-red-50' : 'border-border'}`}>
+                              {isUploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                              {uploaded ? 'Ganti File' : 'Pilih File'}
+                            </div>
+                          </label>
+                        </div>
+                      </div>
                     </div>
                   )
                 })}

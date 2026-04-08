@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle, Badge, Textarea, Label } from
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from '@/hooks/useToast'
 import api from '@/lib/api'
-import { ArrowLeft, FileText, User, GraduationCap, Briefcase, Users, Globe, Target, Upload, Loader2 } from 'lucide-react'
+import { ArrowLeft, FileText, User, GraduationCap, Briefcase, Users, Globe, Target, Upload, Loader2, Download } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { generateCVPDF, generateCVExcel, generateCVWord } from '@/lib/cvGenerator'
+import KandidatCVPreview from '@/components/KandidatCVPreview'
 
 const statusFormulirConfig: Record<string, { label: string; variant: string }> = {
   draft: { label: 'Draft', variant: 'secondary' },
@@ -55,6 +57,26 @@ export default function KandidatDetailPage() {
   const [newProgres, setNewProgres] = useState('')
   const [catatanProgres, setCatatanProgres] = useState('')
   const [updatingProgres, setUpdatingProgres] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+  const [showCVPreview, setShowCVPreview] = useState(false)
+
+  const handleDownloadCV = async (format: 'pdf' | 'excel' | 'word') => {
+    setDownloading(true)
+    try {
+      if (format === 'pdf') {
+        await generateCVPDF(data)
+      } else if (format === 'excel') {
+        await generateCVExcel(data)
+      } else if (format === 'word') {
+        await generateCVWord(data)
+      }
+      toast({ title: 'CV berhasil didownload', variant: 'success' as any })
+    } catch (err) {
+      toast({ title: 'Gagal download CV', variant: 'destructive' })
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   useEffect(() => {
     api.get(`/kandidat/${id}`).then(r => {
@@ -113,6 +135,11 @@ export default function KandidatDetailPage() {
             {data.nama_katakana && <span className="text-muted-foreground font-mono text-sm">{data.nama_katakana}</span>}
             <Badge variant={stCfg.variant as any}>{stCfg.label}</Badge>
             {data.status_progres && <Badge variant={progresCfgItem.variant as any}>{progresCfgItem.label}</Badge>}
+          </div>
+          <div className="flex gap-2 mt-2">
+            <Button variant="default" size="sm" onClick={() => setShowCVPreview(true)}>
+              <FileText size={14} className="mr-1" /> Lihat CV
+            </Button>
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">{data.email} • {data.nama_cabang}</p>
         </div>
@@ -277,7 +304,6 @@ export default function KandidatDetailPage() {
                       'sertifikat_jft': 'Sertifikat JFT',
                       'pas_foto': 'Pas Foto',
                       'foto_full_body': 'Foto Full Body',
-                      'video_perkenalan': 'Video Perkenalan',
                       'kk': 'Kartu Keluarga (KK)',
                       'ktp': 'KTP',
                       'ijazah': 'Ijazah',
@@ -389,6 +415,10 @@ export default function KandidatDetailPage() {
           </Card>
         </div>
       </div>
+
+      {showCVPreview && (
+        <KandidatCVPreview data={data} onClose={() => setShowCVPreview(false)} />
+      )}
     </div>
   )
 }

@@ -49,15 +49,14 @@ const YearMonthPicker = ({ monthVal, yearVal, onMonthChange, onYearChange, place
 )
 
 const dokumenTypes = [
-  { key: 'sertifikat_jft', label: 'Sertifikat JFT' },
+  { key: 'sertifikat_jft', label: 'Sertifikat JFT', optional: true },
   { key: 'pas_foto', label: 'Pas Foto' },
   { key: 'foto_full_body', label: 'Foto Full Body' },
-  { key: 'video_perkenalan', label: 'Video Perkenalan' },
   { key: 'kk', label: 'Kartu Keluarga (KK)' },
   { key: 'ktp', label: 'KTP' },
   { key: 'ijazah', label: 'Ijazah' },
   { key: 'akte', label: 'Akte Kelahiran' },
-  { key: 'lainnya', label: 'Dokumen Lainnya' },
+  { key: 'lainnya', label: 'Dokumen Lainnya', optional: true },
 ]
 
 const ssw_options = [
@@ -69,7 +68,7 @@ const ssw_options = [
   'Driver'
 ];
 
-const REQUIRED_DOCS = ['pas_foto', 'foto_full_body', 'video_perkenalan', 'kk', 'ktp', 'ijazah', 'akte']
+const REQUIRED_DOCS = ['pas_foto', 'foto_full_body', 'kk', 'ktp', 'ijazah', 'akte']
 
 export default function FormulirPage() {
   const [step, setStep] = useState(1)
@@ -733,22 +732,23 @@ export default function FormulirPage() {
                 {dokumenTypes.map(dt => {
                   const uploaded = form.dokumen?.find((d: any) => d.jenis_dokumen === dt.key)
                   const isUploading = uploadingKey === dt.key
-                  const maxSize = dt.key === 'video_perkenalan' ? '20MB' : dt.key === 'foto_full_body' ? '3MB' : '2MB'
+                  const maxSize = dt.key === 'foto_full_body' ? '3MB' : '2MB'
+                  const isOptional = dt.optional
                   return (
                     <div key={dt.key} className={`border rounded-lg p-4 transition-colors ${uploaded ? 'border-emerald-200 bg-emerald-50/50' : 'border-border'}`}>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           {uploaded ? <CheckCircle size={14} className="text-emerald-500 shrink-0" /> : <FileText size={14} className="text-muted-foreground shrink-0" />}
-                          <span className="text-sm font-medium">{dt.label} *</span>
+                          <span className="text-sm font-medium">{dt.label} {isOptional ? '' : '*'}</span>
                         </div>
                         <span className="text-xs text-muted-foreground">Maks {maxSize}</span>
                       </div>
                       {uploaded && <p className="text-xs text-muted-foreground mb-2 truncate">{uploaded.nama_file}</p>}
                       <label className="cursor-pointer">
                         <input type="file" className="hidden" disabled={isUploading || isSubmitted}
-                          accept={dt.key === 'video_perkenalan' ? 'video/*' : 'image/jpeg,image/png,application/pdf'}
+                          accept="image/jpeg,image/png,application/pdf"
                           onChange={e => e.target.files?.[0] && handleUpload(dt.key, e.target.files[0])} />
-                        <div className={`flex items-center gap-2 text-xs px-3 py-1.5 border rounded-md w-fit transition-colors ${isSubmitted ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted cursor-pointer'} ${!uploaded ? 'border-red-300 bg-red-50' : 'border-border'}`}>
+                        <div className={`flex items-center gap-2 text-xs px-3 py-1.5 border rounded-md w-fit transition-colors ${isSubmitted ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted cursor-pointer'} ${!uploaded && !isOptional ? 'border-red-300 bg-red-50' : 'border-border'}`}>
                           {isUploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
                           {uploaded ? 'Ganti' : 'Upload'}
                         </div>

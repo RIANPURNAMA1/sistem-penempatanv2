@@ -10,6 +10,9 @@ const pool = mysql.createPool({
   connectionLimit: 10,
 });
 
+// Only run migrations when called directly via CLI (npm run db)
+if (require.main === module) {
+
 const migrations = [
   {
     name: 'create_cabang',
@@ -299,6 +302,61 @@ const migrations = [
     sql: `INSERT INTO users (nama, email, password, role, cabang_id) VALUES 
       ('Admin Penempatan', 'admin@kandidat.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin_penempatan', NULL),
       ('Admin Bandung', 'admin.bdg@kandidat.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin_cabang', 2)`
+  },
+  {
+    name: 'create_job_order',
+    check: async (conn) => {
+      const [t] = await conn.query("SHOW TABLES LIKE 'job_order'");
+      return t.length > 0;
+    },
+    sql: `CREATE TABLE IF NOT EXISTS job_order (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      nomor VARCHAR(50),
+      perusahaan_id INT,
+      tanggal_terbit DATE,
+      detail_job_order TEXT,
+      bidang_ssw VARCHAR(100),
+      nama_grup VARCHAR(200),
+      link_grup VARCHAR(500),
+      biaya_awal DECIMAL(15,2) DEFAULT 0,
+      biaya_akhir DECIMAL(15,2) DEFAULT 0,
+      tanggal_cv DATE,
+      pic_cv VARCHAR(100),
+      tanggal_mensetsu_1 DATE,
+      tanggal_mensetsu_2 DATE,
+      tanggal_mensetsu_3 DATE,
+      status_kelulusan ENUM('Menunggu', 'Lulus', 'Tidak Lulus', 'Tidak Hadir') DEFAULT 'Menunggu',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (perusahaan_id) REFERENCES perusahaan(id) ON DELETE SET NULL
+    )`
+  },
+  {
+    name: 'create_job_order_kandidat',
+    check: async (conn) => {
+      const [t] = await conn.query("SHOW TABLES LIKE 'job_order_kandidat'");
+      return t.length > 0;
+    },
+    sql: `CREATE TABLE IF NOT EXISTS job_order_kandidat (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      job_order_id INT NOT NULL,
+      kandidat_id INT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (job_order_id) REFERENCES job_order(id) ON DELETE CASCADE,
+      FOREIGN KEY (kandidat_id) REFERENCES kandidat_profil(id) ON DELETE CASCADE,
+      UNIQUE KEY unique_job_kandidat (job_order_id, kandidat_id)
+    )`
+  },
+  {
+    name: 'migrate_existing_joborder_kandidat',
+    check: async (conn) => {
+      const [t] = await conn.query("SHOW TABLES LIKE 'job_order_kandidat'");
+      if (t.length === 0) return false;
+      const [cnt] = await conn.query('SELECT COUNT(*) as cnt FROM job_order_kandidat');
+      return cnt[0].cnt > 0;
+    },
+    sql: `INSERT IGNORE INTO job_order_kandidat (job_order_id, kandidat_id)
+      SELECT id, kandidat_id FROM job_order WHERE kandidat_id IS NOT NULL`
   }
 ];
 
@@ -346,3 +404,6 @@ async function runMigrations() {
 }
 
 runMigrations();
+
+
+}

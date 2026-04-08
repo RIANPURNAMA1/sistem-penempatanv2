@@ -6,7 +6,8 @@ const getAll = async (req, res) => {
     const { search, status, cabang_id, jenis_kelamin, umur_min, umur_max, bidang_ssw, status_progres, jenjang } = req.query;
     const user = req.user;
     let query = `
-      SELECT kp.*, u.nama, u.email, u.status as user_status, c.nama_cabang, kp.pendidikan_terakhir
+      SELECT kp.*, u.nama, u.email, u.status as user_status, c.nama_cabang, kp.pendidikan_terakhir,
+        (SELECT path_file FROM kandidat_dokumen WHERE kandidat_id = kp.id AND jenis_dokumen = 'pas_foto' LIMIT 1) as pas_foto
       FROM kandidat_profil kp
       JOIN users u ON kp.user_id = u.id
       LEFT JOIN cabang c ON kp.cabang_id = c.id

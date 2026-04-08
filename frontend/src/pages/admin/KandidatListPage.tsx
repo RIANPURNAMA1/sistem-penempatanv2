@@ -12,7 +12,7 @@ interface Kandidat {
   id: number; user_id: number; nama: string; email: string; nama_romaji: string
   nama_katakana: string; jenis_kelamin: string; umur: number; nama_cabang: string
   status_formulir: string; status_progres: string; updated_at: string; level_bahasa_jepang: string
-  sertifikat_ssw: string; pendidikan_terakhir: string
+  sertifikat_ssw: string; pendidikan_terakhir: string; pas_foto: string
 }
 
 const statusFormulirConfig: Record<string, { label: string; variant: string }> = {
@@ -197,6 +197,7 @@ export default function KandidatListPage() {
               <thead className="bg-muted/50">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">No</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Foto</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Nama</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Cabang</th>
                   <th className="text-center px-4 py-3 font-medium text-muted-foreground">JK</th>
@@ -215,7 +216,7 @@ export default function KandidatListPage() {
                   </tr>
                 ) : data.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="text-center px-4 py-12 text-muted-foreground">Tidak ada data kandidat</td>
+                    <td colSpan={11} className="text-center px-4 py-12 text-muted-foreground">Tidak ada data kandidat</td>
                   </tr>
                 ) : (
                   data.map((item, i) => {
@@ -224,6 +225,22 @@ export default function KandidatListPage() {
                     return (
                       <tr key={item.id} className="hover:bg-muted/20 transition-colors">
                         <td className="px-4 py-3 text-muted-foreground">{i + 1}</td>
+                        <td className="px-4 py-3">
+                          {item.pas_foto ? (
+                            <img 
+                              src={item.pas_foto} 
+                              alt="Foto" 
+                              className="w-10 h-10 rounded-full object-cover border"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.nama_romaji || item.nama || '?')}&background=random`
+                              }}
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs">
+                              {item.nama_romaji ? item.nama_romaji.charAt(0).toUpperCase() : '?'}
+                            </div>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <div>
                             <p className="font-medium">{item.nama_romaji || item.nama}</p>

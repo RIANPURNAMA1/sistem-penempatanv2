@@ -239,3 +239,42 @@ INSERT INTO users (nama, email, password, role, cabang_id) VALUES
 ('Admin Bandung', 'admin.bdg@kandidat.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin_cabang', 2);
 
 -- Note: Default password for both admins is "password"
+
+-- ============ TABEL JOB ORDER / MENSETSU ============
+CREATE TABLE IF NOT EXISTS job_order (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  kandidat_id INT NOT NULL,
+  perusahaan_id INT,
+  
+  -- Job Order Info
+  nomor VARCHAR(50),
+  tanggal_terbit DATE,
+  detail_job_order TEXT,
+  bidang_ssw VARCHAR(200),
+  nama_grup VARCHAR(255),
+  link_grup VARCHAR(500),
+  biaya_awal DECIMAL(15,2) DEFAULT 0,
+  biaya_akhir DECIMAL(15,2) DEFAULT 0,
+  
+  -- CV Info
+  tanggal_cv DATE,
+  pic_cv VARCHAR(100),
+  
+  -- Mensetsu Dates
+  tanggal_mensetsu_1 DATE,
+  tanggal_mensetsu_2 DATE,
+  tanggal_mensetsu_3 DATE,
+  
+  -- Status
+  status_kelulusan ENUM('Lulus', 'Tidak Lulus', 'Menunggu', 'Tidak Hadir') DEFAULT 'Menunggu',
+  
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (kandidat_id) REFERENCES kandidat_profil(id) ON DELETE CASCADE,
+  FOREIGN KEY (perusahaan_id) REFERENCES perusahaan(id) ON DELETE SET NULL
+);
+
+-- ============ INDEX ============
+CREATE INDEX idx_job_order_kandidat ON job_order(kandidat_id);
+CREATE INDEX idx_job_order_perusahaan ON job_order(perusahaan_id);

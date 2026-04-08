@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Users, Building2, GitBranch, LogOut,
-  Menu, X, ChevronRight, FileText, User, Settings
+  Menu, X, ChevronRight, FileText, User, Settings, Briefcase
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -20,6 +20,7 @@ const LogoMenduniaJepang = "/images/logo4.png"
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin_penempatan', 'admin_cabang'] },
   { label: 'Data Kandidat', href: '/kandidat', icon: Users, roles: ['admin_penempatan', 'admin_cabang'] },
+  { label: 'Job Order', href: '/joborder', icon: Briefcase, roles: ['admin_penempatan', 'admin_cabang'] },
   { label: 'Perusahaan', href: '/perusahaan', icon: Building2, roles: ['admin_penempatan'] },
   { label: 'Cabang', href: '/cabang', icon: GitBranch, roles: ['admin_penempatan'] },
   { label: 'Manajemen User', href: '/users', icon: Settings, roles: ['admin_penempatan'] },

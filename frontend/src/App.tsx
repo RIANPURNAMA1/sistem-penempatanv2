@@ -8,6 +8,7 @@ import CabangPage from '@/pages/admin/CabangPage'
 import PerusahaanPage from '@/pages/admin/PerusahaanPage'
 import KandidatListPage from '@/pages/admin/KandidatListPage'
 import KandidatDetailPage from '@/pages/admin/KandidatDetailPage'
+import JobOrderPage from '@/pages/admin/JobOrderPage'
 import UsersPage from '@/pages/admin/UsersPage'
 import FormulirPage from '@/pages/kandidat/FormulirPage'
 import KandidatDashboardPage from '@/pages/kandidat/KandidatDashboardPage'
@@ -42,6 +43,11 @@ export default function App() {
         <Route path="/kandidat/:id" element={
           <ProtectedRoute roles={['admin_penempatan', 'admin_cabang']}>
             <KandidatDetailPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/joborder" element={
+          <ProtectedRoute roles={['admin_penempatan', 'admin_cabang']}>
+            <JobOrderPage />
           </ProtectedRoute>
         } />
         <Route path="/cabang" element={

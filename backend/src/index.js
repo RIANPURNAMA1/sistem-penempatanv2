@@ -21,6 +21,7 @@ app.use('/api/cabang', require('./routes/cabang'));
 app.use('/api/perusahaan', require('./routes/perusahaan'));
 app.use('/api/kandidat', require('./routes/kandidat'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/joborder', require('./routes/joborder'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));

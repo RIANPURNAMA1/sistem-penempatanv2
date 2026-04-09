@@ -275,6 +275,45 @@ const migrations = [
     sql: `ALTER TABLE kandidat_profil ADD COLUMN pendidikan_terakhir VARCHAR(50)`
   },
   {
+    name: 'add_status_keberangkatan',
+    check: async (conn) => {
+      const [cols] = await conn.query('SHOW COLUMNS FROM kandidat_profil LIKE "status_keberangkatan"');
+      return cols.length > 0;
+    },
+    sql: `ALTER TABLE kandidat_profil ADD COLUMN status_keberangkatan ENUM('stay', 'keluar', 'terbang') DEFAULT NULL`
+  },
+  {
+    name: 'add_progres_lengkap',
+    check: async (conn) => {
+      const [cols] = await conn.query('SHOW COLUMNS FROM kandidat_profil LIKE "status_kandidat"');
+      return cols.length > 0;
+    },
+    sql: `ALTER TABLE kandidat_profil 
+      ADD COLUMN status_kandidat VARCHAR(50) DEFAULT NULL,
+      ADD COLUMN nama_perusahaan VARCHAR(255) DEFAULT NULL,
+      ADD COLUMN bidang_ssw VARCHAR(255) DEFAULT NULL,
+      ADD COLUMN detail_pekerjaan TEXT DEFAULT NULL,
+      ADD COLUMN jadwal_interview DATE DEFAULT NULL,
+      ADD COLUMN catatan_interview TEXT DEFAULT NULL,
+      ADD COLUMN tgl_setsumeikai DATE DEFAULT NULL,
+      ADD COLUMN tgl_mensetsu_1 DATE DEFAULT NULL,
+      ADD COLUMN tgl_mensetsu_2 DATE DEFAULT NULL,
+      ADD COLUMN catatan_mensetsu TEXT DEFAULT NULL,
+      ADD COLUMN biaya_pemberkasan VARCHAR(50) DEFAULT NULL,
+      ADD COLUMN adm_tahap_1 VARCHAR(50) DEFAULT NULL,
+      ADD COLUMN adm_tahap_2 VARCHAR(50) DEFAULT NULL,
+      ADD COLUMN dokumen_dikirim DATE DEFAULT NULL,
+      ADD COLUMN terbit_kontrak DATE DEFAULT NULL,
+      ADD COLUMN kontrak_dikirim_tsk DATE DEFAULT NULL,
+      ADD COLUMN terbit_paspor DATE DEFAULT NULL,
+      ADD COLUMN masuk_imigrasi DATE DEFAULT NULL,
+      ADD COLUMN coe_terbit DATE DEFAULT NULL,
+      ADD COLUMN ektkln_pembuatan DATE DEFAULT NULL,
+      ADD COLUMN dokumen_dikirim_2 DATE DEFAULT NULL,
+      ADD COLUMN visa DATE DEFAULT NULL,
+      ADD COLUMN jadwal_penerbangan DATE DEFAULT NULL`
+  },
+  {
     name: 'update_jenis_dokumen_varchar',
     check: async (conn) => {
       const [cols] = await conn.query("SHOW COLUMNS FROM kandidat_dokumen LIKE 'jenis_dokumen'");
@@ -357,6 +396,27 @@ const migrations = [
     },
     sql: `INSERT IGNORE INTO job_order_kandidat (job_order_id, kandidat_id)
       SELECT id, kandidat_id FROM job_order WHERE kandidat_id IS NOT NULL`
+  },
+  {
+    name: 'create_kandidat_history',
+    check: async (conn) => {
+      const [t] = await conn.query("SHOW TABLES LIKE 'kandidat_history'");
+      return t.length > 0;
+    },
+    sql: `CREATE TABLE IF NOT EXISTS kandidat_history (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      kandidat_id INT NOT NULL,
+      admin_id INT,
+      admin_nama VARCHAR(200),
+      action_type ENUM('status_formulir', 'status_progres', 'status_keberangkatan', 'progres_lengkap', 'catatan') NOT NULL,
+      field_name VARCHAR(100),
+      old_value TEXT,
+      new_value TEXT,
+      description TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (kandidat_id) REFERENCES kandidat_profil(id) ON DELETE CASCADE,
+      FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
+    )`
   }
 ];
 

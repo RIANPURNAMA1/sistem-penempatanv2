@@ -9,6 +9,7 @@ router.use(authenticate);
 
 // Stats
 router.get('/stats', authorize('admin_penempatan', 'admin_cabang'), ctrl.getStats);
+router.get('/interview-stats', authorize('admin_penempatan', 'admin_cabang'), ctrl.getInterviewStats);
 
 // My profile (kandidat)
 router.get('/my-profile', authorize('kandidat'), ctrl.getMyProfile);
@@ -19,8 +20,11 @@ router.post('/upload-dokumen', authorize('kandidat'), uploadDokumenMiddleware, c
 // Admin access
 router.get('/', authorize('admin_penempatan', 'admin_cabang'), ctrl.getAll);
 router.get('/:id', authorize('admin_penempatan', 'admin_cabang'), ctrl.getById);
+router.get('/:id/history', authorize('admin_penempatan', 'admin_cabang'), ctrl.getHistory);
 router.patch('/:id/status', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateStatus);
 router.patch('/:id/progres', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateProgres);
+router.patch('/:id/keberangkatan', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateKeberangkatan);
+router.patch('/:id/progres-lengkap', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateProgresLengkap);
 
 // Get file limits for frontend
 router.get('/file-limits', (req, res) => {

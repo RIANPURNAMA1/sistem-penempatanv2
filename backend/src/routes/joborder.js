@@ -5,6 +5,20 @@ const pool = require('../config/database');
 // GET all job orders with kandidat and perusahaan data
 router.get('/', async (req, res) => {
   try {
+    const { tanggal_awal, tanggal_akhir } = req.query;
+    
+    let whereClause = '';
+    const params = [];
+    
+    if (tanggal_awal) {
+      whereClause += ' AND jo.tanggal_terbit >= ?';
+      params.push(tanggal_awal);
+    }
+    if (tanggal_akhir) {
+      whereClause += ' AND jo.tanggal_terbit <= ?';
+      params.push(tanggal_akhir);
+    }
+    
     const sql = `
       SELECT 
         jo.*,
@@ -16,10 +30,11 @@ router.get('/', async (req, res) => {
       LEFT JOIN job_order_kandidat jok ON jo.id = jok.job_order_id
       LEFT JOIN kandidat_profil k ON jok.kandidat_id = k.id
       LEFT JOIN perusahaan p ON jo.perusahaan_id = p.id
+      WHERE 1=1 ${whereClause}
       GROUP BY jo.id
       ORDER BY jo.created_at DESC
     `;
-    const [results] = await pool.query(sql);
+    const [results] = await pool.query(sql, params);
     results.forEach(r => {
       r.kandidat_ids = r.kandidat_ids ? r.kandidat_ids.split(',').map(Number) : [];
     });

@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, Badge, Textarea, Label } from '@/components/ui/components'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { toast } from '@/hooks/useToast'
 import api from '@/lib/api'
-import { ArrowLeft, FileText, User, GraduationCap, Briefcase, Users, Globe, Target, Upload, Loader2, Download } from 'lucide-react'
+import { ArrowLeft, FileText, User, GraduationCap, Briefcase, Users, Globe, Target, Upload, Loader2, Save, CheckCircle, History } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { generateCVPDF, generateCVExcel, generateCVWord } from '@/lib/cvGenerator'
 import KandidatCVPreview from '@/components/KandidatCVPreview'
+import HistoryModal from '@/components/HistoryModal'
 
 const statusFormulirConfig: Record<string, { label: string; variant: string }> = {
   draft: { label: 'Draft', variant: 'secondary' },
@@ -53,12 +56,40 @@ export default function KandidatDetailPage() {
   const [newStatus, setNewStatus] = useState('')
   const [catatanAdmin, setCatatanAdmin] = useState('')
   const [updatingStatus, setUpdatingStatus] = useState(false)
+  const [showVerifikasiModal, setShowVerifikasiModal] = useState(false)
   
-  const [newProgres, setNewProgres] = useState('')
-  const [catatanProgres, setCatatanProgres] = useState('')
   const [updatingProgres, setUpdatingProgres] = useState(false)
+  const [showProgresModal, setShowProgresModal] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [showCVPreview, setShowCVPreview] = useState(false)
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
+
+  // Form Progres Lengkap
+  const [formProgres, setFormProgres] = useState({
+    status_progres: '',
+    nama_perusahaan: '',
+    bidang_ssw: '',
+    detail_pekerjaan: '',
+    jadwal_interview: '',
+    catatan_interview: '',
+    tgl_setsumeikai: '',
+    tgl_mensetsu_1: '',
+    tgl_mensetsu_2: '',
+    catatan_mensetsu: '',
+    biaya_pemberkasan: '',
+    adm_tahap_1: '',
+    adm_tahap_2: '',
+    dokumen_dikirim: '',
+    terbit_kontrak: '',
+    kontrak_dikirim_tsk: '',
+    terbit_paspor: '',
+    masuk_imigrasi: '',
+    coe_terbit: '',
+    ektkln_pembuatan: '',
+    dokumen_dikirim_2: '',
+    visa: '',
+    jadwal_penerbangan: '',
+  })
 
   const handleDownloadCV = async (format: 'pdf' | 'excel' | 'word') => {
     setDownloading(true)
@@ -80,11 +111,35 @@ export default function KandidatDetailPage() {
 
   useEffect(() => {
     api.get(`/kandidat/${id}`).then(r => {
-      setData(r.data.data)
-      setNewStatus(r.data.data.status_formulir)
-      setCatatanAdmin(r.data.data.catatan_admin || '')
-      setNewProgres(r.data.data.status_progres || 'Job Matching')
-      setCatatanProgres(r.data.data.catatan_progres || '')
+      const d = r.data.data
+      setData(d)
+      setNewStatus(d.status_formulir)
+      setCatatanAdmin(d.catatan_admin || '')
+      setFormProgres({
+        status_progres: d.status_progres || '',
+        nama_perusahaan: d.nama_perusahaan || '',
+        bidang_ssw: d.bidang_ssw || '',
+        detail_pekerjaan: d.detail_pekerjaan || '',
+        jadwal_interview: d.jadwal_interview || '',
+        catatan_interview: d.catatan_interview || '',
+        tgl_setsumeikai: d.tgl_setsumeikai || '',
+        tgl_mensetsu_1: d.tgl_mensetsu_1 || '',
+        tgl_mensetsu_2: d.tgl_mensetsu_2 || '',
+        catatan_mensetsu: d.catatan_mensetsu || '',
+        biaya_pemberkasan: d.biaya_pemberkasan || '',
+        adm_tahap_1: d.adm_tahap_1 || '',
+        adm_tahap_2: d.adm_tahap_2 || '',
+        dokumen_dikirim: d.dokumen_dikirim || '',
+        terbit_kontrak: d.terbit_kontrak || '',
+        kontrak_dikirim_tsk: d.kontrak_dikirim_tsk || '',
+        terbit_paspor: d.terbit_paspor || '',
+        masuk_imigrasi: d.masuk_imigrasi || '',
+        coe_terbit: d.coe_terbit || '',
+        ektkln_pembuatan: d.ektkln_pembuatan || '',
+        dokumen_dikirim_2: d.dokumen_dikirim_2 || '',
+        visa: d.visa || '',
+        jadwal_penerbangan: d.jadwal_penerbangan || '',
+      })
     }).finally(() => setLoading(false))
   }, [id])
 
@@ -94,6 +149,7 @@ export default function KandidatDetailPage() {
       await api.patch(`/kandidat/${id}/status`, { status_formulir: newStatus, catatan_admin: catatanAdmin })
       toast({ title: 'Status berhasil diupdate', variant: 'success' as any })
       setData((p: any) => ({ ...p, status_formulir: newStatus, catatan_admin: catatanAdmin }))
+      setShowVerifikasiModal(false)
     } catch {
       toast({ title: 'Gagal update status', variant: 'destructive' })
     } finally { setUpdatingStatus(false) }
@@ -102,12 +158,17 @@ export default function KandidatDetailPage() {
   const handleUpdateProgres = async () => {
     setUpdatingProgres(true)
     try {
-      await api.patch(`/kandidat/${id}/progres`, { status_progres: newProgres, catatan_progres: catatanProgres })
-      toast({ title: 'Progres berhasil diupdate', variant: 'success' as any })
-      setData((p: any) => ({ ...p, status_progres: newProgres, catatan_progres: catatanProgres }))
+      await api.patch(`/kandidat/${id}/progres-lengkap`, formProgres)
+      toast({ title: 'Data progres berhasil disimpan', variant: 'success' as any })
+      setData((p: any) => ({ ...p, ...formProgres }))
+      setShowProgresModal(false)
     } catch {
-      toast({ title: 'Gagal update progres', variant: 'destructive' })
+      toast({ title: 'Gagal menyimpan progres', variant: 'destructive' })
     } finally { setUpdatingProgres(false) }
+  }
+
+  const updateFormProgres = (key: string, value: string) => {
+    setFormProgres(prev => ({ ...prev, [key]: value }))
   }
 
   const bool = (v: any) => v ? 'Ya' : 'Tidak'
@@ -136,9 +197,18 @@ export default function KandidatDetailPage() {
             <Badge variant={stCfg.variant as any}>{stCfg.label}</Badge>
             {data.status_progres && <Badge variant={progresCfgItem.variant as any}>{progresCfgItem.label}</Badge>}
           </div>
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-2 mt-2 flex-wrap">
             <Button variant="default" size="sm" onClick={() => setShowCVPreview(true)}>
               <FileText size={14} className="mr-1" /> Lihat CV
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowVerifikasiModal(true)}>
+              <CheckCircle size={14} className="mr-1" /> Verifikasi
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowProgresModal(true)}>
+              <Save size={14} className="mr-1" /> Progres
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowHistoryModal(true)}>
+              <History size={14} className="mr-1" /> Riwayat
             </Button>
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">{data.email} • {data.nama_cabang}</p>
@@ -345,56 +415,6 @@ export default function KandidatDetailPage() {
 
         {/* Right sidebar */}
         <div className="space-y-4">
-          {/* Verifikasi & Progres Form - Sticky */}
-          <div className="sticky top-4 space-y-4">
-            <Card>
-              <CardHeader><CardTitle className="text-base">Verifikasi</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label>Status Formulir</Label>
-                  <Select value={newStatus} onValueChange={setNewStatus}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(statusFormulirConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Catatan Admin</Label>
-                  <Textarea value={catatanAdmin} onChange={e => setCatatanAdmin(e.target.value)} placeholder="Tambahkan catatan..." rows={3} />
-                </div>
-                <Button className="w-full" onClick={handleUpdateStatus} disabled={updatingStatus}>
-                  {updatingStatus && <Loader2 size={14} className="mr-2 animate-spin" />}
-                  Simpan Status
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Progres Kandidat Form */}
-            <Card>
-              <CardHeader><CardTitle className="text-base">Progres Kandidat</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label>Status Progres</Label>
-                  <Select value={newProgres} onValueChange={setNewProgres}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(progresConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Catatan Progres</Label>
-                  <Textarea value={catatanProgres} onChange={e => setCatatanProgres(e.target.value)} placeholder="Tambahkan catatan progres..." rows={3} />
-                </div>
-                <Button className="w-full" variant="outline" onClick={handleUpdateProgres} disabled={updatingProgres}>
-                  {updatingProgres && <Loader2 size={14} className="mr-2 animate-spin" />}
-                  Simpan Progres
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
           <Card>
             <CardContent className="pt-4 space-y-2">
               <div className="text-xs text-muted-foreground">Update terakhir</div>
@@ -416,9 +436,202 @@ export default function KandidatDetailPage() {
         </div>
       </div>
 
+      {/* Verifikasi Modal */}
+      <Dialog open={showVerifikasiModal} onOpenChange={setShowVerifikasiModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Verifikasi Kandidat</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Status Formulir</Label>
+              <Select value={newStatus} onValueChange={setNewStatus}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(statusFormulirConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Catatan Admin</Label>
+              <Textarea value={catatanAdmin} onChange={e => setCatatanAdmin(e.target.value)} placeholder="Tambahkan catatan..." rows={3} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowVerifikasiModal(false)}>Batal</Button>
+            <Button onClick={handleUpdateStatus} disabled={updatingStatus}>
+              {updatingStatus && <Loader2 size={14} className="mr-2 animate-spin" />}
+              Simpan Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Progres Modal */}
+      <Dialog open={showProgresModal} onOpenChange={setShowProgresModal}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Progres Kandidat</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div className="space-y-1.5">
+              <Label>Status Kandidat</Label>
+              <Select value={formProgres.status_progres} onValueChange={v => updateFormProgres('status_progres', v)}>
+                <SelectTrigger><SelectValue placeholder="Pilih status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Job Matching">Job Matching</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="lamar ke perusahaan">Lamar ke Perusahaan</SelectItem>
+                  <SelectItem value="Interview">Interview</SelectItem>
+                  <SelectItem value="Jadwalkan Interview Ulang">Jadwalkan Interview Ulang</SelectItem>
+                  <SelectItem value="Lulus interview">Lulus Interview</SelectItem>
+                  <SelectItem value="Gagal Interview">Gagal Interview</SelectItem>
+                  <SelectItem value="Pemberkasan">Pemberkasan</SelectItem>
+                  <SelectItem value="Berangkat">Berangkat</SelectItem>
+                  <SelectItem value="Ditolak">Ditolak</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="border-t pt-4">
+              <p className="text-xs font-medium text-muted-foreground mb-3">JOB / PERUSAHAAN</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Nama Perusahaan</Label>
+                  <Input value={formProgres.nama_perusahaan} onChange={e => updateFormProgres('nama_perusahaan', e.target.value)} placeholder="Nama perusahaan..." />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Bidang SSW</Label>
+                  <Input value={formProgres.bidang_ssw} onChange={e => updateFormProgres('bidang_ssw', e.target.value)} placeholder="Bidang SSW..." />
+                </div>
+              </div>
+              <div className="space-y-1.5 mt-3">
+                <Label className="text-xs">Detail Pekerjaan</Label>
+                <Textarea value={formProgres.detail_pekerjaan} onChange={e => updateFormProgres('detail_pekerjaan', e.target.value)} placeholder="Detail pekerjaan..." rows={2} />
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <p className="text-xs font-medium text-muted-foreground mb-3">JADWAL INTERVIEW</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Jadwal Interview</Label>
+                  <Input type="date" value={formProgres.jadwal_interview} onChange={e => updateFormProgres('jadwal_interview', e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-1.5 mt-3">
+                <Label className="text-xs">Catatan Interview</Label>
+                <Textarea value={formProgres.catatan_interview} onChange={e => updateFormProgres('catatan_interview', e.target.value)} placeholder="Catatan interview..." rows={2} />
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <p className="text-xs font-medium text-muted-foreground mb-3">DATA INTERVIEW & MENSETSU</p>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">TGL Setsumeikai</Label>
+                  <Input type="date" value={formProgres.tgl_setsumeikai} onChange={e => updateFormProgres('tgl_setsumeikai', e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">TGL Mensetsu 1</Label>
+                  <Input type="date" value={formProgres.tgl_mensetsu_1} onChange={e => updateFormProgres('tgl_mensetsu_1', e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">TGL Mensetsu 2</Label>
+                  <Input type="date" value={formProgres.tgl_mensetsu_2} onChange={e => updateFormProgres('tgl_mensetsu_2', e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-1.5 mt-3">
+                <Label className="text-xs">Catatan Mensetsu</Label>
+                <Textarea value={formProgres.catatan_mensetsu} onChange={e => updateFormProgres('catatan_mensetsu', e.target.value)} placeholder="Catatan mensetsu..." rows={2} />
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <p className="text-xs font-medium text-muted-foreground mb-3">BIAYA & ADMINISTRASI</p>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Biaya Pemberkasan</Label>
+                  <Input value={formProgres.biaya_pemberkasan} onChange={e => updateFormProgres('biaya_pemberkasan', e.target.value)} placeholder="Rp..." />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">ADM Tahap 1</Label>
+                  <Input value={formProgres.adm_tahap_1} onChange={e => updateFormProgres('adm_tahap_1', e.target.value)} placeholder="Rp..." />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">ADM Tahap 2</Label>
+                  <Input value={formProgres.adm_tahap_2} onChange={e => updateFormProgres('adm_tahap_2', e.target.value)} placeholder="Rp..." />
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <p className="text-xs font-medium text-muted-foreground mb-3">TRACKING DOKUMEN & PROSES</p>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Dok. Dikirim</Label>
+                  <Input type="date" value={formProgres.dokumen_dikirim} onChange={e => updateFormProgres('dokumen_dikirim', e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Terbit Kontrak</Label>
+                  <Input type="date" value={formProgres.terbit_kontrak} onChange={e => updateFormProgres('terbit_kontrak', e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Kontrak ke TSK</Label>
+                  <Input type="date" value={formProgres.kontrak_dikirim_tsk} onChange={e => updateFormProgres('kontrak_dikirim_tsk', e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Terbit Paspor</Label>
+                  <Input type="date" value={formProgres.terbit_paspor} onChange={e => updateFormProgres('terbit_paspor', e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Masuk Imigrasi</Label>
+                  <Input type="date" value={formProgres.masuk_imigrasi} onChange={e => updateFormProgres('masuk_imigrasi', e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">COE Terbit</Label>
+                  <Input type="date" value={formProgres.coe_terbit} onChange={e => updateFormProgres('coe_terbit', e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">E-KTKLN</Label>
+                  <Input type="date" value={formProgres.ektkln_pembuatan} onChange={e => updateFormProgres('ektkln_pembuatan', e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Dok. Dikirim 2</Label>
+                  <Input type="date" value={formProgres.dokumen_dikirim_2} onChange={e => updateFormProgres('dokumen_dikirim_2', e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Visa</Label>
+                  <Input type="date" value={formProgres.visa} onChange={e => updateFormProgres('visa', e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Jadwal Penerbangan</Label>
+                  <Input type="date" value={formProgres.jadwal_penerbangan} onChange={e => updateFormProgres('jadwal_penerbangan', e.target.value)} />
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowProgresModal(false)}>Batal</Button>
+            <Button onClick={handleUpdateProgres} disabled={updatingProgres}>
+              {updatingProgres && <Loader2 size={14} className="mr-2 animate-spin" />}
+              <Save size={14} className="mr-2" />
+              Simpan Progres
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {showCVPreview && (
         <KandidatCVPreview data={data} onClose={() => setShowCVPreview(false)} />
       )}
+
+      <HistoryModal 
+        open={showHistoryModal} 
+        onOpenChange={setShowHistoryModal} 
+        kandidatId={Number(id)} 
+        kandidatName={data?.nama || ''} 
+      />
     </div>
   )
 }

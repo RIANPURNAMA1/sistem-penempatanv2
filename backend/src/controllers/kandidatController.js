@@ -168,7 +168,23 @@ const updateStatus = async (req, res) => {
     const { status_formulir, catatan_admin } = req.body;
     const validStatus = ['draft', 'submitted', 'reviewed', 'approved', 'rejected'];
     if (!validStatus.includes(status_formulir)) return res.status(400).json({ success: false, message: 'Status tidak valid' });
+    
+    const [old] = await pool.query('SELECT status_formulir FROM kandidat_profil WHERE id = ?', [req.params.id]);
+    const oldValue = old.length ? old[0].status_formulir : null;
+    
     await pool.query('UPDATE kandidat_profil SET status_formulir = ?, catatan_admin = ? WHERE id = ?', [status_formulir, catatan_admin, req.params.id]);
+    
+    await addHistory(
+      req.params.id,
+      req.user?.id || null,
+      req.user?.nama || 'System',
+      'status_formulir',
+      'status_formulir',
+      oldValue,
+      status_formulir,
+      `Mengubah status formulir dari "${oldValue}" menjadi "${status_formulir}"`
+    );
+    
     res.json({ success: true, message: 'Status berhasil diupdate' });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });
@@ -180,9 +196,131 @@ const updateProgres = async (req, res) => {
     const { status_progres, catatan_progres } = req.body;
     const validProgres = ['Job Matching', 'Pending', 'lamar ke perusahaan', 'Interview', 'Jadwalkan Interview Ulang', 'Lulus interview', 'Gagal Interview', 'Pemberkasan', 'Berangkat', 'Ditolak'];
     if (!validProgres.includes(status_progres)) return res.status(400).json({ success: false, message: 'Status progres tidak valid' });
+    
+    const [old] = await pool.query('SELECT status_progres FROM kandidat_profil WHERE id = ?', [req.params.id]);
+    const oldValue = old.length ? old[0].status_progres : null;
+    
     await pool.query('UPDATE kandidat_profil SET status_progres = ?, catatan_progres = ? WHERE id = ?', [status_progres, catatan_progres, req.params.id]);
+    
+    await addHistory(
+      req.params.id,
+      req.user?.id || null,
+      req.user?.nama || 'System',
+      'status_progres',
+      'status_progres',
+      oldValue,
+      status_progres,
+      `Mengubah progres dari "${oldValue || 'null'}" menjadi "${status_progres}"`
+    );
+    
     res.json({ success: true, message: 'Progres berhasil diupdate' });
   } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const updateKeberangkatan = async (req, res) => {
+  try {
+    const { status_keberangkatan } = req.body;
+    const validStatus = ['stay', 'keluar', 'terbang'];
+    if (!validStatus.includes(status_keberangkatan)) {
+      return res.status(400).json({ success: false, message: 'Status keberangkatan tidak valid' });
+    }
+    
+    const [old] = await pool.query('SELECT status_keberangkatan FROM kandidat_profil WHERE id = ?', [req.params.id]);
+    const oldValue = old.length ? old[0].status_keberangkatan : null;
+    
+    await pool.query('UPDATE kandidat_profil SET status_keberangkatan = ? WHERE id = ?', [status_keberangkatan, req.params.id]);
+    
+    await addHistory(
+      req.params.id,
+      req.user?.id || null,
+      req.user?.nama || 'System',
+      'status_keberangkatan',
+      'status_keberangkatan',
+      oldValue,
+      status_keberangkatan,
+      `Mengubah status keberangkatan dari "${oldValue || 'null'}" menjadi "${status_keberangkatan}"`
+    );
+    
+    res.json({ success: true, message: 'Status keberangkatan berhasil diupdate' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const updateProgresLengkap = async (req, res) => {
+  try {
+    const fields = [
+      'status_progres', 'nama_perusahaan', 'bidang_ssw', 'detail_pekerjaan',
+      'jadwal_interview', 'catatan_interview', 'tgl_setsumeikai', 'tgl_mensetsu_1',
+      'tgl_mensetsu_2', 'catatan_mensetsu', 'biaya_pemberkasan', 'adm_tahap_1',
+      'adm_tahap_2', 'dokumen_dikirim', 'terbit_kontrak', 'kontrak_dikirim_tsk',
+      'terbit_paspor', 'masuk_imigrasi', 'coe_terbit', 'ektkln_pembuatan',
+      'dokumen_dikirim_2', 'visa', 'jadwal_penerbangan'
+    ];
+    
+    const updates = [];
+    const values = [];
+    
+    for (const field of fields) {
+      if (req.body[field] !== undefined) {
+        updates.push(`${field} = ?`);
+        values.push(req.body[field]);
+      }
+    }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'Tidak ada data untuk diupdate' });
+    }
+    
+    values.push(req.params.id);
+    await pool.query(`UPDATE kandidat_profil SET ${updates.join(', ')} WHERE id = ?`, values);
+    
+    for (const field of fields) {
+      if (req.body[field] !== undefined) {
+        const fieldLabels = {
+          status_progres: 'Status Progres',
+          nama_perusahaan: 'Nama Perusahaan',
+          bidang_ssw: 'Bidang SSW',
+          detail_pekerjaan: 'Detail Pekerjaan',
+          jadwal_interview: 'Jadwal Interview',
+          catatan_interview: 'Catatan Interview',
+          tgl_setsumeikai: 'TGL Setsumeikai',
+          tgl_mensetsu_1: 'TGL Mensetsu 1',
+          tgl_mensetsu_2: 'TGL Mensetsu 2',
+          catatan_mensetsu: 'Catatan Mensetsu',
+          biaya_pemberkasan: 'Biaya Pemberkasan',
+          adm_tahap_1: 'ADM Tahap 1',
+          adm_tahap_2: 'ADM Tahap 2',
+          dokumen_dikirim: 'Dok. Dikirim',
+          terbit_kontrak: 'Terbit Kontrak',
+          kontrak_dikirim_tsk: 'Kontrak ke TSK',
+          terbit_paspor: 'Terbit Paspor',
+          masuk_imigrasi: 'Masuk Imigrasi',
+          coe_terbit: 'COE Terbit',
+          ektkln_pembuatan: 'E-KTKLN',
+          dokumen_dikirim_2: 'Dok. Dikirim 2',
+          visa: 'Visa',
+          jadwal_penerbangan: 'Jadwal Penerbangan'
+        };
+        
+        await addHistory(
+          req.params.id,
+          req.user?.id || null,
+          req.user?.nama || 'System',
+          'progres_lengkap',
+          field,
+          null,
+          req.body[field],
+          `Mengupdate ${fieldLabels[field] || field}`
+        );
+      }
+    }
+    
+    res.json({ success: true, message: 'Data progres berhasil disimpan' });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -231,34 +369,228 @@ const getStats = async (req, res) => {
     const [byCabang] = await pool.query(`SELECT c.nama_cabang, COUNT(kp.id) as count FROM kandidat_profil kp LEFT JOIN cabang c ON kp.cabang_id = c.id ${whereClause} GROUP BY kp.cabang_id, c.nama_cabang`, params);
     
     const [allProfiles] = await pool.query(`
-      SELECT kp.sertifikat_ssw, kp.jenis_kelamin 
+      SELECT kp.sertifikat_ssw, kp.jenis_kelamin, kp.status_progres 
       FROM kandidat_profil kp 
       ${whereClause}
     `, params);
 
     const sswList = ['Pengolahan Makanan', 'Pertanian', 'Kaigo (perawat)', 'Building Cleaning', 'Restoran', 'Driver'];
+    const progresList = ['Job Matching', 'Pending', 'lamar ke perusahaan', 'Interview', 'Jadwalkan Interview Ulang', 'Lulus interview', 'Gagal Interview', 'Pemberkasan', 'Berangkat', 'Ditolak'];
     const bySSWGender = [];
+    const bySSWProgres = [];
     
     sswList.forEach(ssw => {
-      const laki = allProfiles.filter(p => {
-        if (!p.sertifikat_ssw || !p.jenis_kelamin) return false;
+      const profileBySSW = allProfiles.filter(p => {
+        if (!p.sertifikat_ssw) return false;
         const sswArray = p.sertifikat_ssw.split(',').map(s => s.trim());
-        return sswArray.includes(ssw) && p.jenis_kelamin === 'Laki-laki';
-      }).length;
+        return sswArray.includes(ssw);
+      });
       
-      const perempuan = allProfiles.filter(p => {
-        if (!p.sertifikat_ssw || !p.jenis_kelamin) return false;
-        const sswArray = p.sertifikat_ssw.split(',').map(s => s.trim());
-        return sswArray.includes(ssw) && p.jenis_kelamin === 'Perempuan';
-      }).length;
+      const laki = profileBySSW.filter(p => p.jenis_kelamin === 'Laki-laki').length;
+      const perempuan = profileBySSW.filter(p => p.jenis_kelamin === 'Perempuan').length;
       
-      bySSWGender.push({ ssw, laki, perempuan });
+      bySSWGender.push({ ssw, laki, perempuan, total: laki + perempuan });
+      
+      const progresCounts = {};
+      progresList.forEach(progres => {
+        progresCounts[progres] = 0;
+      });
+      
+      profileBySSW.forEach(p => {
+        const progres = p.status_progres || 'Pending';
+        if (progresCounts[progres] !== undefined) {
+          progresCounts[progres]++;
+        }
+      });
+      
+      bySSWProgres.push({
+        ssw,
+        progres: Object.entries(progresCounts).map(([status, count]) => ({ status, count }))
+      });
     });
 
-    res.json({ success: true, data: { total: total[0].total, byStatus, byCabang, bySSWGender } });
+    const [byCabangProgres] = await pool.query(`
+      SELECT 
+        c.nama_cabang,
+        kp.status_progres,
+        COUNT(kp.id) as count
+      FROM kandidat_profil kp 
+      LEFT JOIN cabang c ON kp.cabang_id = c.id 
+      ${whereClause}
+      GROUP BY kp.cabang_id, c.nama_cabang, kp.status_progres
+      ORDER BY c.nama_cabang, kp.status_progres
+    `, params);
+
+    const [jftByGender] = await pool.query(`
+      SELECT 
+        kp.jenis_kelamin,
+        COUNT(DISTINCT CASE WHEN jft.id IS NOT NULL THEN kp.id END) as has_jft,
+        COUNT(DISTINCT CASE WHEN jft.id IS NULL THEN kp.id END) as no_jft
+      FROM kandidat_profil kp
+      LEFT JOIN kandidat_dokumen jft ON jft.kandidat_id = kp.id AND jft.jenis_dokumen = 'sertifikat_jft'
+      ${whereClause ? whereClause : 'WHERE 1=1'}
+      GROUP BY kp.jenis_kelamin
+    `, params);
+
+    const [jftByCabang] = await pool.query(`
+      SELECT 
+        c.nama_cabang,
+        COUNT(DISTINCT CASE WHEN jft.id IS NOT NULL THEN kp.id END) as has_jft,
+        COUNT(DISTINCT CASE WHEN jft.id IS NULL THEN kp.id END) as no_jft
+      FROM kandidat_profil kp
+      LEFT JOIN kandidat_dokumen jft ON jft.kandidat_id = kp.id AND jft.jenis_dokumen = 'sertifikat_jft'
+      LEFT JOIN cabang c ON kp.cabang_id = c.id
+      ${whereClause}
+      GROUP BY kp.cabang_id, c.nama_cabang
+      ORDER BY c.nama_cabang
+    `, params);
+
+    const [sswByGender] = await pool.query(`
+      SELECT 
+        kp.jenis_kelamin,
+        COUNT(DISTINCT CASE WHEN ssw.id IS NOT NULL THEN kp.id END) as has_ssw,
+        COUNT(DISTINCT CASE WHEN ssw.id IS NULL THEN kp.id END) as no_ssw
+      FROM kandidat_profil kp
+      LEFT JOIN kandidat_dokumen ssw ON ssw.kandidat_id = kp.id AND ssw.jenis_dokumen LIKE 'ssw_%'
+      ${whereClause ? whereClause : 'WHERE 1=1'}
+      GROUP BY kp.jenis_kelamin
+    `, params);
+
+    const [sswByCabang] = await pool.query(`
+      SELECT 
+        c.nama_cabang,
+        COUNT(DISTINCT CASE WHEN ssw.id IS NOT NULL THEN kp.id END) as has_ssw,
+        COUNT(DISTINCT CASE WHEN ssw.id IS NULL THEN kp.id END) as no_ssw
+      FROM kandidat_profil kp
+      LEFT JOIN kandidat_dokumen ssw ON ssw.kandidat_id = kp.id AND ssw.jenis_dokumen LIKE 'ssw_%'
+      LEFT JOIN cabang c ON kp.cabang_id = c.id
+      ${whereClause}
+      GROUP BY kp.cabang_id, c.nama_cabang
+      ORDER BY c.nama_cabang
+    `, params);
+
+    res.json({ success: true, data: { 
+      total: total[0].total, 
+      byStatus, 
+      byCabang, 
+      bySSWGender, 
+      bySSWProgres, 
+      byCabangProgres,
+      jftByGender,
+      jftByCabang,
+      sswByGender,
+      sswByCabang
+    } });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
-module.exports = { getAll, getById, getMyProfile, updateMyProfile, updateStatus, updateProgres, submitForm, uploadDokumen, getStats };
+const addHistory = async (kandidatId, adminId, adminNama, actionType, fieldName, oldValue, newValue, description) => {
+  try {
+    console.log('Adding history:', { kandidatId, adminId, adminNama, actionType, fieldName, oldValue, newValue, description });
+    const result = await pool.query(
+      `INSERT INTO kandidat_history (kandidat_id, admin_id, admin_nama, action_type, field_name, old_value, new_value, description) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [kandidatId, adminId, adminNama, actionType, fieldName, oldValue, newValue, description]
+    );
+    console.log('History added successfully:', result[0].insertId);
+  } catch (err) {
+    console.error('Error adding history:', err);
+  }
+};
+
+const getHistory = async (req, res) => {
+  try {
+    const kandidatId = req.params.id;
+    console.log('Fetching history for kandidat_id:', kandidatId);
+    
+    const [history] = await pool.query(`
+      SELECT kh.*, u.nama as admin_user_nama
+      FROM kandidat_history kh
+      LEFT JOIN users u ON kh.admin_id = u.id
+      WHERE kh.kandidat_id = ?
+      ORDER BY kh.created_at DESC
+    `, [kandidatId]);
+    
+    console.log('Found history records:', history.length);
+    res.json({ success: true, data: history });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const getInterviewStats = async (req, res) => {
+  try {
+    const user = req.user;
+    const { start_date, end_date, filter_type } = req.query;
+    
+    let dateFilter = '';
+    const params = [];
+    
+    if (filter_type === 'today') {
+      const today = new Date().toISOString().split('T')[0];
+      dateFilter = ' AND DATE(kh.created_at) = ?';
+      params.push(today);
+    } else if (filter_type === 'yesterday') {
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      dateFilter = ' AND DATE(kh.created_at) = ?';
+      params.push(yesterday);
+    } else if (filter_type === 'week') {
+      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+      dateFilter = ' AND DATE(kh.created_at) >= ?';
+      params.push(weekAgo);
+    } else if (filter_type === 'month') {
+      const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+      dateFilter = ' AND DATE(kh.created_at) >= ?';
+      params.push(monthAgo);
+    } else if (start_date && end_date) {
+      dateFilter = ' AND DATE(kh.created_at) BETWEEN ? AND ?';
+      params.push(start_date, end_date);
+    }
+    
+    if (user.role === 'admin_cabang') {
+      dateFilter += ' AND kp.cabang_id = ?';
+      params.push(user.cabang_id);
+    }
+    
+    // Count Interview status changes
+    const [interviewCount] = await pool.query(`
+      SELECT COUNT(DISTINCT kh.kandidat_id) as count
+      FROM kandidat_history kh
+      JOIN kandidat_profil kp ON kh.kandidat_id = kp.id
+      WHERE kh.field_name = 'status_progres' 
+      AND kh.new_value = 'Interview'
+      ${dateFilter}
+    `, params);
+    
+    // Count Lulus Interview status changes
+    const [lulusCount] = await pool.query(`
+      SELECT COUNT(DISTINCT kh.kandidat_id) as count
+      FROM kandidat_history kh
+      JOIN kandidat_profil kp ON kh.kandidat_id = kp.id
+      WHERE kh.field_name = 'status_progres' 
+      AND kh.new_value = 'Lulus interview'
+      ${dateFilter}
+    `, params);
+    
+    const interviewNum = interviewCount[0]?.count || 0;
+    const lulusNum = lulusCount[0]?.count || 0;
+    const percentage = interviewNum > 0 ? Math.round((lulusNum / interviewNum) * 100) : 0;
+    
+    res.json({ 
+      success: true, 
+      data: { 
+        interview_count: interviewNum, 
+        lulus_count: lulusNum,
+        percentage 
+      } 
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+module.exports = { getAll, getById, getMyProfile, updateMyProfile, updateStatus, updateProgres, updateKeberangkatan, updateProgresLengkap, submitForm, uploadDokumen, getStats, addHistory, getHistory, getInterviewStats };

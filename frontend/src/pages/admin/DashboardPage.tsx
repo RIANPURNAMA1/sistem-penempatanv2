@@ -24,7 +24,7 @@ export default function DashboardPage() {
   const { user } = useAuthStore()
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'verifikasi' | 'status' | 'sertifikasi' | 'job order' | 'interview'>('interview')
+  const [activeTab, setActiveTab] = useState<'verifikasi' | 'status' | 'sertifikasi' | 'job order' | 'interview'>('verifikasi')
   const [jobOrderStats, setJobOrderStats] = useState<{ bidang: string; count: number }[]>([])
   const [loadingJobOrder, setLoadingJobOrder] = useState(false)
   const [filterTanggalAwal, setFilterTanggalAwal] = useState('')
@@ -135,6 +135,10 @@ export default function DashboardPage() {
           Interview & Lulus
         </button>
       </div>
+
+      {activeTab === 'verifikasi' && (
+        <VerifikasiPendaftaran stats={stats} loading={loading} />
+      )}
 
       {activeTab === 'status' && (
         <StatusKandidat stats={stats?.bySSWGender} bySSWProgres={stats?.bySSWProgres} byCabangProgres={stats?.byCabangProgres} loading={loading} />

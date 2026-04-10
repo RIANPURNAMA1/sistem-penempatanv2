@@ -12,6 +12,7 @@ import JobOrderPage from '@/pages/admin/JobOrderPage'
 import UsersPage from '@/pages/admin/UsersPage'
 import FormulirPage from '@/pages/kandidat/FormulirPage'
 import KandidatDashboardPage from '@/pages/kandidat/KandidatDashboardPage'
+import DataSistemLamaPage from '@/pages/admin/DataSistemLamaPage'
 import { useAuthStore } from '@/store/authStore'
 
 function HomeRedirect() {
@@ -63,6 +64,11 @@ export default function App() {
         <Route path="/users" element={
           <ProtectedRoute roles={['admin_penempatan']}>
             <UsersPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/data-sistem-lama" element={
+          <ProtectedRoute roles={['admin_penempatan']}>
+            <DataSistemLamaPage />
           </ProtectedRoute>
         } />
 

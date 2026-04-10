@@ -4,7 +4,8 @@ import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Users, Building2, GitBranch, LogOut,
-  Menu, X, ChevronRight, FileText, User, Settings, Briefcase
+  Menu, X, ChevronRight, FileText, User, Settings, Briefcase,
+  Database
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -24,6 +25,7 @@ const navItems: NavItem[] = [
   { label: 'Perusahaan', href: '/perusahaan', icon: Building2, roles: ['admin_penempatan'] },
   { label: 'Cabang', href: '/cabang', icon: GitBranch, roles: ['admin_penempatan'] },
   { label: 'Manajemen User', href: '/users', icon: Settings, roles: ['admin_penempatan'] },
+  { label: 'Data Sistem Lama', href: '/data-sistem-lama', icon: Database, roles: ['admin_penempatan'] },
   { label: 'Dashboard', href: '/kandidat-dashboard', icon: LayoutDashboard, roles: ['kandidat'] },
   { label: 'Isi Formulir', href: '/formulir', icon: FileText, roles: ['kandidat'] },
   { label: 'Profil', href: '/profil', icon: User, roles: ['kandidat'] },

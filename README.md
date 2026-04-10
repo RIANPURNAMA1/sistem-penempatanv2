@@ -194,3 +194,15 @@ cd frontend
 npm run build
 # Output di dist/ folder
 ```
+
+
+
+<!-- fitur pada penempatan perusahaan -->
+
+1. nama perusahaan
+2. alamat
+3. kontak
+4. email
+5. website
+6. status -> [aktif, nonaktif]
+7. keterangan

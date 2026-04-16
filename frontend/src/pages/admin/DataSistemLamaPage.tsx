@@ -3,8 +3,20 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from '@/hooks/useToast'
-import { Search, Eye, Users, Loader2, FileText, ChevronLeft, ChevronRight, History, LayoutDashboard, FileCheck, UserCheck, UserPlus } from 'lucide-react'
+import { Search, Eye, Users, Loader2, FileText, ChevronLeft, ChevronRight, History, LayoutDashboard, FileCheck, UserCheck, UserPlus, FileStack } from 'lucide-react'
 import KandidatTable from '@/components/admin/KandidatTable'
+import DataCvTable from '@/components/admin/DataCvTable'
+
+interface Dokumen {
+  foto?: string
+  ktp?: string
+  kk?: string
+  ijasah?: string
+  sertifikat_jft?: string | null
+  sertifikat_ssw?: string[] | null
+  bukti_pelunasan?: string
+  akte?: string
+}
 
 interface Pendaftaran {
   id: number
@@ -22,15 +34,13 @@ interface Pendaftaran {
   status_jft: string | null
   status_ssw: string | null
   verifikasi: string | null
-  ktp: string | null
-  kk: string | null
-  ijasah: string | null
   created_at: string
   nama_cabang: string | null
+  dokumen: Dokumen | null
 }
 
 export default function DataSistemLamaPage() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'pendaftaran' | 'kandidat' | 'terverifikasi'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'pendaftaran' | 'kandidat' | 'terverifikasi' | 'datacv'>('dashboard')
   const [data, setData] = useState<Pendaftaran[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -39,12 +49,27 @@ export default function DataSistemLamaPage() {
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
   const [kandidatData, setKandidatData] = useState<any[]>([])
+  const [selectedKandidat, setSelectedKandidat] = useState<any>(null)
+  const [showKandidatModal, setShowKandidatModal] = useState(false)
+
+  const handleSelectKandidat = (kandidat: any) => {
+    setSelectedKandidat(kandidat)
+    setShowKandidatModal(true)
+  }
 
   const load = () => {
     setLoading(true)
     fetch('http://127.0.0.1:8000/api/pendaftaran')
       .then(r => r.json())
-      .then(r => { if (r.success) setData(r.data) })
+      .then(r => {
+        if (r.success) {
+          const mappedData = r.data.map((item: any) => ({
+            ...item,
+            dokumen: item.dokumen || {}
+          }))
+          setData(mappedData)
+        }
+      })
       .catch(() => toast({ title: 'Gagal memuat', variant: 'destructive' }))
       .finally(() => setLoading(false))
   }
@@ -81,6 +106,7 @@ export default function DataSistemLamaPage() {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'pendaftaran', label: 'Pendaftaran', icon: UserPlus },
     { id: 'kandidat', label: 'Kandidat', icon: Users },
+    { id: 'datacv', label: 'Data CV', icon: FileStack },
     { id: 'terverifikasi', label: 'Terverifikasi', icon: UserCheck },
   ]
 
@@ -174,7 +200,9 @@ export default function DataSistemLamaPage() {
         </div>
       )}
 
-      {activeTab === 'kandidat' && <KandidatTable />}
+      {activeTab === 'kandidat' && <KandidatTable onSelect={handleSelectKandidat} />}
+
+      {activeTab === 'datacv' && <DataCvTable />}
 
       {activeTab === 'terverifikasi' && (
         <div className="bg-white rounded-lg border overflow-hidden">
@@ -205,7 +233,42 @@ export default function DataSistemLamaPage() {
             <div className="grid grid-cols-3 gap-4">
               <div><h4 className="font-bold text-blue-600 text-sm mb-2">IDENTITAS</h4><DetailItem label="NIK" value={selectedData.nik} /><DetailItem label="Agama" value={selectedData.agama} /><DetailItem label="Pendidikan" value={selectedData.pendidikan_terakhir} /></div>
               <div><h4 className="font-bold text-blue-600 text-sm mb-2">PROGRAM</h4><DetailItem label="ID Prometric" value={selectedData.id_prometric} /><DetailItem label="Status JFT" value={selectedData.status_jft} /><DetailItem label="Status SSW" value={selectedData.status_ssw} /></div>
-              <div><h4 className="font-bold text-blue-600 text-sm mb-2">DOKUMEN</h4><LinkFile label="KTP" path={selectedData.ktp} /><LinkFile label="KK" path={selectedData.kk} /><LinkFile label="Ijazah" path={selectedData.ijasah} /></div>
+              <div><h4 className="font-bold text-blue-600 text-sm mb-2">DOKUMEN</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <LinkFile label="Pas Foto" path={selectedData.dokumen?.foto} />
+                  <LinkFile label="KTP" path={selectedData.dokumen?.ktp} />
+                  <LinkFile label="KK" path={selectedData.dokumen?.kk} />
+                  <LinkFile label="Ijazah" path={selectedData.dokumen?.ijasah} />
+                  <LinkFile label="Akte Kelahiran" path={selectedData.dokumen?.akte} />
+                  <LinkFile label="Bukti Pelunasan" path={selectedData.dokumen?.bukti_pelunasan} />
+                  <LinkFile label="Sertifikat JFT" path={selectedData.dokumen?.sertifikat_jft} />
+                  <LinkFile label="Sertifikat SSW" path={selectedData.dokumen?.sertifikat_ssw} />
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {showKandidatModal && selectedKandidat && (
+        <Dialog open={showKandidatModal} onOpenChange={setShowKandidatModal}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Detail Kandidat: {selectedKandidat?.pendaftaran?.nama}</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-bold text-blue-600 text-sm mb-2">DATA PRIBADI</h4>
+                <DetailItem label="NIK" value={selectedKandidat.pendaftaran?.nik} />
+                <DetailItem label="No WA" value={selectedKandidat.pendaftaran?.no_wa} />
+                <DetailItem label="Email" value={selectedKandidat.pendaftaran?.email} />
+              </div>
+              <div>
+                <h4 className="font-bold text-blue-600 text-sm mb-2">STATUS</h4>
+                <DetailItem label="Status Kandidat" value={selectedKandidat.status_kandidat} />
+                <DetailItem label="Perusahaan" value={selectedKandidat.nama_perusahaan} />
+                <DetailItem label="Cabang" value={selectedKandidat.cabang?.nama_cabang} />
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -214,12 +277,91 @@ export default function DataSistemLamaPage() {
   )
 }
 
-function DetailItem({ label, value }: { label: string; value: any }) {
-  return <div className="mb-2"><p className="text-[10px] text-gray-500 uppercase">{label}</p><p className="text-sm font-medium">{value || '-'}</p></div>
+const cleanPath = (p: string): string => {
+  if (!p) return ''
+  let cleaned = String(p)
+  
+  try { cleaned = decodeURIComponent(cleaned) } catch {}
+  
+  cleaned = cleaned.replace(/\\[\\"\[\]]/g, '')
+  
+  if (cleaned.includes('127.0.0.1:8000/') || cleaned.includes('localhost:8000/')) {
+    const parts = cleaned.split(/127\.0\.0\.1:8000\//).pop()?.split(/localhost:8000\//).pop()
+    if (parts) cleaned = parts
+  }
+  
+  cleaned = cleaned.replace(/[\[\]"]+/g, '')
+  cleaned = cleaned.replace(/^["']+|["']+$/g, '')
+  cleaned = cleaned.replace(/\/+/g, '/')
+  cleaned = cleaned.replace(/dokumen\//gi, '')
+  cleaned = cleaned.replace(/\/$/, '')
+  
+  return cleaned
 }
 
-function LinkFile({ label, path }: { label: string; path?: string | null }) {
-  if (!path) return <div className="p-2 border border-dashed rounded text-gray-400 text-xs text-center">{label} (-)</div>
-  const fp = String(path).startsWith('http') ? path.substring(path.indexOf('/', 8) + 1) : path
-  return <a href={`http://localhost:8000/${fp}`} target="_blank" className="block p-2 border border-blue-200 rounded text-blue-600 text-xs text-center hover:bg-blue-50"><FileText size={12} className="mx-auto mb-1" />{label}</a>
+const parseDokumenPath = (path: any): string[] => {
+  if (!path || (Array.isArray(path) && path.length === 0)) return []
+  let result: string[] = []
+  const seen = new Set<string>()
+  
+  const addPath = (val: any) => {
+    if (!val) return
+    let s = val
+    if (typeof s !== 'string') s = String(s)
+    
+    s = s.replace(/\\/g, '')
+    try { s = decodeURIComponent(s) } catch {}
+    
+    if (s.includes('127.0.0.1:8000/') || s.includes('localhost:8000/')) {
+      const parts = s.split(/127\.0\.0\.1:8000\//).pop()?.split(/localhost:8000\//).pop()
+      if (parts) s = parts
+    }
+    
+    s = s.replace(/[\[\]"]+/g, '')
+    s = s.replace(/^["']+|["']+$/g, '')
+    s = s.replace(/\/+/g, '/')
+    s = s.replace(/dokumen\//gi, '')
+    
+    s = s.replace(/\/$/, '')
+    s = s.trim()
+    
+    if (s && !seen.has(s)) {
+      seen.add(s)
+      result.push(s)
+    }
+  }
+  
+  if (Array.isArray(path)) {
+    path.forEach((p: any) => {
+      if (Array.isArray(p)) {
+        p.forEach((inner: any) => addPath(inner))
+      } else {
+        addPath(p)
+      }
+    })
+  } else {
+    addPath(path)
+  }
+  
+  return result
+}
+
+function LinkFile({ label, path }: { label: string, path?: string | string[] | null }) {
+  const pathArray = parseDokumenPath(path)
+  
+  if (pathArray.length === 0) return <div className="p-2 border border-dashed rounded text-gray-400 text-xs text-center">{label} (-)</div>
+  
+  return (
+    <div className="flex flex-col gap-1">
+      {pathArray.map((p, i) => (
+        <a key={i} href={`http://127.0.0.1:8000/dokumen/${p}`} target="_blank" rel="noopener noreferrer" className="block p-2 border border-blue-200 rounded text-blue-600 text-xs text-center hover:bg-blue-50">
+          <FileText size={12} className="mx-auto mb-1" />{label} {pathArray.length > 1 ? `#${i + 1}` : ''}
+        </a>
+      ))}
+    </div>
+  )
+}
+
+function DetailItem({ label, value }: { label: string, value: any }) {
+  return <div className="mb-2"><p className="text-[10px] text-gray-500 uppercase">{label}</p><p className="text-sm font-medium">{value || '-'}</p></div>
 }

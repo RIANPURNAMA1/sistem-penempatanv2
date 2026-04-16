@@ -29,14 +29,6 @@ router.get('/', async (req, res) => {
         p.password_prometric,
         p.status_jft,
         p.status_ssw,
-        p.foto,
-        p.sertifikat_jft,
-        p.sertifikat_ssw,
-        p.kk,
-        p.ktp,
-        p.bukti_pelunasan,
-        p.akte,
-        p.ijasah,
         p.catatan_admin,
         p.created_at,
         p.updated_at,
@@ -45,7 +37,49 @@ router.get('/', async (req, res) => {
       LEFT JOIN cabang c ON c.id = p.cabang_id
       ORDER BY p.id DESC
     `);
-    res.json({ success: true, data: rows });
+
+    const pangkatIds = rows.map(r => r.id).filter(id => id);
+    let dokumenMap = {};
+    
+    if (pangkatIds.length > 0) {
+      const [dokumenRows] = await pool.query(`
+        SELECT kandidat_id, jenis_dokumen, MAX(path_file) as path_file, MAX(nama_file) as nama_file 
+        FROM kandidat_dokumen 
+        WHERE kandidat_id IN (${pangkatIds.map(() => '?').join(',')})
+        GROUP BY kandidat_id, jenis_dokumen
+      `, pangkatIds);
+      
+      dokumenRows.forEach((d) => {
+        if (!dokumenMap[d.kandidat_id]) dokumenMap[d.kandidat_id] = [];
+        dokumenMap[d.kandidat_id].push(d);
+      });
+    }
+
+    const dataWithDokumen = rows.map((p) => {
+      const dokumen = dokumenMap[p.id] || [];
+      const dokumenObj = {};
+      
+      dokumen.forEach((d) => {
+        if (d.jenis_dokumen === 'pas_foto') dokumenObj.foto = d.path_file;
+        else if (d.jenis_dokumen === 'ktp') dokumenObj.ktp = d.path_file;
+        else if (d.jenis_dokumen === 'kk') dokumenObj.kk = d.path_file;
+        else if (d.jenis_dokumen === 'ijazah') dokumenObj.ijasah = d.path_file;
+        else if (d.jenis_dokumen === 'akte') dokumenObj.akte = d.path_file;
+        else if (d.jenis_dokumen === 'sertifikat_jft') dokumenObj.sertifikat_jft = d.path_file;
+        else if (d.jenis_dokumen === 'sertifikat_ssw') {
+          if (!dokumenObj.sertifikat_ssw) dokumenObj.sertifikat_ssw = [];
+          if (!dokumenObj.sertifikat_ssw.includes(d.path_file)) {
+            dokumenObj.sertifikat_ssw.push(d.path_file);
+          }
+        }
+        else if (d.jenis_dokumen === 'bukti_pelunasan') dokumenObj.bukti_pelunasan = d.path_file;
+        else if (d.jenis_dokumen === 'lainnya') dokumenObj.lainnya = d.path_file;
+      });
+      
+      return { ...p, dokumen: dokumenObj };
+    });
+
+    res.json({ success: true, data: dataWithDokumen });
   } catch (error) {
     console.error('Error fetching pendaftaran:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -56,9 +90,7 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const [rows] = await pool.query(`
-      SELECT 
-        p.*,
-        c.nama_cabang
+      SELECT p.*, c.nama_cabang
       FROM pendaftaran_sistem_lama p
       LEFT JOIN cabang c ON p.cabang_id = c.id
       WHERE p.id = ?

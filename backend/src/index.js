@@ -26,6 +26,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/joborder', require('./routes/joborder'));
 app.use('/api/pendaftaran', require('./routes/pendaftaran'));
 app.use('/api/history', require('./routes/history'));
+app.use('/api/cv', require('./routes/cv'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));

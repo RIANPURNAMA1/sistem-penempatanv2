@@ -2,8 +2,40 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Printer, ArrowLeft } from 'lucide-react'
-import { CvData } from '@/components/admin/DataCvTable'
+import { CvData } from '@/components/admin-sistem-lama/DataCvTable'
 
+interface Pendidikan {
+  tahun_masuk: string;
+  tahun_lulus: string;
+  nama: string;
+  jurusan: string;
+}
+
+interface Pengalaman {
+  tanggal_masuk: string;
+  tanggal_keluar?: string | null;
+  perusahaan: string;
+  jabatan: string;
+  gaji?: string | number;
+}
+
+type CvWithRelations = CvData & {
+  pendidikans?: Pendidikan[];
+  pengalamans?: Pengalaman[];
+  tujuanSetelahPulang?: { tujuan_setelah_pulang: string } | null;
+}
+
+interface CvTemplateProps {
+  cv:
+    | (CvData & {
+        pendidikans?: Pendidikan[];
+        pengalamans?: Pengalaman[];
+        tujuanSetelahPulang?: { tujuan_setelah_pulang: string } | null;
+      })
+    | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
 const mappingAgama: Record<string, string> = {
   'Islam': 'イスラム',
   'Kristen': 'キリスト',
@@ -26,7 +58,7 @@ const mappingSertifikat: Record<string, string> = {
 export default function CvPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [cv, setCv] = useState<CvData | null>(null)
+  const [cv, setCv] = useState<CvWithRelations | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -35,7 +67,7 @@ export default function CvPage() {
       .then(r => r.json())
       .then(r => {
         const list = r.data || r || []
-        const found = list.find((c: CvData) => c.id === Number(id))
+        const found = list.find((c: CvWithRelations) => c.id === Number(id))
         if (found) setCv(found)
       })
       .catch(console.error)
@@ -57,6 +89,18 @@ export default function CvPage() {
       const month = String(date.getMonth() + 1).padStart(2, '0')
       const day = String(date.getDate()).padStart(2, '0')
       return `${year}年 ${month}月 ${day}日`
+    } catch {
+      return dateStr
+    }
+  }
+
+  const formatYearMonth = (dateStr: string) => {
+    if (!dateStr) return '-'
+    try {
+      const date = new Date(dateStr)
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      return `${year}年 ${month}月`
     } catch {
       return dateStr
     }
@@ -259,6 +303,424 @@ export default function CvPage() {
                   電話番号　： {cv.no_telepon || '-'}
                 </td>
               </tr>
+            </table>
+
+            
+            {/* TABLE PENDIDIKAN */}
+            {/* Pendidikan */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                marginTop: "10px",
+              }}
+            >
+              <tbody>
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="bg-header section-title"
+                    style={{ border: "1px solid black", padding: "4px" }}
+                  >
+                    学歴 PENDIDIKAN
+                  </td>
+                </tr>
+                <tr className="bg-header">
+                  <td
+                    className="small-text"
+                    style={{
+                      width: "96px",
+                      border: "1px solid black",
+                      padding: "4px",
+                    }}
+                  >
+                    期間 TAHUN
+                  </td>
+                  <td
+                    className="small-text"
+                    style={{
+                      width: "20px",
+                      border: "1px solid black",
+                      borderLeft: "none",
+                      padding: "4px",
+                    }}
+                  ></td>
+                  <td
+                    className="small-text"
+                    style={{
+                      width: "96px",
+                      border: "1px solid black",
+                      borderLeft: "none",
+                      padding: "4px",
+                    }}
+                  ></td>
+                  <td
+                    className="small-text"
+                    style={{
+                      width: "383px",
+                      border: "1px solid black",
+                      borderLeft: "none",
+                      padding: "4px",
+                    }}
+                  >
+                    学校名 NAMA SEKOLAH
+                  </td>
+                  <td
+                    className="small-text"
+                    style={{
+                      border: "1px solid black",
+                      borderLeft: "none",
+                      padding: "4px",
+                    }}
+                  >
+                    専攻 JURUSAN
+                  </td>
+                </tr>
+
+                {/* Looping data pendidikan */}
+                {cv?.pendidikans && cv.pendidikans.length > 0 ? (
+                  cv.pendidikans.map((p, i) => (
+                    <tr key={i} className="text-center">
+                      <td
+                        className="small-text"
+                        style={{
+                          border: "1px solid black",
+                          borderTop: "none",
+                          padding: "4px",
+                        }}
+                      >
+                        {p.tahun_masuk}
+                      </td>
+                      <td
+                        className="small-text"
+                        style={{
+                          border: "1px solid black",
+                          borderTop: "none",
+                          borderLeft: "none",
+                          padding: "4px",
+                        }}
+                      >
+                        -
+                      </td>
+                      <td
+                        className="small-text"
+                        style={{
+                          border: "1px solid black",
+                          borderTop: "none",
+                          borderLeft: "none",
+                          padding: "4px",
+                        }}
+                      >
+                        {p.tahun_lulus}
+                      </td>
+                      <td
+                        className="value-text"
+                        style={{
+                          border: "1px solid black",
+                          borderTop: "none",
+                          borderLeft: "none",
+                          padding: "4px",
+                          textAlign: "left",
+                        }}
+                      >
+                        {p.nama}
+                      </td>
+                      <td
+                        className="value-text"
+                        style={{
+                          border: "1px solid black",
+                          borderTop: "none",
+                          borderLeft: "none",
+                          padding: "4px",
+                          textAlign: "left",
+                        }}
+                      >
+                        {p.jurusan}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  /* Baris kosong jika data tidak ada */
+                  <tr>
+                    <td
+                      colSpan={5}
+                      style={{
+                        height: "20px",
+                        border: "1px solid black",
+                        borderTop: "none",
+                        padding: "4px",
+                        textAlign: "center",
+                      }}
+                    >
+                      Data tidak tersedia
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+
+            {/* Pengalaman Kerja */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                marginTop: "10px",
+              }}
+            >
+              <tbody>
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="bg-header section-title"
+                    style={{ border: "1px solid black", padding: "4px" }}
+                  >
+                    職歴 PENGALAMAN KERJA
+                  </td>
+                </tr>
+                <tr className="bg-header">
+                  <td
+                    className="small-text"
+                    style={{
+                      width: "95px",
+                      border: "1px solid black",
+                      borderTop: "none",
+                      padding: "4px",
+                    }}
+                  >
+                    期間 TAHUN
+                  </td>
+                  <td
+                    className="small-text"
+                    style={{
+                      width: "20px",
+                      border: "1px solid black",
+                      borderTop: "none",
+                      borderLeft: "none",
+                      padding: "4px",
+                    }}
+                  ></td>
+                  <td
+                    className="small-text"
+                    style={{
+                      width: "94px",
+                      border: "1px solid black",
+                      borderTop: "none",
+                      borderLeft: "none",
+                      padding: "4px",
+                    }}
+                  ></td>
+                  <td
+                    className="small-text"
+                    style={{
+                      width: "383px",
+                      border: "1px solid black",
+                      borderTop: "none",
+                      borderLeft: "none",
+                      padding: "4px",
+                    }}
+                  >
+                    会社名 NAMA PERUSAHAAN
+                  </td>
+                  <td
+                    className="small-text"
+                    style={{
+                      width: "122px",
+                      border: "1px solid black",
+                      borderTop: "none",
+                      borderLeft: "none",
+                      padding: "4px",
+                    }}
+                  >
+                    職種 JENIS KERJA
+                  </td>
+                  <td
+                    className="small-text"
+                    style={{
+                      border: "1px solid black",
+                      borderTop: "none",
+                      borderLeft: "none",
+                      padding: "4px",
+                    }}
+                  >
+                    月収/円 GAJI
+                  </td>
+                </tr>
+                {cv.pengalamans && cv.pengalamans.length > 0 ? (
+                  cv.pengalamans.map((p, i) => (
+                    <tr key={i} className="text-center">
+                      <td
+                        className="small-text"
+                        style={{
+                          border: "1px solid black",
+                          borderTop: "none",
+                          padding: "4px",
+                        }}
+                      >
+                        {formatYearMonth(p.tanggal_masuk)}
+                      </td>
+                      <td
+                        className="small-text"
+                        style={{
+                          border: "1px solid black",
+                          borderTop: "none",
+                          borderLeft: "none",
+                          padding: "4px",
+                        }}
+                      >
+                        -
+                      </td>
+                      <td
+                        className="small-text"
+                        style={{
+                          border: "1px solid black",
+                          borderTop: "none",
+                          borderLeft: "none",
+                          padding: "4px",
+                        }}
+                      >
+                        {p.tanggal_keluar
+                          ? formatYearMonth(p.tanggal_keluar)
+                          : "現在"}
+                      </td>
+                      <td
+                        className="value-text"
+                        style={{
+                          border: "1px solid black",
+                          borderTop: "none",
+                          borderLeft: "none",
+                          padding: "4px",
+                        }}
+                      >
+                        {p.perusahaan}
+                      </td>
+                      <td
+                        className="value-text"
+                        style={{
+                          border: "1px solid black",
+                          borderTop: "none",
+                          borderLeft: "none",
+                          padding: "4px",
+                        }}
+                      >
+                        {p.jabatan}
+                      </td>
+                      <td
+                        className="value-text"
+                        style={{
+                          border: "1px solid black",
+                          borderTop: "none",
+                          borderLeft: "none",
+                          padding: "4px",
+                        }}
+                      >
+                        {p.gaji ? `¥ ${p.gaji}` : "-"}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      style={{
+                        height: "20px",
+                        border: "1px solid black",
+                        borderTop: "none",
+                        padding: "4px",
+                      }}
+                    ></td>
+                    <td
+                      style={{
+                        border: "1px solid black",
+                        borderTop: "none",
+                        borderLeft: "none",
+                        padding: "4px",
+                      }}
+                    ></td>
+                    <td
+                      style={{
+                        border: "1px solid black",
+                        borderTop: "none",
+                        borderLeft: "none",
+                        padding: "4px",
+                      }}
+                    ></td>
+                    <td
+                      style={{
+                        border: "1px solid black",
+                        borderTop: "none",
+                        borderLeft: "none",
+                        padding: "4px",
+                      }}
+                    ></td>
+                    <td
+                      style={{
+                        border: "1px solid black",
+                        borderTop: "none",
+                        borderLeft: "none",
+                        padding: "4px",
+                      }}
+                    ></td>
+                    <td
+                      style={{
+                        border: "1px solid black",
+                        borderTop: "none",
+                        borderLeft: "none",
+                        padding: "4px",
+                      }}
+                    ></td>
+                  </tr>
+                )}
+                {/* Extra empty row */}
+                <tr>
+                  <td
+                    style={{
+                      height: "20px",
+                      border: "1px solid black",
+                      borderTop: "none",
+                      padding: "4px",
+                    }}
+                  ></td>
+                  <td
+                    style={{
+                      border: "1px solid black",
+                      borderTop: "none",
+                      borderLeft: "none",
+                      padding: "4px",
+                    }}
+                  ></td>
+                  <td
+                    style={{
+                      border: "1px solid black",
+                      borderTop: "none",
+                      borderLeft: "none",
+                      padding: "4px",
+                    }}
+                  ></td>
+                  <td
+                    style={{
+                      border: "1px solid black",
+                      borderTop: "none",
+                      borderLeft: "none",
+                      padding: "4px",
+                    }}
+                  ></td>
+                  <td
+                    style={{
+                      border: "1px solid black",
+                      borderTop: "none",
+                      borderLeft: "none",
+                      padding: "4px",
+                    }}
+                  ></td>
+                  <td
+                    style={{
+                      border: "1px solid black",
+                      borderTop: "none",
+                      borderLeft: "none",
+                      padding: "4px",
+                    }}
+                  ></td>
+                </tr>
+              </tbody>
             </table>
 
             {/* Keluarga */}

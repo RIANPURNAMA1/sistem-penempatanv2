@@ -3,9 +3,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from '@/hooks/useToast'
-import { Search, Eye, Users, Loader2, FileText, ChevronLeft, ChevronRight, History, LayoutDashboard, FileCheck, UserCheck, UserPlus, FileStack } from 'lucide-react'
-import KandidatTable from '@/components/admin/KandidatTable'
-import DataCvTable from '@/components/admin/DataCvTable'
+import { Search, Eye, Users, Loader2, FileText, ChevronLeft, ChevronRight, History, LayoutDashboard, UserCheck, UserPlus, FileStack, Download } from 'lucide-react'
+import KandidatTable from '@/components/admin-sistem-lama/KandidatTable'
+import DataCvTable from '@/components/admin-sistem-lama/DataCvTable'
+import DashboardSistemLama from '@/components/admin-sistem-lama/DashboardSistemLama'
+import { generatePendaftaranPDF, generatePendaftaranExcel, downloadDokumen } from '@/lib/pendaftaranGenerator'
 
 interface Dokumen {
   foto?: string
@@ -96,11 +98,47 @@ export default function DataSistemLamaPage() {
   const menunggu = data.filter(d => d.verifikasi === 'menunggu').length
   const ditolak = data.filter(d => d.verifikasi === 'ditolak').length
 
-  const sswStats: Record<string, number> = {}
-  kandidatData.forEach(k => { const s = k.bidang_ssw || 'Lainnya'; sswStats[s] = (sswStats[s] || 0) + 1 })
+  const sswStatsMap: Record<string, { laki: number; perempuan: number }> = {}
+  kandidatData.forEach(k => {
+    const s = k.bidang_ssw || 'Lainnya'
+    const gender = k.pendaftaran?.jenis_kelamin || k.jenis_kelamin || '-'
+    if (!sswStatsMap[s]) {
+      sswStatsMap[s] = { laki: 0, perempuan: 0 }
+    }
+    if (gender === 'Laki-laki') {
+      sswStatsMap[s].laki++
+    } else if (gender === 'Perempuan') {
+      sswStatsMap[s].perempuan++
+    }
+  })
+
+  const sswStats = Object.keys(sswStatsMap).map(ssw => ({
+    ssw,
+    laki: sswStatsMap[ssw].laki,
+    perempuan: sswStatsMap[ssw].perempuan,
+    total: sswStatsMap[ssw].laki + sswStatsMap[ssw].perempuan
+  })).sort((a, b) => b.total - a.total)
 
   const progressStats: Record<string, number> = {}
   kandidatData.forEach(k => { const p = k.status_kandidat || 'Unknown'; progressStats[p] = (progressStats[p] || 0) + 1 })
+
+  const cabangStatsMap: Record<string, Record<string, number>> = {}
+  kandidatData.forEach(k => {
+    const cabang = k.cabang?.nama_cabang || k.nama_cabang || 'Tanpa Cabang'
+    const status = k.status_kandidat || 'Unknown'
+    if (!cabangStatsMap[cabang]) {
+      cabangStatsMap[cabang] = {}
+    }
+    cabangStatsMap[cabang][status] = (cabangStatsMap[cabang][status] || 0) + 1
+  })
+
+  const cabangStats = Object.keys(cabangStatsMap).map(cabang => ({
+    nama_cabang: cabang,
+    progress: Object.keys(cabangStatsMap[cabang]).map(status => ({
+      status,
+      count: cabangStatsMap[cabang][status]
+    }))
+  }))
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -126,33 +164,15 @@ export default function DataSistemLamaPage() {
       </div>
 
       {activeTab === 'dashboard' && (
-        <div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-lg border p-6"><div className="flex items-center gap-3"><div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center"><Users size={24} className="text-blue-600" /></div><div><p className="text-2xl font-bold">{total}</p><p className="text-xs text-gray-500">Total</p></div></div></div>
-            <div className="bg-white rounded-lg border p-6"><div className="flex items-center gap-3"><div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center"><FileCheck size={24} className="text-green-600" /></div><div><p className="text-2xl font-bold">{diterima}</p><p className="text-xs text-gray-500">Diterima</p></div></div></div>
-            <div className="bg-white rounded-lg border p-6"><div className="flex items-center gap-3"><div className="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center"><Users size={24} className="text-yellow-600" /></div><div><p className="text-2xl font-bold">{menunggu}</p><p className="text-xs text-gray-500">Menunggu</p></div></div></div>
-            <div className="bg-white rounded-lg border p-6"><div className="flex items-center gap-3"><div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center"><Users size={24} className="text-red-600" /></div><div><p className="text-2xl font-bold">{ditolak}</p><p className="text-xs text-gray-500">Ditolak</p></div></div></div>
-          </div>
-
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-3">Statistik SSW</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {Object.keys(sswStats).length === 0 ? <p className="text-gray-500">Belum ada data</p> : Object.keys(sswStats).map(ssw => (
-                <div key={ssw} className="bg-white rounded-lg border p-4"><p className="text-xs text-gray-500">{ssw}</p><p className="text-xl font-bold">{sswStats[ssw]}</p></div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-3">Statistik Progress</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-              {Object.keys(progressStats).length === 0 ? <p className="text-gray-500">Belum ada data</p> : Object.keys(progressStats).map(prog => {
-                const colors: Record<string, string> = { 'Job Matching': 'bg-blue-100', 'Pending': 'bg-gray-100', 'Interview': 'bg-yellow-100', 'Lulus interview': 'bg-green-100', 'Gagal Interview': 'bg-red-100' }
-                return <div key={prog} className={`rounded-lg border p-4 ${colors[prog] || 'bg-white'}`}><p className="text-xs text-gray-600">{prog}</p><p className="text-xl font-bold">{progressStats[prog]}</p></div>
-              })}
-            </div>
-          </div>
-        </div>
+        <DashboardSistemLama
+          total={total}
+          diterima={diterima}
+          menunggu={menunggu}
+          ditolak={ditolak}
+          sswStats={sswStats}
+          progressStats={progressStats}
+          cabangStats={cabangStats}
+        />
       )}
 
       {activeTab === 'pendaftaran' && (
@@ -229,20 +249,32 @@ export default function DataSistemLamaPage() {
       {showModal && selectedData && (
         <Dialog open={showModal} onOpenChange={setShowModal}>
           <DialogContent className="max-w-4xl">
-            <DialogHeader><DialogTitle>Detail: {selectedData.nama}</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <DialogTitle>Detail: {selectedData.nama}</DialogTitle>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => generatePendaftaranExcel(selectedData)}>
+                    <Download size={14} className="mr-2" /> Download Excel
+                  </Button>
+                  <Button size="sm" onClick={() => generatePendaftaranPDF(selectedData)}>
+                    <Download size={14} className="mr-2" /> Download PDF
+                  </Button>
+                </div>
+              </div>
+            </DialogHeader>
             <div className="grid grid-cols-3 gap-4">
               <div><h4 className="font-bold text-blue-600 text-sm mb-2">IDENTITAS</h4><DetailItem label="NIK" value={selectedData.nik} /><DetailItem label="Agama" value={selectedData.agama} /><DetailItem label="Pendidikan" value={selectedData.pendidikan_terakhir} /></div>
               <div><h4 className="font-bold text-blue-600 text-sm mb-2">PROGRAM</h4><DetailItem label="ID Prometric" value={selectedData.id_prometric} /><DetailItem label="Status JFT" value={selectedData.status_jft} /><DetailItem label="Status SSW" value={selectedData.status_ssw} /></div>
               <div><h4 className="font-bold text-blue-600 text-sm mb-2">DOKUMEN</h4>
                 <div className="grid grid-cols-2 gap-2">
-                  <LinkFile label="Pas Foto" path={selectedData.dokumen?.foto} />
-                  <LinkFile label="KTP" path={selectedData.dokumen?.ktp} />
-                  <LinkFile label="KK" path={selectedData.dokumen?.kk} />
-                  <LinkFile label="Ijazah" path={selectedData.dokumen?.ijasah} />
-                  <LinkFile label="Akte Kelahiran" path={selectedData.dokumen?.akte} />
-                  <LinkFile label="Bukti Pelunasan" path={selectedData.dokumen?.bukti_pelunasan} />
-                  <LinkFile label="Sertifikat JFT" path={selectedData.dokumen?.sertifikat_jft} />
-                  <LinkFile label="Sertifikat SSW" path={selectedData.dokumen?.sertifikat_ssw} />
+                  <LinkFileWithDownload label="Pas Foto" path={selectedData.dokumen?.foto} />
+                  <LinkFileWithDownload label="KTP" path={selectedData.dokumen?.ktp} />
+                  <LinkFileWithDownload label="KK" path={selectedData.dokumen?.kk} />
+                  <LinkFileWithDownload label="Ijazah" path={selectedData.dokumen?.ijasah} />
+                  <LinkFileWithDownload label="Akte Kelahiran" path={selectedData.dokumen?.akte} />
+                  <LinkFileWithDownload label="Bukti Pelunasan" path={selectedData.dokumen?.bukti_pelunasan} />
+                  <LinkFileWithDownload label="Sertifikat JFT" path={selectedData.dokumen?.sertifikat_jft} />
+                  <LinkFileWithDownload label="Sertifikat SSW" path={selectedData.dokumen?.sertifikat_ssw} />
                 </div>
               </div>
             </div>
@@ -320,7 +352,6 @@ const parseDokumenPath = (path: any): string[] => {
     s = s.replace(/[\[\]"]+/g, '')
     s = s.replace(/^["']+|["']+$/g, '')
     s = s.replace(/\/+/g, '/')
-    s = s.replace(/dokumen\//gi, '')
     
     s = s.replace(/\/$/, '')
     s = s.trim()
@@ -353,14 +384,71 @@ function LinkFile({ label, path }: { label: string, path?: string | string[] | n
   
   return (
     <div className="flex flex-col gap-1">
-      {pathArray.map((p, i) => (
-        <a key={i} href={`http://127.0.0.1:8000/dokumen/${p}`} target="_blank" rel="noopener noreferrer" className="block p-2 border border-blue-200 rounded text-blue-600 text-xs text-center hover:bg-blue-50">
-          <FileText size={12} className="mx-auto mb-1" />{label} {pathArray.length > 1 ? `#${i + 1}` : ''}
-        </a>
-      ))}
+      {pathArray.map((p, i) => {
+        let fullUrl = p
+        if (p.startsWith('http')) {
+          fullUrl = p
+        } else {
+          fullUrl = `https://matchingjob.mendunia.id/dokumen/${p}`
+        }
+        return (
+          <a key={i} href={fullUrl} target="_blank" rel="noopener noreferrer" className="block p-2 border border-blue-200 rounded text-blue-600 text-xs text-center hover:bg-blue-50">
+            <FileText size={12} className="mx-auto mb-1" />{label} {pathArray.length > 1 ? `#${i + 1}` : ''}
+          </a>
+        )
+      })}
     </div>
   )
 }
+
+function LinkFileWithDownload({ label, path }: { label: string, path?: string | string[] | null }) {
+  const pathArray = parseDokumenPath(path)
+  const [downloading, setDownloading] = useState<string | null>(null)
+  
+  const handleDownload = async (p: string, idx: number) => {
+    const key = `${idx}`
+    setDownloading(key)
+    try {
+      await downloadDokumen(p, `${label}_${idx + 1}`)
+    } catch {
+      toast({ title: 'Gagal download dokumen', variant: 'destructive' })
+    } finally {
+      setDownloading(null)
+    }
+  }
+  
+  if (pathArray.length === 0) return <div className="p-2 border border-dashed rounded text-gray-400 text-xs text-center">{label} (-)</div>
+  
+  return (
+    <div className="flex flex-col gap-1">
+      {pathArray.map((p, i) => {
+        let fullUrl = p
+        if (p.startsWith('http')) {
+          fullUrl = p
+        } else {
+          fullUrl = `https://matchingjob.mendunia.id/dokumen/${p}`
+        }
+        return (
+          <div key={i} className="flex gap-1">
+            <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="flex-1 block p-2 border border-blue-200 rounded text-blue-600 text-xs text-center hover:bg-blue-50">
+              <FileText size={12} className="mx-auto mb-1" />{label} {pathArray.length > 1 ? `#${i + 1}` : ''}
+            </a>
+            <button
+              onClick={() => handleDownload(p, i)}
+              disabled={downloading === `${i}`}
+              className="p-2 border border-green-200 rounded text-green-600 text-xs hover:bg-green-50 disabled:opacity-50"
+              title="Download"
+            >
+              {downloading === `${i}` ? <Loader2 size={12} className="animate-spin mx-auto" /> : <Download size={12} className="mx-auto" />}
+            </button>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+
 
 function DetailItem({ label, value }: { label: string, value: any }) {
   return <div className="mb-2"><p className="text-[10px] text-gray-500 uppercase">{label}</p><p className="text-sm font-medium">{value || '-'}</p></div>

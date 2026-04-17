@@ -1,9 +1,24 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Search, X, Eye, Users, Loader2, ChevronLeft, ChevronRight, History, Clock } from 'lucide-react'
+import { Label } from '@/components/ui/components'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Search, X, Eye, Users, Loader2, ChevronLeft, ChevronRight, History, Clock, Edit2 } from 'lucide-react'
 import { toast } from '@/hooks/useToast'
+import api from '@/lib/api'
+import axios from 'axios'
+
+const updateApi = axios.create({
+  baseURL: 'https://matchingjob.mendunia.id/api',
+  headers: { 'Content-Type': 'application/json' }
+})
+
+updateApi.interceptors.request.use(config => {
+  const token = localStorage.getItem('token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
 
 interface KandidatData {
   id: number
@@ -40,6 +55,19 @@ const statusConfig: Record<string, { label: string; bg: string; text: string }> 
   'Berangkat': { label: 'Berangkat', bg: 'bg-emerald-100', text: 'text-emerald-700' },
   'Ditolak': { label: 'Ditolak', bg: 'bg-red-100', text: 'text-red-700' },
 }
+
+const statusOptions = [
+  'Job Matching',
+  'Pending',
+  'lamar ke perusahaan',
+  'Interview',
+  'Jadwalkan Interview Ulang',
+  'Lulus interview',
+  'Gagal Interview',
+  'Pemberkasan',
+  'Berangkat',
+  'Ditolak',
+]
 
 interface HistoryItem {
   id: number
@@ -78,16 +106,26 @@ export default function KandidatTable({ onSelect }: KandidatTableProps) {
   const [showHistory, setShowHistory] = useState(false)
   const [historyData, setHistoryData] = useState<HistoryItem[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [showStatusModal, setShowStatusModal] = useState(false)
+  const [selectedKandidat, setSelectedKandidat] = useState<KandidatData | null>(null)
+  const [statusForm, setStatusForm] = useState({
+    status_kandidat: '',
+    bidang_ssw: '',
+    institusi_id: null as number | null,
+    nama_perusahaan: '',
+    catatan_interview: '',
+    jadwal_interview: '',
+  })
+  const [updatingStatus, setUpdatingStatus] = useState(false)
 
   const load = () => {
     setLoading(true)
-    fetch('https://matchingjob.mendunia.id/api/kandidat')
-      .then(r => r.json())
+    updateApi.get('/kandidat')
       .then(r => {
-        if (r.success) setData(r.data)
+        if (r.data.success) setData(r.data.data)
         else toast({ title: 'Gagal memuat data', variant: 'destructive' })
       })
-      .catch(() => toast({ title: 'Gagal menyabung ke server', variant: 'destructive' }))
+      .catch(() => toast({ title: 'Gagal menyambung ke server', variant: 'destructive' }))
       .finally(() => setLoading(false))
   }
 
@@ -99,14 +137,66 @@ export default function KandidatTable({ onSelect }: KandidatTableProps) {
     setSelectedKandidatName(nama)
     setShowHistory(true)
     setLoadingHistory(true)
-    fetch(`https://matchingjob.mendunia.id/api/history?kandidat_id=${kandidatId}`)
-      .then(r => r.json())
+    updateApi.get(`/history?kandidat_id=${kandidatId}`)
       .then(r => {
-        if (r.success) setHistoryData(r.data)
+        if (r.data.success) setHistoryData(r.data.data)
         else setHistoryData([])
       })
       .catch(() => setHistoryData([]))
       .finally(() => setLoadingHistory(false))
+  }
+
+  const openStatusModal = (kandidat: KandidatData) => {
+    setSelectedKandidat(kandidat)
+    setStatusForm({
+      status_kandidat: kandidat.status_kandidat,
+      bidang_ssw: '',
+      institusi_id: null,
+      nama_perusahaan: kandidat.nama_perusahaan || '',
+      catatan_interview: '',
+      jadwal_interview: '',
+    })
+    setShowStatusModal(true)
+  }
+
+  const handleUpdateStatus = async () => {
+    if (!selectedKandidat) return
+    if (!statusForm.status_kandidat) {
+      toast({ title: 'Status harus dipilih', variant: 'destructive' })
+      return
+    }
+    if (!statusForm.bidang_ssw) {
+      toast({ title: 'Bidang SSW harus diisi', variant: 'destructive' })
+      return
+    }
+    if (['Interview', 'Jadwalkan Interview Ulang'].includes(statusForm.status_kandidat) && !statusForm.jadwal_interview) {
+      toast({ title: 'Jadwal interview wajib diisi untuk status ini', variant: 'destructive' })
+      return
+    }
+    setUpdatingStatus(true)
+    try {
+      const payload = {
+        status_kandidat: statusForm.status_kandidat,
+        bidang_ssw: statusForm.bidang_ssw,
+        institusi_id: statusForm.institusi_id,
+        nama_perusahaan: statusForm.nama_perusahaan || null,
+        catatan_interview: statusForm.catatan_interview || null,
+        jadwal_interview: statusForm.jadwal_interview || null,
+      }
+      const res = await updateApi.put(`/kandidat/update/data/${selectedKandidat.id}`, payload)
+      if (res.data.success) {
+        toast({ title: res.data.message || 'Status berhasil diupdate', variant: 'success' as any })
+        setShowStatusModal(false)
+        load()
+      } else {
+        toast({ title: res.data.message || 'Gagal update status', variant: 'destructive' })
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Gagal menyambung ke server'
+      toast({ title: msg, variant: 'destructive' })
+    } finally {
+      setUpdatingStatus(false)
+    }
   }
 
   const filteredData = data.filter(item => {
@@ -189,10 +279,13 @@ export default function KandidatTable({ onSelect }: KandidatTableProps) {
                     <td className="px-3 py-2 text-center text-gray-600 text-xs">{item.jumlah_interview}</td>
                     <td className="px-3 py-2 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => loadHistory(item.id, item.pendaftaran?.nama || '-')}>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openStatusModal(item)} title="Ubah Status">
+                          <Edit2 size={14} />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => loadHistory(item.id, item.pendaftaran?.nama || '-')} title="Riwayat">
                           <History size={14} />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => onSelect?.(item)}>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => onSelect?.(item)} title="Detail">
                           <Eye size={14} />
                         </Button>
                       </div>
@@ -247,6 +340,89 @@ export default function KandidatTable({ onSelect }: KandidatTableProps) {
           </div>
         )}
       </div>
+
+      <Dialog open={showStatusModal} onOpenChange={setShowStatusModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit2 size={18} />
+              Ubah Status Kandidat
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Kandidat</Label>
+              <Input value={selectedKandidat?.pendaftaran?.nama || '-'} disabled />
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={statusForm.status_kandidat} onValueChange={v => setStatusForm(p => ({ ...p, status_kandidat: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map(opt => (
+                    <SelectItem key={opt} value={opt}>
+                      {statusConfig[opt]?.label || opt}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Perusahaan</Label>
+              <Input
+                value={statusForm.nama_perusahaan}
+                onChange={e => setStatusForm(p => ({ ...p, nama_perusahaan: e.target.value }))}
+                placeholder="Nama perusahaan (opsional)"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Bidang SSW (ID)</Label>
+              <Input
+                type="number"
+                value={statusForm.bidang_ssw}
+                onChange={e => setStatusForm(p => ({ ...p, bidang_ssw: e.target.value }))}
+                placeholder="ID Bidang SSW"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Institusi ID</Label>
+              <Input
+                type="number"
+                value={statusForm.institusi_id || ''}
+                onChange={e => setStatusForm(p => ({ ...p, institusi_id: e.target.value ? Number(e.target.value) : null }))}
+                placeholder="ID Institusi (opsional)"
+              />
+            </div>
+            {['Interview', 'Jadwalkan Interview Ulang'].includes(statusForm.status_kandidat) && (
+              <div className="space-y-2">
+                <Label>Jadwal Interview</Label>
+                <Input
+                  type="date"
+                  value={statusForm.jadwal_interview}
+                  onChange={e => setStatusForm(p => ({ ...p, jadwal_interview: e.target.value }))}
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Catatan Interview</Label>
+              <Input
+                value={statusForm.catatan_interview}
+                onChange={e => setStatusForm(p => ({ ...p, catatan_interview: e.target.value }))}
+                placeholder="Catatan interview (opsional)"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowStatusModal(false)}>Batal</Button>
+            <Button onClick={handleUpdateStatus} disabled={updatingStatus}>
+              {updatingStatus && <Loader2 size={14} className="animate-spin mr-2" />}
+              Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showHistory} onOpenChange={setShowHistory}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">

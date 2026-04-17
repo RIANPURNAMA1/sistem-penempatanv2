@@ -113,11 +113,11 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div className="mt-8 p-4 bg-muted/50 rounded-lg border border-border">
+          {/* <div className="mt-8 p-4 bg-muted/50 rounded-lg border border-border">
             <p className="text-xs font-mono text-muted-foreground mb-2">Demo akses:</p>
             <p className="text-xs text-muted-foreground">Admin: <span className="font-mono">admin@kandidat.com</span></p>
             <p className="text-xs text-muted-foreground">Password: <span className="font-mono">password</span></p>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

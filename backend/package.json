@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "db": "node src/database.js"
+    "db": "node src/database.js",
+    "db:docker": "dotenv -e .env.docker node src/database/init.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

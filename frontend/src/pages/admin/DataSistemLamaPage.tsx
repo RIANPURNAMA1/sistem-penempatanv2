@@ -59,7 +59,7 @@ export default function DataSistemLamaPage() {
 
   const load = () => {
     setLoading(true)
-    fetch('http://127.0.0.1:8000/api/pendaftaran')
+    fetch('https://matchingjob.mendunia.id/api/pendaftaran')
       .then(r => r.json())
       .then(r => {
         if (r.success) {
@@ -76,7 +76,7 @@ export default function DataSistemLamaPage() {
 
   useEffect(() => { load() }, [])
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/api/kandidat')
+    fetch('https://matchingjob.mendunia.id/api/kandidat')
       .then(r => r.json())
       .then(r => { if (r.success) setKandidatData(r.data) })
       .catch(() => {})

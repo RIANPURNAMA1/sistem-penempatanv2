@@ -81,7 +81,7 @@ export default function KandidatTable({ onSelect }: KandidatTableProps) {
 
   const load = () => {
     setLoading(true)
-    fetch('http://127.0.0.1:8000/api/kandidat')
+    fetch('https://matchingjob.mendunia.id/api/kandidat')
       .then(r => r.json())
       .then(r => {
         if (r.success) setData(r.data)
@@ -99,7 +99,7 @@ export default function KandidatTable({ onSelect }: KandidatTableProps) {
     setSelectedKandidatName(nama)
     setShowHistory(true)
     setLoadingHistory(true)
-    fetch(`http://127.0.0.1:8000/api/history?kandidat_id=${kandidatId}`)
+    fetch(`https://matchingjob.mendunia.id/api/history?kandidat_id=${kandidatId}`)
       .then(r => r.json())
       .then(r => {
         if (r.success) setHistoryData(r.data)

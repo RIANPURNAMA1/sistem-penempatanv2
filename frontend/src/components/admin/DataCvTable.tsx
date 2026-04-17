@@ -147,7 +147,7 @@ export default function DataCvTable({ onSelect }: DataCvTableProps) {
 
   const load = () => {
     setLoading(true)
-    fetch('http://127.0.0.1:8000/api/cv/all')
+    fetch('https://matchingjob.mendunia.id/api/cv/all')
       .then(r => r.json())
       .then(r => {
         if (r.data) setData(r.data)
@@ -231,7 +231,7 @@ export default function DataCvTable({ onSelect }: DataCvTableProps) {
                   <td className="px-3 py-2">
                     {item.pas_foto_cv ? (
                       <img 
-                        src={`http://127.0.0.1:8000/${item.pas_foto_cv}`} 
+                        src={`https://matchingjob.mendunia.id/${item.pas_foto_cv}`} 
                         alt="Foto" 
                         className="w-10 h-10 rounded-full object-cover border"
                         onError={(e) => {

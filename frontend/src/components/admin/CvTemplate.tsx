@@ -98,7 +98,7 @@ export default function CvTemplate({ cv, open, onOpenChange }: CvTemplateProps) 
               <div style={{ width: '130px', flexShrink: 0 }}>
                 {cv.pas_foto_cv && (
                   <img 
-                    src={`http://127.0.0.1:8000/${cv.pas_foto_cv}`} 
+                    src={`https://matchingjob.mendunia.id/${cv.pas_foto_cv}`} 
                     alt="Pas Foto" 
                     style={{ width: '130px', height: '170px', objectFit: 'cover', borderRadius: '2px' }}
                   />

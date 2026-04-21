@@ -30,6 +30,7 @@ router.get('/', async (req, res) => {
         p.status_jft,
         p.status_ssw,
         p.catatan_admin,
+        p.foto,
         p.created_at,
         p.updated_at,
         c.nama_cabang
@@ -55,29 +56,35 @@ router.get('/', async (req, res) => {
       });
     }
 
-    const dataWithDokumen = rows.map((p) => {
-      const dokumen = dokumenMap[p.id] || [];
-      const dokumenObj = {};
-      
-      dokumen.forEach((d) => {
-        if (d.jenis_dokumen === 'pas_foto') dokumenObj.foto = d.path_file;
-        else if (d.jenis_dokumen === 'ktp') dokumenObj.ktp = d.path_file;
-        else if (d.jenis_dokumen === 'kk') dokumenObj.kk = d.path_file;
-        else if (d.jenis_dokumen === 'ijazah') dokumenObj.ijasah = d.path_file;
-        else if (d.jenis_dokumen === 'akte') dokumenObj.akte = d.path_file;
-        else if (d.jenis_dokumen === 'sertifikat_jft') dokumenObj.sertifikat_jft = d.path_file;
-        else if (d.jenis_dokumen === 'sertifikat_ssw') {
-          if (!dokumenObj.sertifikat_ssw) dokumenObj.sertifikat_ssw = [];
-          if (!dokumenObj.sertifikat_ssw.includes(d.path_file)) {
-            dokumenObj.sertifikat_ssw.push(d.path_file);
-          }
-        }
-        else if (d.jenis_dokumen === 'bukti_pelunasan') dokumenObj.bukti_pelunasan = d.path_file;
-        else if (d.jenis_dokumen === 'lainnya') dokumenObj.lainnya = d.path_file;
-      });
-      
-      return { ...p, dokumen: dokumenObj };
-    });
+     const dataWithDokumen = rows.map((p) => {
+       const dokumen = dokumenMap[p.id] || [];
+       const dokumenObj = {};
+       
+       dokumen.forEach((d) => {
+         if (d.jenis_dokumen === 'pas_foto') dokumenObj.foto = d.path_file;
+         else if (d.jenis_dokumen === 'ktp') dokumenObj.ktp = d.path_file;
+         else if (d.jenis_dokumen === 'kk') dokumenObj.kk = d.path_file;
+         else if (d.jenis_dokumen === 'ijazah') dokumenObj.ijasah = d.path_file;
+         else if (d.jenis_dokumen === 'akte') dokumenObj.akte = d.path_file;
+         else if (d.jenis_dokumen === 'sertifikat_jft') dokumenObj.sertifikat_jft = d.path_file;
+         else if (d.jenis_dokumen === 'sertifikat_ssw') {
+           if (!dokumenObj.sertifikat_ssw) dokumenObj.sertifikat_ssw = [];
+           if (!dokumenObj.sertifikat_ssw.includes(d.path_file)) {
+             dokumenObj.sertifikat_ssw.push(d.path_file);
+           }
+         }
+         else if (d.jenis_dokumen === 'bukti_pelunasan') dokumenObj.bukti_pelunasan = d.path_file;
+         else if (d.jenis_dokumen === 'lainnya') dokumenObj.lainnya = d.path_file;
+       });
+       
+       // Add foto from pendaftaran_sistem_lama table if available
+       const finalFoto = p.foto || dokumenObj.foto;
+       if (finalFoto) {
+         dokumenObj.foto = finalFoto;
+       }
+       
+       return { ...p, dokumen: dokumenObj };
+     });
 
     res.json({ success: true, data: dataWithDokumen });
   } catch (error) {

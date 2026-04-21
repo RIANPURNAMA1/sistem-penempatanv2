@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Users, Building2, GitBranch, LogOut,
   Menu, X, ChevronRight, FileText, User, Settings, Briefcase,
-  Database
+  Database, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -33,9 +33,21 @@ const navItems: NavItem[] = [
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const { user, logout } = useAuthStore()
   const location = useLocation()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebarCollapsed')
+    if (saved) setSidebarCollapsed(JSON.parse(saved))
+  }, [])
+
+  const toggleSidebar = () => {
+    const newValue = !sidebarCollapsed
+    setSidebarCollapsed(newValue)
+    localStorage.setItem('sidebarCollapsed', JSON.stringify(newValue))
+  }
 
   const filtered = navItems.filter(i => user && i.roles.includes(user.role))
 
@@ -59,12 +71,28 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-border flex flex-col transition-transform duration-300 lg:static lg:translate-x-0 shadow-sm",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        "fixed inset-y-0 left-0 z-50 bg-white border-r border-border flex flex-col shadow-sm transition-all duration-300",
+        sidebarOpen ? "translate-x-0" : "-translate-x-full",
+        "lg:static lg:translate-x-0",
+        sidebarCollapsed ? "lg:w-16" : "lg:w-64"
       )}>
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-border">
-          <div className="flex items-center gap-2.5">
+        <div className={cn(
+          "h-16 flex items-center border-b border-border shrink-0",
+          sidebarCollapsed ? "lg:px-2 justify-center" : "px-6 justify-between"
+        )}>
+          {/* Logo - show when collapsed, hide when expanded */}
+          <div className={cn(
+            "items-center justify-center",
+            sidebarCollapsed ? "lg:flex w-full h-10" : "lg:hidden"
+          )}>
+            <img src={LogoMenduniaJepang} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+          {/* Text - show when expanded, hide when collapsed */}
+          <div className={cn(
+            "flex items-center gap-2.5",
+            sidebarCollapsed ? "lg:hidden" : ""
+          )}>
             <div className="w-8 h-8  rounded-lg flex items-center justify-center">
                <img src={LogoMenduniaJepang} alt="Logo" className="w-full h-full object-contain" />
             </div>
@@ -76,15 +104,25 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-muted-foreground hover:text-foreground">
             <X size={18} />
           </button>
+          {/* Collapse button - desktop only */}
+          <button 
+            onClick={toggleSidebar} 
+            className={cn(
+              "hidden lg:flex items-center justify-center w-7 h-7 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors",
+              sidebarCollapsed ? "absolute -right-3.5 top-4 bg-white border shadow-sm" : ""
+            )}
+          >
+            {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+          </button>
         </div>
 
         {/* User info */}
-        <div className="px-4 py-4 border-b border-border">
-          <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+        <div className={cn("border-b border-border shrink-0", sidebarCollapsed ? "lg:py-3 lg:flex lg:justify-center" : "px-4 py-4")}>
+          <div className={cn("flex items-center gap-3 p-2 rounded-lg bg-muted/50", sidebarCollapsed && "lg:flex-col lg:p-1.5")}>
             <div className="w-8 h-8 rounded-full bg-[#1e3a5f] flex items-center justify-center shrink-0">
               <span className="text-white text-xs font-semibold">{user?.nama?.charAt(0)?.toUpperCase()}</span>
             </div>
-            <div className="min-w-0">
+            <div className={cn("min-w-0", sidebarCollapsed && "lg:hidden")}>
               <p className="text-sm font-medium truncate text-foreground">{user?.nama}</p>
               <p className="text-[11px] text-muted-foreground">{user && roleLabel[user.role]}</p>
             </div>
@@ -92,7 +130,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        <nav className={cn("flex-1 py-4 space-y-0.5 overflow-y-auto", sidebarCollapsed ? "lg:px-1.5" : "px-3")}>
           {filtered.map(item => {
             const Icon = item.icon
             const active = location.pathname.startsWith(item.href)
@@ -105,25 +143,29 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all group",
                   active
                     ? "bg-[#1e3a5f] text-white font-medium"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                  sidebarCollapsed && "lg:justify-center lg:px-2"
                 )}
               >
                 <Icon size={16} className="shrink-0" />
-                <span className="flex-1">{item.label}</span>
-                {active && <ChevronRight size={14} className="opacity-80" />}
+                <span className={cn("flex-1", sidebarCollapsed && "lg:hidden")}>{item.label}</span>
+                {active && !sidebarCollapsed && <ChevronRight size={14} className="opacity-80" />}
               </Link>
             )
           })}
         </nav>
 
         {/* Logout */}
-        <div className="p-3 border-t border-border">
+        <div className={cn("border-t border-border shrink-0", sidebarCollapsed ? "lg:px-1.5" : "p-3")}>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all"
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all",
+              sidebarCollapsed && "lg:justify-center lg:px-2"
+            )}
           >
             <LogOut size={16} />
-            <span>Keluar</span>
+            <span className={sidebarCollapsed ? "lg:hidden" : ""}>Keluar</span>
           </button>
         </div>
       </aside>

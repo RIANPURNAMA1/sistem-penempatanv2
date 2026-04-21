@@ -10,6 +10,7 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   charset: 'utf8mb4'
+  
 });
 
 module.exports = pool;

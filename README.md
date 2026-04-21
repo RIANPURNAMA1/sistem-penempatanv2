@@ -105,7 +105,9 @@ kandidat-system/
 │   │   ├── config/          # Database & multer config
 │   │   ├── controllers/     # Business logic
 │   │   ├── middleware/      # Auth middleware
-│   │   └── routes/          # API routes
+│   │   └── routes/ 
+
+         # API routes
 │   ├── uploads/             # File uploads (auto-created)
 │   ├── database.sql         # Schema MySQL
 │   ├── .env.example

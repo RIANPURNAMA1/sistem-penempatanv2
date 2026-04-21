@@ -92,13 +92,25 @@ export default function HistoryModal({ open, onOpenChange, kandidatId, kandidatN
     return relevant?.new_value || currentCompany || companies[0] || '-'
   }
 
+  // Get SSW at specific date
+  const getSSWAtDate = (targetDate: string) => {
+    const targetTime = new Date(targetDate).getTime()
+    const sswHistory = history
+      .filter(h => h.field_name === 'bidang_ssw' && h.new_value)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    
+    const relevant = sswHistory.find(h => new Date(h.created_at).getTime() <= targetTime)
+    return relevant?.new_value || currentSSW || sswFields[0] || '-'
+  }
+
   const statusChanges = history.filter(h => h.field_name === 'status_progres')
     .map(h => ({
       date: h.created_at,
       oldStatus: h.old_value,
       newStatus: h.new_value,
       admin: h.admin_nama || h.admin_user_nama || 'System',
-      company: getCompanyAtDate(h.created_at)
+      company: getCompanyAtDate(h.created_at),
+      ssw: getSSWAtDate(h.created_at)
     }))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
@@ -128,7 +140,8 @@ export default function HistoryModal({ open, onOpenChange, kandidatId, kandidatN
     .map(h => ({
       date: h.created_at,
       type: 'Interview',
-      company: getCompanyAtDate(h.created_at)
+      company: getCompanyAtDate(h.created_at),
+      ssw: getSSWAtDate(h.created_at)
     }))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
@@ -228,6 +241,9 @@ export default function HistoryModal({ open, onOpenChange, kandidatId, kandidatN
                           <p className="text-xs text-gray-500 mt-0.5">
                             <Building size={12} className="inline mr-1" />
                             {int.company}
+                            {int.ssw && int.ssw !== '-' && (
+                              <> • <Star size={12} className="inline mr-1" />{int.ssw}</>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -265,6 +281,15 @@ export default function HistoryModal({ open, onOpenChange, kandidatId, kandidatN
                               <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                                 <Building size={12} />
                                 {status.company}
+                                {status.ssw && status.ssw !== '-' && (
+                                  <> • <Star size={12} className="inline mr-1" />{status.ssw}</>
+                                )}
+                              </p>
+                            )}
+                            {!status.company || status.company === '-' && status.ssw && status.ssw !== '-' && (
+                              <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                <Star size={12} />
+                                {status.ssw}
                               </p>
                             )}
                           </div>

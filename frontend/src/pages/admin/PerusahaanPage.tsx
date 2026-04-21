@@ -144,10 +144,10 @@ export default function PerusahaanPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border overflow-hidden">
+      <div className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className=" bg-gray-50 border-b">
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-medium">NO</th>
                 <th className="px-4 py-2 text-left text-xs font-medium">PERUSAHAAN</th>
@@ -160,7 +160,7 @@ export default function PerusahaanPage() {
                 <th className="px-4 py-2 text-center text-xs font-medium">AKSI</th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y-0">
               {loading ? (
                 <tr><td colSpan={9} className="py-8 text-center"><Loader2 className="animate-spin mx-auto" /></td></tr>
               ) : paginatedData.length === 0 ? (

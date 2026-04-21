@@ -25,6 +25,7 @@ router.patch('/:id/status', authorize('admin_penempatan', 'admin_cabang'), ctrl.
 router.patch('/:id/progres', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateProgres);
 router.patch('/:id/keberangkatan', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateKeberangkatan);
 router.patch('/:id/progres-lengkap', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateProgresLengkap);
+router.put('/:id/update-profile', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateProfileByAdmin);
 
 // Get file limits for frontend
 router.get('/file-limits', (req, res) => {

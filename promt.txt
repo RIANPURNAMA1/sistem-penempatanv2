@@ -1,143 +1,310 @@
-public function update(Request $request, $id)
-{
-    try {
-        /* ------------------------------------------------------------
-        | Validasi
-        ------------------------------------------------------------ */
-        $validator = \Validator::make($request->all(), [
-            'status_kandidat' => 'required|in:Job Matching,Pending,Interview,Jadwalkan Interview Ulang,Lulus interview,Gagal Interview,Pemberkasan,Berangkat,Ditolak,lamar ke perusahaan',
-            'institusi_id' => 'nullable|exists:institusis,id',
-            'catatan_interview' => 'nullable|string',
-            'jadwal_interview' => 'nullable|date',
-            'nama_perusahaan' => 'nullable|string',
-            'bidang_ssw' => 'required',
-        ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validasi gagal',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
+Teks penuh
+id
+kandidat_id
+jenis_dokumen
+nama_file
+path_file
+ukuran_file
+mime_type
+uploaded_at
 
-        /* ------------------------------------------------------------
-        | Ambil kandidat
-        ------------------------------------------------------------ */
-        $kandidat = Kandidat::with('pendaftaran')->find($id);
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+3
+1
+ijazah
+WhatsApp Image 2026-04-07 at 11.53.53.jpeg
+uploads/3/1775556210461-u0v4e3k2v1o.jpeg
+119836
+image/jpeg
+2026-04-07 17:03:30
 
-        if (!$kandidat) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Kandidat tidak ditemukan'
-            ], 404);
-        }
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+4
+1
+akte
+WhatsApp Image 2026-04-07 at 11.53.53.jpeg
+uploads/3/1775556219787-3bajt2xaho5.jpeg
+119836
+image/jpeg
+2026-04-07 17:03:39
 
-        $status_lama = $kandidat->status_kandidat;
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+5
+1
+ktp
+WhatsApp Image 2026-04-07 at 11.53.53.jpeg
+uploads/3/1775556223438-cl5oijnt7c.jpeg
+119836
+image/jpeg
+2026-04-07 17:03:43
 
-        /* ------------------------------------------------------------
-        | Validasi Interview wajib tanggal
-        ------------------------------------------------------------ */
-        if (in_array($request->status_kandidat, ['Interview', 'Jadwalkan Interview Ulang']) 
-            && empty($request->jadwal_interview)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Tanggal interview wajib diisi'
-            ], 422);
-        }
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+6
+1
+kk
+WhatsApp Image 2026-04-07 at 11.58.28.jpeg
+uploads/3/1775556227762-ivq9qiuwdc8.jpeg
+55274
+image/jpeg
+2026-04-07 17:03:47
 
-        /* ------------------------------------------------------------
-        | Larangan update
-        ------------------------------------------------------------ */
-        if ($status_lama === 'Lulus interview' && in_array($request->status_kandidat, [
-            'Interview', 'Jadwalkan Interview Ulang', 'Gagal Interview'
-        ])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Tidak boleh mengubah status setelah lulus'
-            ], 422);
-        }
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+7
+1
+video_perkenalan
+WhatsApp Image 2026-04-07 at 11.58.28.jpeg
+uploads/3/1775556241187-9q69kw72x3j.jpeg
+55274
+image/jpeg
+2026-04-07 17:04:01
 
-        if (in_array($status_lama, ['Pemberkasan', 'Berangkat'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Status tidak bisa diubah setelah tahap akhir'
-            ], 422);
-        }
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+8
+1
+foto_full_body
+WhatsApp Image 2026-04-07 at 11.53.53.jpeg
+uploads/3/1775556245962-zrn10ze1h2a.jpeg
+119836
+image/jpeg
+2026-04-07 17:04:05
 
-        /* ------------------------------------------------------------
-        | Hitung jumlah interview
-        ------------------------------------------------------------ */
-        if ($request->status_kandidat === 'Interview' && $status_lama !== 'Interview') {
-            $kandidat->jumlah_interview += 1;
-        }
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+9
+1
+pas_foto
+WhatsApp Image 2026-04-07 at 11.58.28.jpeg
+uploads/3/1775556249964-nlu9nptepc.jpeg
+55274
+image/jpeg
+2026-04-07 17:04:09
 
-        /* ------------------------------------------------------------
-        | Update kandidat
-        ------------------------------------------------------------ */
-        $kandidat->update([
-            'status_kandidat' => $request->status_kandidat,
-            'institusi_id' => $request->institusi_id,
-            'catatan_interview' => $request->catatan_interview,
-            'jadwal_interview' => $request->jadwal_interview,
-            'nama_perusahaan' => $request->nama_perusahaan,
-            'jumlah_interview' => $kandidat->jumlah_interview,
-        ]);
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+10
+1
+sertifikat_jft
+WhatsApp Image 2026-04-07 at 11.53.53.jpeg
+uploads/3/1775556253999-ad3jzcaaan.jpeg
+119836
+image/jpeg
+2026-04-07 17:04:14
 
-        /* ------------------------------------------------------------
-        | Update bidang SSW
-        ------------------------------------------------------------ */
-        $kandidat->bidang_ssws()->delete();
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+11
+1
+ssw_1
+Data_Akun_Karyawan_1770958614951.pdf
+uploads/3/1775556272890-rqzioig1owb.pdf
+4433
+application/pdf
+2026-04-07 17:04:32
 
-        $bidang = $kandidat->pendaftaran->bidang_ssws()
-            ->find($request->bidang_ssw);
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+12
+1
+ssw_2
+WhatsApp Image 2026-04-07 at 11.58.28.jpeg
+uploads/3/1775556378796-epef0nkow68.jpeg
+55274
+image/jpeg
+2026-04-07 17:06:18
 
-        if ($bidang) {
-            BidangSsw::create([
-                'kandidat_id' => $kandidat->id,
-                'pendaftaran_id' => $kandidat->pendaftaran_id,
-                'nama_bidang' => $bidang->nama_bidang,
-            ]);
-        }
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+13
+1
+ssw_3
+Gemini_Generated_Image_7r0kt47r0kt47r0k.png
+uploads/3/1775556426466-3vau5uule1o.png
+2013886
+image/png
+2026-04-07 17:07:06
 
-        /* ------------------------------------------------------------
-        | Simpan history
-        ------------------------------------------------------------ */
-        KandidatHistory::create([
-            'kandidat_id' => $kandidat->id,
-            'status_kandidat' => $kandidat->status_kandidat,
-            'nama_perusahaan' => $kandidat->nama_perusahaan,
-        ]);
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+14
+1
+ssw_4
+WhatsApp Image 2026-04-07 at 11.53.53.jpeg
+uploads/3/1775556431245-ov0ff0uf98.jpeg
+119836
+image/jpeg
+2026-04-07 17:07:11
 
-        /* ------------------------------------------------------------
-        | Response API
-        ------------------------------------------------------------ */
-        return response()->json([
-            'success' => true,
-            'message' => 'Data kandidat berhasil diperbarui',
-            'data' => $kandidat->fresh(['pendaftaran', 'institusi', 'bidang_ssws'])
-        ]);
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+15
+1
+ssw_5
+WhatsApp Image 2026-04-07 at 11.53.53.jpeg
+uploads/3/1775556434938-q6xgpxg3cyc.jpeg
+119836
+image/jpeg
+2026-04-07 17:07:14
 
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Terjadi kesalahan server',
-            'error'   => $e->getMessage()
-        ], 500);
-    }
-}
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+16
+1
+lainnya
+WhatsApp Image 2026-04-07 at 11.53.53.jpeg
+uploads/3/1775619645888-dqalrx1g4yu.jpeg
+119836
+image/jpeg
+2026-04-08 10:40:45
 
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+17
+2
+pas_foto
+1772171820.png
+uploads/4/1775640148538-wezc506z2uq.png
+688670
+image/png
+2026-04-08 16:22:28
 
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+18
+2
+foto_full_body
+WhatsApp Image 2026-04-07 at 11.58.28.jpeg
+uploads/4/1775640156474-0oh8gcrj5gui.jpeg
+55274
+image/jpeg
+2026-04-08 16:22:36
 
-url : http://localhost:8000/api/kandidat/update/data/{id}
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+19
+2
+ktp
+WhatsApp Image 2026-04-07 at 11.53.53.jpeg
+uploads/4/1775640160424-3sz27oo9oah.jpeg
+119836
+image/jpeg
+2026-04-08 16:22:40
 
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+20
+2
+kk
+WhatsApp Image 2026-04-07 at 11.53.53.jpeg
+uploads/4/1775640164262-enkkgjs0bp7.jpeg
+119836
+image/jpeg
+2026-04-08 16:22:44
 
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+21
+2
+ijazah
+WhatsApp Image 2026-04-07 at 11.58.28.jpeg
+uploads/4/1775640168075-5njf6v0k9nt.jpeg
+55274
+image/jpeg
+2026-04-08 16:22:48
 
-nah klo response gini berhasil 
-{
-  "status_kandidat": "Interview",
-  "institusi_id": 4,
-  "jadwal_interview": "2026-04-20",
-  "nama_perusahaan": "PT Jepang Sejahtera",
-  "bidang_ssw": 5
-}  
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+22
+2
+akte
+WhatsApp Image 2026-04-07 at 11.53.53.jpeg
+uploads/4/1775640172204-0exshl5ok617.jpeg
+119836
+image/jpeg
+2026-04-08 16:22:52
+
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+23
+2
+ssw_1
+WhatsApp Image 2026-04-07 at 11.53.53.jpeg
+uploads/4/1775640176338-99yw20lpop4.jpeg
+119836
+image/jpeg
+2026-04-08 16:22:56
+
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+25
+3
+sertifikat_jft
+rian_CV.pdf
+uploads/5/1775705928194-von8wble1a.pdf
+6780
+application/pdf
+2026-04-09 10:38:48
+
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+26
+3
+pas_foto
+ebook sucess story.png
+uploads/5/1775705934156-uuqpjv0641.png
+799819
+image/png
+2026-04-09 10:38:54
+
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+27
+3
+foto_full_body
+rian_CV.pdf
+uploads/5/1775705937699-t3svzs21h1c.pdf
+6780
+application/pdf
+2026-04-09 10:38:57
+
+Ubah Ubah
+Salin Salin
+Hapus Hapus
+28
+3
+kk
+rian_CV.pdf
+uploads/5/1775705941218-qiyw1cxp3p.pdf
+6780
+application/pdf
+2026-04-09 10:39:01

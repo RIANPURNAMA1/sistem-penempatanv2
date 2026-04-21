@@ -415,7 +415,7 @@ export default function JobOrderPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg border">
+      <div className="border-0 ">
         <div className="px-4 py-3 border-b flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Briefcase size={18} className="text-gray-500" />
@@ -445,7 +445,7 @@ export default function JobOrderPage() {
                 <th className="text-center px-4 py-3 font-medium text-xs text-gray-500">AKSI</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y-0">
               {loading ? (
                 <tr>
                   <td colSpan={8} className="text-center px-4 py-12">
@@ -567,9 +567,9 @@ export default function JobOrderPage() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <Card className="w-full max-w-6xl max-h-[95vh] overflow-y-auto shadow-xl">
-            <div className="bg-gradient-to-r from-[#1e3a5f] to-[#2d5a8a] px-4 py-3 flex items-center justify-between sticky top-0 z-10 rounded-t-lg">
-              <h2 className="text-white font-semibold">{editingId ? 'Update' : 'Tambah'} Job Order</h2>
-              <Button variant="ghost" size="icon" onClick={() => setShowModal(false)} className="text-white hover:bg-white/20">
+            <div className="px-4 py-3 flex items-center justify-between sticky top-0 z-10 rounded-t-lg">
+              <h2 className=" font-semibold">{editingId ? 'Update' : 'Tambah'} Job Order</h2>
+              <Button variant="ghost" size="icon" onClick={() => setShowModal(false)} className=" hover:bg-white/20">
                 <X size={20} />
               </Button>
             </div>
@@ -731,95 +731,123 @@ export default function JobOrderPage() {
         </div>
       )}
 
-      {/* MODAL DETAIL */}
-      {showDetailModal && detailItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-4xl max-h-[95vh] overflow-y-auto shadow-xl">
-            <div className="bg-gradient-to-r from-[#1e3a5f] to-[#2d5a8a] px-4 py-3 flex items-center justify-between sticky top-0 z-10 rounded-t-lg">
-              <h2 className="text-white font-semibold">Detail Job Order</h2>
-              <Button variant="ghost" size="icon" onClick={() => setShowDetailModal(false)} className="text-white hover:bg-white/20">
-                <X size={20} />
-              </Button>
-            </div>
-            <CardContent className="p-6 space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="font-medium text-slate-500 text-xs">No. Job Order:</span>
-                  <p className="font-semibold">{detailItem.nomor || '-'}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-slate-500 text-xs">Tanggal Terbit:</span>
-                  <p>{formatDate(detailItem.tanggal_terbit)}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-slate-500 text-xs">Perusahaan:</span>
-                  <p>{detailItem.nama_perusahaan || '-'}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-slate-500 text-xs">Bidang SSW:</span>
-                  <p>{detailItem.bidang_ssw || '-'}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-slate-500 text-xs">Status Kelulusan:</span>
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold mt-1 ${statusConfig[detailItem.status_kelulusan]?.bg} ${statusConfig[detailItem.status_kelulusan]?.text}`}>
+  {/* MODAL DETAIL */}
+{showDetailModal && detailItem && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+    <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col bg-white">
+      {/* Header Modal */}
+      <div className="px-6 py-4 flex items-center justify-between border-b-2 border-slate-200 bg-white">
+        <h2 className="text-xl font-bold text-slate-800">Detail Job Order</h2>
+        <Button variant="ghost" size="icon" onClick={() => setShowDetailModal(false)} className="rounded-full">
+          <X size={20} />
+        </Button>
+      </div>
+
+      <CardContent className="p-6 overflow-y-auto flex-1">
+        {/* TABEL UTAMA DENGAN BORDER TEGAS */}
+        <div className="overflow-hidden border border-slate-300 rounded-lg">
+          <table className="w-full border-collapse">
+            <tbody>
+              {/* Baris 1 */}
+              <tr>
+                <td className="w-[20%] border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">No. Job Order</td>
+                <td className="w-[30%] border border-slate-300 px-4 py-3 font-bold text-blue-600">{detailItem.nomor || '-'}</td>
+                <td className="w-[20%] border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Tanggal Terbit</td>
+                <td className="w-[30%] border border-slate-300 px-4 py-3">{formatDate(detailItem.tanggal_terbit)}</td>
+              </tr>
+              {/* Baris 2 */}
+              <tr>
+                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Perusahaan</td>
+                <td className="border border-slate-300 px-4 py-3 font-semibold text-slate-800">{detailItem.nama_perusahaan || '-'}</td>
+                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Bidang SSW</td>
+                <td className="border border-slate-300 px-4 py-3">{detailItem.bidang_ssw || '-'}</td>
+              </tr>
+              {/* Baris 3 */}
+              <tr>
+                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Status Lulus</td>
+                <td className="border border-slate-300 px-4 py-3">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusConfig[detailItem.status_kelulusan]?.bg} ${statusConfig[detailItem.status_kelulusan]?.text}`}>
                     {detailItem.status_kelulusan}
                   </span>
-                </div>
-                <div>
-                  <span className="font-medium text-slate-500 text-xs">Nama Grup:</span>
-                  <p>{detailItem.nama_grup || '-'}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-slate-500 text-xs">Link Grup:</span>
-                  <p>{detailItem.link_grup ? <a href={detailItem.link_grup} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{detailItem.link_grup}</a> : '-'}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-slate-500 text-xs">Biaya Awal:</span>
-                  <p>{detailItem.biaya_awal ? `Rp ${Number(detailItem.biaya_awal).toLocaleString('id-ID')}` : '-'}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-slate-500 text-xs">Biaya Akhir:</span>
-                  <p>{detailItem.biaya_akhir ? `Rp ${Number(detailItem.biaya_akhir).toLocaleString('id-ID')}` : '-'}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-slate-500 text-xs">Tanggal CV:</span>
-                  <p>{formatDate(detailItem.tanggal_cv)}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-slate-500 text-xs">PIC CV:</span>
-                  <p>{detailItem.pic_cv || '-'}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-slate-500 text-xs">Tanggal Mensetsu 1:</span>
-                  <p>{formatDate(detailItem.tanggal_mensetsu_1)}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-slate-500 text-xs">Tanggal Mensetsu 2:</span>
-                  <p>{formatDate(detailItem.tanggal_mensetsu_2)}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-slate-500 text-xs">Tanggal Mensetsu 3:</span>
-                  <p>{formatDate(detailItem.tanggal_mensetsu_3)}</p>
-                </div>
-              </div>
-              <div>
-                <span className="font-medium text-slate-500 text-xs">Kandidat ({detailItem.kandidat_ids?.length || 0}):</span>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {detailItem.nama_kandidat ? detailItem.nama_kandidat.split(', ').map((nama: string, idx: number) => (
-                    <span key={idx} className="bg-[#1e3a5f]/10 text-[#1e3a5f] text-xs px-3 py-1 rounded-full font-medium">
-                      {nama.trim()}
-                    </span>
-                  )) : '-'}
-                </div>
-              </div>
-              <div>
-                <span className="font-medium text-slate-500 text-xs">Detail Job Order:</span>
-                <p className="mt-1 text-sm whitespace-pre-wrap">{detailItem.detail_job_order || '-'}</p>
-              </div>
-            </CardContent>
-          </Card>
+                </td>
+                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Nama Grup</td>
+                <td className="border border-slate-300 px-4 py-3">{detailItem.nama_grup || '-'}</td>
+              </tr>
+              {/* Baris 4 */}
+              <tr>
+                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Biaya Awal</td>
+                <td className="border border-slate-300 px-4 py-3 text-green-600 font-bold">
+                  {detailItem.biaya_awal ? `Rp ${Number(detailItem.biaya_awal).toLocaleString('id-ID')}` : '-'}
+                </td>
+                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Biaya Akhir</td>
+                <td className="border border-slate-300 px-4 py-3 text-green-600 font-bold">
+                  {detailItem.biaya_akhir ? `Rp ${Number(detailItem.biaya_akhir).toLocaleString('id-ID')}` : '-'}
+                </td>
+              </tr>
+              {/* Baris 5 - Link (Full Width) */}
+              <tr>
+                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Link Grup WA</td>
+                <td colSpan={3} className="border border-slate-300 px-4 py-3">
+                  {detailItem.link_grup ? (
+                    <a href={detailItem.link_grup} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                      {detailItem.link_grup}
+                    </a>
+                  ) : '-'}
+                </td>
+              </tr>
+              {/* Baris 6 - Detail Mensetsu & CV */}
+              <tr>
+                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Jadwal Mensetsu</td>
+                <td className="border border-slate-300 px-4 py-3 leading-relaxed">
+                  <div className="flex justify-between border-b border-slate-200 pb-1"><span>Mensetsu 1:</span> <span className="font-medium">{formatDate(detailItem.tanggal_mensetsu_1)}</span></div>
+                  <div className="flex justify-between pt-1"><span>Mensetsu 2:</span> <span className="font-medium">{formatDate(detailItem.tanggal_mensetsu_2)}</span></div>
+                </td>
+                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Data CV</td>
+                <td className="border border-slate-300 px-4 py-3 leading-relaxed">
+                  <div className="flex justify-between border-b border-slate-200 pb-1"><span>Tgl CV:</span> <span className="font-medium">{formatDate(detailItem.tanggal_cv)}</span></div>
+                  <div className="flex justify-between pt-1"><span>PIC:</span> <span className="font-medium">{detailItem.pic_cv || '-'}</span></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-      )}
+
+        {/* Bagian Kandidat - Menggunakan List Box agar rapi */}
+        <div className="mt-6">
+          <h3 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+            <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+            Daftar Kandidat Terdaftar ({detailItem.kandidat_ids?.length || 0})
+          </h3>
+          <div className="border border-slate-300 rounded-lg p-4 bg-slate-50 flex flex-wrap gap-2">
+           {detailItem.nama_kandidat?.split(', ').map((nama: string, idx: number) => (
+  <span key={idx} className="...">
+    {nama.trim()}
+  </span>
+))}
+          </div>
+        </div>
+
+        {/* Bagian Detail Deskripsi */}
+        <div className="mt-6">
+          <h3 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+            <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+            Detail Deskripsi Pekerjaan
+          </h3>
+          <div className="border border-slate-300 rounded-lg p-4 text-sm text-slate-700 bg-slate-50 whitespace-pre-wrap leading-6">
+            {detailItem.detail_job_order || 'Tidak ada catatan tambahan.'}
+          </div>
+        </div>
+      </CardContent>
+
+      {/* Footer */}
+      <div className="px-6 py-4 border-t-2 border-slate-200 bg-slate-50 flex justify-end">
+        <Button onClick={() => setShowDetailModal(false)} className="bg-slate-800 hover:bg-slate-900 text-white px-8">
+          Tutup
+        </Button>
+      </div>
+    </Card>
+  </div>
+)}
     </div>
   )
 }

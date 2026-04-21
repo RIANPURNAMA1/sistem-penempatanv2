@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Card, CardContent } from '@/components/ui/components'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/components'
 import { Button } from '@/components/ui/button'
 import api from '@/lib/api'
 import { Users, TrendingUp, Calendar, Loader2 } from 'lucide-react'
+import ReactApexChart from 'react-apexcharts'
 
 interface InterviewStatsData {
   interview_count: number
@@ -10,12 +11,43 @@ interface InterviewStatsData {
   percentage: number
 }
 
-export default function InterviewStats() {
+interface InterviewByGroup {
+  nama_cabang?: string
+  jenis_kelamin?: string
+  interview: number
+  lulus: number
+}
+
+interface InterviewStatsProps {
+  interviewByCabang?: InterviewByGroup[]
+  interviewByGender?: InterviewByGroup[]
+}
+
+export default function InterviewStats({ interviewByCabang: propInterviewByCabang, interviewByGender: propInterviewByGender }: InterviewStatsProps) {
   const [filterType, setFilterType] = useState<string>('today')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<InterviewStatsData | null>(null)
+  const [interviewByCabang, setInterviewByCabang] = useState<InterviewByGroup[]>([])
+  const [interviewByGender, setInterviewByGender] = useState<InterviewByGroup[]>([])
+
+  // Use props if provided, otherwise use state
+  const byCabang = propInterviewByCabang || interviewByCabang
+  const byGender = propInterviewByGender || interviewByGender
+
+  // Fetch additional data if props not provided
+  useEffect(() => {
+    if (!propInterviewByCabang || !propInterviewByGender) {
+      api.get('/kandidat/stats')
+        .then(r => {
+          const data = r.data.data
+          setInterviewByCabang(data.interviewByCabang || [])
+          setInterviewByGender(data.interviewByGender || [])
+        })
+        .catch(() => {})
+    }
+  }, [])
 
   const fetchStats = () => {
     setLoading(true)
@@ -38,11 +70,6 @@ export default function InterviewStats() {
       fetchStats()
     }
   }
-
-  const today = new Date().toISOString().split('T')[0]
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
-  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
-  const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
 
   return (
     <div className="space-y-6">
@@ -150,6 +177,91 @@ export default function InterviewStats() {
           </Card>
         </div>
       )}
+
+      {/* Grafik Interview & Lulus by Cabin and Gender */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users size={16} />
+              Interview & Lulus berdasarkan Cabin
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {byCabang?.length ? (
+              <ReactApexChart
+                type="bar"
+                series={[
+                  { name: 'Interview', data: byCabang.map((c: any) => c.interview) },
+                  { name: 'Lulus', data: byCabang.map((c: any) => c.lulus) }
+                ]}
+                options={{
+                  chart: { height: 300, toolbar: { show: false } },
+                  colors: ['#3b82f6', '#22c55e'],
+                  plotOptions: {
+                    bar: { horizontal: false, columnWidth: '55%', borderRadius: 4 }
+                  },
+                  dataLabels: { enabled: false },
+                  xaxis: {
+                    categories: byCabang.map((c: any) => c.nama_cabang),
+                    labels: { style: { fontSize: '10px' } }
+                  },
+                  yaxis: { labels: { formatter: (val) => val.toFixed(0) } },
+                  grid: { borderColor: '#f1f1f1', strokeDashArray: 4 },
+                  tooltip: { theme: 'light' },
+                  legend: { position: 'top', horizontalAlign: 'right' }
+                }}
+                height={300}
+              />
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
+                Belum ada data Interview
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp size={16} />
+              Interview & Lulus berdasarkan Jenis Kelamin
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {byGender?.length ? (
+              <ReactApexChart
+                type="bar"
+                series={[
+                  { name: 'Interview', data: byGender.map((g: any) => g.interview) },
+                  { name: 'Lulus', data: byGender.map((g: any) => g.lulus) }
+                ]}
+                options={{
+                  chart: { height: 300, toolbar: { show: false } },
+                  colors: ['#8b5cf6', '#ec4899'],
+                  plotOptions: {
+                    bar: { horizontal: false, columnWidth: '55%', borderRadius: 4 }
+                  },
+                  dataLabels: { enabled: false },
+                  xaxis: {
+                    categories: byGender.map((g: any) => g.jenis_kelamin),
+                    labels: { style: { fontSize: '11px' } }
+                  },
+                  yaxis: { labels: { formatter: (val) => val.toFixed(0) } },
+                  grid: { borderColor: '#f1f1f1', strokeDashArray: 4 },
+                  tooltip: { theme: 'light' },
+                  legend: { position: 'top', horizontalAlign: 'right' }
+                }}
+                height={300}
+              />
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground text-sm">
+                Belum ada data Interview
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

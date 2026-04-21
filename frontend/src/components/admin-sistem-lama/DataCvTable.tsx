@@ -206,7 +206,7 @@ export default function DataCvTable({ onSelect }: DataCvTableProps) {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border overflow-hidden">
+      <div className=" overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
@@ -220,7 +220,7 @@ export default function DataCvTable({ onSelect }: DataCvTableProps) {
                 <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">AKSI</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y-0">
               {loading ? (
                 <tr><td colSpan={7} className="py-8 text-center"><Loader2 className="animate-spin mx-auto" /></td></tr>
               ) : paginatedData.length === 0 ? (

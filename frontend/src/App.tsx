@@ -30,7 +30,6 @@ export default function App() {
         <Route path="/" element={<HomeRedirect />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-
         {/* Admin routes */}
         <Route path="/dashboard" element={
           <ProtectedRoute roles={['admin_penempatan', 'admin_cabang']}>
@@ -89,6 +88,11 @@ export default function App() {
             <FormulirPage />
           </ProtectedRoute>
         } />
+
+
+        {/* <Route path="/testing-cv">
+        <TestingCv/>
+        </Route> */}
 
         <Route path="/unauthorized" element={
           <div className="flex items-center justify-center h-screen">

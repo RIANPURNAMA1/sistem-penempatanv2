@@ -186,10 +186,11 @@ CREATE TABLE IF NOT EXISTS kandidat_pengalaman_kerja (
 CREATE TABLE IF NOT EXISTS kandidat_keluarga (
   id INT PRIMARY KEY AUTO_INCREMENT,
   kandidat_id INT NOT NULL,
-  hubungan ENUM('Ayah', 'Ibu', 'Kakak', 'Adik', 'Lainnya') NOT NULL,
+  hubungan ENUM('Ayah', 'Ibu', 'Suami', 'Istri', 'Kakak', 'Adik', 'Lainnya') NOT NULL,
   nama VARCHAR(200),
   usia INT,
   pekerjaan VARCHAR(150),
+  penghasilan VARCHAR(50),
   urutan INT DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (kandidat_id) REFERENCES kandidat_profil(id) ON DELETE CASCADE

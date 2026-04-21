@@ -28,10 +28,13 @@ const fileFilter = (req, file, cb) => {
   else cb(new Error('Format file tidak didukung'));
 };
 
+// ============================================================
+// ✅ UPDATE: KONFIGURASI LIMIT BARU
+// ============================================================
 const FILE_LIMITS = {
-  default: 2 * 1024 * 1024,
-  video: 20 * 1024 * 1024,
-  foto_full_body: 3 * 1024 * 1024,
+  default: 500 * 1024,          // 500KB untuk dokumen standar
+  video: 20 * 1024 * 1024,      // 20MB
+  foto_full_body: 3 * 1024 * 1024, // 3MB
 };
 
 const getFileLimit = (jenis_dokumen) => {
@@ -40,6 +43,7 @@ const getFileLimit = (jenis_dokumen) => {
   return FILE_LIMITS.default;
 };
 
+// Buat instance multer secara dinamis berdasarkan limit
 const uploaders = {
   default: multer({ storage, fileFilter, limits: { fileSize: FILE_LIMITS.default } }),
   video: multer({ storage, fileFilter, limits: { fileSize: FILE_LIMITS.video } }),
@@ -47,7 +51,12 @@ const uploaders = {
 };
 
 const uploadDokumenMiddleware = (req, res, next) => {
-  const jenis = req.body.jenis_dokumen;
+  // Ambil jenis_dokumen dari query atau header jika body belum ter-parse
+  // Karena Multer belum jalan, req.body mungkin masih kosong. 
+  // Strategi terbaik: Gunakan uploader default dulu untuk parsing body, atau uploader dinamis.
+  
+  const jenis = req.query.jenis_dokumen || req.body.jenis_dokumen; 
+  
   const uploader = jenis === 'video_perkenalan' ? uploaders.video : 
                    jenis === 'foto_full_body' ? uploaders.foto_full_body : 
                    uploaders.default;
@@ -56,8 +65,16 @@ const uploadDokumenMiddleware = (req, res, next) => {
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
         const limit = getFileLimit(jenis);
-        const maxMB = Math.round(limit / 1024 / 1024);
-        return res.status(400).json({ success: false, message: `Ukuran file maksimal ${maxMB}MB` });
+        
+        // Logic pesan error: jika di bawah 1MB, tampilkan dalam KB
+        let message;
+        if (limit < 1024 * 1024) {
+            message = `Ukuran file maksimal ${limit / 1024}KB`;
+        } else {
+            message = `Ukuran file maksimal ${Math.round(limit / 1024 / 1024)}MB`;
+        }
+        
+        return res.status(400).json({ success: false, message });
       }
       return res.status(400).json({ success: false, message: err.message });
     }

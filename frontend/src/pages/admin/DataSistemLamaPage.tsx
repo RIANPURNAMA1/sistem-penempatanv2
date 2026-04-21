@@ -36,6 +36,7 @@ interface Pendaftaran {
   status_jft: string | null
   status_ssw: string | null
   verifikasi: string | null
+  foto: string | null
   created_at: string
   nama_cabang: string | null
   dokumen: Dokumen | null
@@ -180,24 +181,52 @@ export default function DataSistemLamaPage() {
           <div className="flex justify-between mb-4">
             <div className="relative w-full max-w-md"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><Input placeholder="Cari..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} /></div>
           </div>
-          <div className="bg-white rounded-lg border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
-                <tr><th className="px-3 py-2 text-left">NO</th><th className="px-3 py-2 text-left">NAMA</th><th className="px-3 py-2 text-left">NIK</th><th className="px-3 py-2 text-left">KONTAK</th><th className="px-3 py-2 text-center">VERIFIKASI</th><th className="px-3 py-2 text-center">AKSI</th></tr>
-              </thead>
-              <tbody className="divide-y">
-                {loading ? <tr><td colSpan={6} className="py-8 text-center"><Loader2 className="animate-spin mx-auto" /></td></tr> : paginatedData.map((item, idx) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2 text-gray-400">{(page - 1) * perPage + idx + 1}</td>
-                    <td className="px-3 py-2 font-medium">{item.nama}</td>
-                    <td className="px-3 py-2 font-mono text-xs">{item.nik}</td>
-                    <td className="px-3 py-2 text-xs"><div>{item.email}</div><div className="text-green-600">{item.no_wa}</div></td>
-                    <td className="px-3 py-2 text-center"><span className={`px-2 py-1 rounded text-xs ${item.verifikasi === 'diterima' ? 'bg-green-100 text-green-700' : item.verifikasi === 'ditolak' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{item.verifikasi || '-'}</span></td>
-                    <td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => { setSelectedData(item); setShowModal(true) }}><Eye size={14} /></Button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className=" overflow-hidden">
+             <table className="w-full text-sm">
+               <thead className="bg-gray-50 border-b">
+                 <tr><th className="px-3 py-2 text-left">NO</th><th className="px-3 py-2 text-left">FOTO</th><th className="px-3 py-2 text-left">NAMA</th><th className="px-3 py-2 text-left">NIK</th><th className="px-3 py-2 text-left">KONTAK</th><th className="px-3 py-2 text-center">VERIFIKASI</th><th className="px-3 py-2 text-center">AKSI</th></tr>
+               </thead>
+               <tbody className="divide-y">
+                 {loading ? <tr><td colSpan={7} className="py-8 text-center"><Loader2 className="animate-spin mx-auto" /></td></tr> : paginatedData.map((item, idx) => {
+                    const fotoFromTable = item.foto;
+                    const fotoFromDokumen = item.dokumen?.foto;
+                    const fotoPath = fotoFromTable || fotoFromDokumen;
+                    
+                    let fotoUrl = '/images/default-avatar.png'; // Default avatar if no photo
+                    if (fotoPath) {
+                      // Check if fotoPath is already a full URL
+                      if (fotoPath.startsWith('http')) {
+                        fotoUrl = fotoPath;
+                      } else {
+                        fotoUrl = `https://matchingjob.mendunia.id/dokumen/${fotoPath}`;
+                      }
+                    }
+                     
+                    return (
+                      <tr key={item.id} className="hover:bg-gray-50">
+                        <td className="px-3 py-2 text-gray-400">{((page - 1) * perPage) + idx + 1}</td>
+                        <td className="px-3 py-2 text-center">
+                          <img 
+                            src={fotoUrl} 
+                            alt={`${item.nama}'s photo`} 
+                            className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                            onError={(e) => {
+                              console.log('Image load failed for:', fotoUrl, 'Error:', e);
+                              // Fallback to default avatar on error
+                              (e.target as HTMLImageElement).src = '/images/default-avatar.png';
+                            }}
+                          />
+                        </td>
+                       <td className="px-3 py-2 font-medium">{item.nama}</td>
+                       <td className="px-3 py-2 font-mono text-xs">{item.nik}</td>
+                       <td className="px-3 py-2 text-xs"><div>{item.email}</div><div className="text-green-600">{item.no_wa}</div></td>
+                       <td className="px-3 py-2 text-center"><span className={`px-2 py-1 rounded text-xs ${item.verifikasi === 'diterima' ? 'bg-green-100 text-green-700' : item.verifikasi === 'ditolak' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{item.verifikasi || '-'}</span></td>
+                       <td className="px-3 py-2 text-center"><Button variant="ghost" size="sm" onClick={() => { setSelectedData(item); setShowModal(true) }}><Eye size={14} /></Button></td>
+                     </tr>
+                   );
+                 })}
+               </tbody>
+             </table>
             {!loading && filteredData.length > 0 && (
               <div className="px-4 py-2 border-t flex items-center justify-between bg-gray-50 text-xs">
                 <div className="flex items-center gap-2">
@@ -225,7 +254,7 @@ export default function DataSistemLamaPage() {
       {activeTab === 'datacv' && <DataCvTable />}
 
       {activeTab === 'terverifikasi' && (
-        <div className="bg-white rounded-lg border overflow-hidden">
+        <div className=" overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr><th className="px-3 py-2 text-left">NO</th><th className="px-3 py-2 text-left">NAMA</th><th className="px-3 py-2 text-left">NIK</th><th className="px-3 py-2 text-left">No WA</th><th className="px-3 py-2 text-left">Status JFT</th><th className="px-3 py-2 text-left">Status SSW</th></tr>

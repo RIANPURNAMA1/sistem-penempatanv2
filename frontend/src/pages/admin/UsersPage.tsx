@@ -138,7 +138,7 @@ export default function UsersPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border">
+      <div className="">
         <div className="px-4 py-3 border-b flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Users size={18} className="text-gray-500" />
@@ -165,7 +165,7 @@ export default function UsersPage() {
                 <th className="text-center px-4 py-3 font-medium text-xs text-gray-500">AKSI</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y-0">
               {loading ? (
                 <tr>
                   <td colSpan={5} className="text-center px-4 py-12">

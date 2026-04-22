@@ -21,8 +21,11 @@ const register = async (req, res) => {
       'INSERT INTO users (nama, email, password, role, cabang_id) VALUES (?, ?, ?, "kandidat", ?)',
       [nama, email, hashed, cabang_id]
     );
-    // Create empty profile
-    await pool.query('INSERT INTO kandidat_profil (user_id, cabang_id) VALUES (?, ?)', [result.insertId, cabang_id]);
+    // Create profile with dasar data
+    await pool.query(
+      'INSERT INTO kandidat_profil (user_id, cabang_id, nama_romaji, status_formulir, status_progres) VALUES (?, ?, ?, ?, ?)',
+      [result.insertId, cabang_id, nama, 'draft', 'Job Matching']
+    );
     res.status(201).json({ success: true, message: 'Registrasi berhasil' });
   } catch (err) {
     console.error(err);
@@ -78,4 +81,88 @@ const getMe = async (req, res) => {
   res.json({ success: true, user: req.user });
 };
 
-module.exports = { register, login, getMe };
+const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { nama, email } = req.body;
+    
+    if (!nama || !email) {
+      return res.status(400).json({ success: false, message: 'Nama dan email wajib diisi' });
+    }
+    
+    const [existing] = await pool.query(
+      'SELECT id FROM users WHERE email = ? AND id != ?',
+      [email, userId]
+    );
+    if (existing.length) {
+      return res.status(409).json({ success: false, message: 'Email sudah digunakan' });
+    }
+    
+    await pool.query(
+      'UPDATE users SET nama = ?, email = ? WHERE id = ?',
+      [nama, email, userId]
+    );
+    
+    const [updated] = await pool.query('SELECT id, nama, email, role FROM users WHERE id = ?', [userId]);
+    res.json({ success: true, message: 'Profil berhasil diperbarui', data: updated[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!newPassword) {
+      return res.status(400).json({ success: false, message: 'Password baru wajib diisi' });
+    }
+    
+    const [users] = await pool.query('SELECT password FROM users WHERE id = ?', [userId]);
+    if (!users.length) {
+      return res.status(404).json({ success: false, message: 'User tidak ditemukan' });
+    }
+    
+    if (currentPassword) {
+      const valid = await bcrypt.compare(currentPassword, users[0].password);
+      if (!valid) {
+        return res.status(401).json({ success: false, message: 'Password lama salah' });
+      }
+    }
+    
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password = ? WHERE id = ?', [hashed, userId]);
+    
+    res.json({ success: true, message: 'Password berhasil diperbarui' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const forgotPassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+    
+    if (!email || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Email dan password baru wajib diisi' });
+    }
+    
+    const [users] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+    if (!users.length) {
+      return res.status(404).json({ success: false, message: 'Email tidak ditemukan' });
+    }
+    
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password = ? WHERE id = ?', [hashed, users[0].id]);
+    
+    res.json({ success: true, message: 'Password berhasil direset. Silakan login dengan password baru.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+module.exports = { register, login, getMe, updateProfile, changePassword, forgotPassword };

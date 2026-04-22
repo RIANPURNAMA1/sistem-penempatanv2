@@ -125,117 +125,160 @@ export default function DashboardSistemLama({ total, diterima, menunggu, ditolak
     })
   }))
 
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {statsData.map((item) => (
-          <Card key={item.label} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg ${item.color} flex items-center justify-center`}>
-                  <item.icon size={20} className={item.iconColor} />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{item.value}</p>
-                  <p className="text-xs text-muted-foreground">{item.label}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+ return (
+  <div className="space-y-4 sm:space-y-6">
 
-     
-
-      {viewMode === 'cards' ? (
-        <>
-        {selectedSSWData && (
-            <Card className="border-[#1e3a5f]">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Award size={16} className="text-[#1e3a5f]" />
-                    Detail - {selectedSSWData.ssw}
-                  </div>
-                  <button onClick={() => setSelectedSSW(null)} className="text-xs text-muted-foreground hover:text-foreground">
-                    Tutup
-                  </button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between p-2 bg-blue-50 rounded">
-                    <span className="text-sm">Laki-laki</span>
-                    <span className="font-bold">{selectedSSWData.laki} orang</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-pink-50 rounded">
-                    <span className="text-sm">Perempuan</span>
-                    <span className="font-bold">{selectedSSWData.perempuan} orang</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Grafik SSW</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {hasSSWData ? (
-              <ReactApexChart
-                type="bar"
-                series={[{ name: 'Total', data: sswStats.map(s => s.total) }]}
-                options={{
-                  chart: { height: 350, toolbar: { show: false } },
-                  colors: ['#1e3a5f'],
-                  plotOptions: { bar: { borderRadius: 4, columnWidth: '40%' } },
-                  dataLabels: { enabled: true, style: { fontSize: '11px', fontWeight: 600 } },
-                  xaxis: {
-                    categories: sswStats.map(s => s.ssw),
-                    labels: { style: { fontSize: '11px' }, rotate: -30 },
-                  },
-                  yaxis: { labels: { formatter: (val: number) => val.toFixed(0) } },
-                  grid: { borderColor: '#f1f1f1', strokeDashArray: 4 },
-                }}
-                height={350}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-64">
-                <p className="text-sm text-muted-foreground">Belum ada data</p>
+    {/* STATS */}
+    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3">
+      {statsData.map((item) => (
+        <Card key={item.label} className="hover:shadow-md transition-shadow">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${item.color} flex items-center justify-center`}>
+                <item.icon size={16} className={item.iconColor} />
               </div>
-            )}
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold truncate">{item.value}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{item.label}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
-      )}
+      ))}
+    </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <TrendingUp size={16} className="text-[#1e3a5f]" />
-            Statistik Progress
+    {/* DETAIL SSW */}
+    {viewMode === 'cards' && selectedSSWData && (
+      <Card className="border-[#1e3a5f]">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center justify-between">
+            <div className="flex items-center gap-2 truncate">
+              <Award size={14} className="text-[#1e3a5f]" />
+              <span className="truncate">Detail - {selectedSSWData.ssw}</span>
+            </div>
+            <button 
+              onClick={() => setSelectedSSW(null)} 
+              className="text-[10px] text-muted-foreground hover:text-foreground"
+            >
+              Tutup
+            </button>
           </CardTitle>
         </CardHeader>
+
         <CardContent>
-          {!hasProgressData ? (
-            <p className="text-sm text-muted-foreground">Belum ada data</p>
+          <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
+            <div className="flex items-center justify-between p-2 bg-blue-50 rounded text-xs">
+              <span>Laki-laki</span>
+              <span className="font-bold">{selectedSSWData.laki}</span>
+            </div>
+            <div className="flex items-center justify-between p-2 bg-pink-50 rounded text-xs">
+              <span>Perempuan</span>
+              <span className="font-bold">{selectedSSWData.perempuan}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )}
+
+    {/* CHART SSW */}
+    {viewMode === 'chart' && (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Grafik SSW</CardTitle>
+        </CardHeader>
+        <CardContent className="px-1 sm:px-4">
+          {hasSSWData ? (
+            <div className="overflow-x-auto">
+              <div className="min-w-[300px]">
+                <ReactApexChart
+                  type="bar"
+                  series={[{ name: 'Total', data: sswStats.map(s => s.total) }]}
+                  options={{
+                    chart: { height: 260, toolbar: { show: false } },
+                    colors: ['#1e3a5f'],
+                    plotOptions: { bar: { borderRadius: 4, columnWidth: '50%' } },
+                    dataLabels: { enabled: false },
+                    xaxis: {
+                      categories: sswStats.map(s => s.ssw),
+                      labels: { style: { fontSize: '9px' }, rotate: -30 },
+                    },
+                    yaxis: { labels: { show: false } },
+                    grid: { show: false },
+                  }}
+                  height={260}
+                />
+              </div>
+            </div>
           ) : (
-            <ReactApexChart type="donut" series={progressValues} options={pieChartOptions} height={300} />
+            <div className="flex items-center justify-center h-40">
+              <p className="text-xs text-muted-foreground">Belum ada data</p>
+            </div>
           )}
         </CardContent>
       </Card>
+    )}
 
-      {cabangStats.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Progress Kandidat per Cabang</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ReactApexChart type="bar" series={branchChartSeries} options={branchChartOptions} height={400} />
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  )
+    {/* PIE CHART */}
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-xs sm:text-sm flex items-center gap-2">
+          <TrendingUp size={14} className="text-[#1e3a5f]" />
+          Statistik Progress
+        </CardTitle>
+      </CardHeader>
+
+      <CardContent className="px-1 sm:px-4">
+        {!hasProgressData ? (
+          <p className="text-xs text-muted-foreground">Belum ada data</p>
+        ) : (
+          <ReactApexChart
+            type="donut"
+            series={progressValues}
+            options={{
+              ...pieChartOptions,
+              legend: {
+                position: 'bottom',
+                fontSize: '10px'
+              }
+            }}
+            height={260}
+          />
+        )}
+      </CardContent>
+    </Card>
+
+    {/* BAR CABANG */}
+    {cabangStats.length > 0 && (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Progress per Cabang</CardTitle>
+        </CardHeader>
+
+        <CardContent className="px-1 sm:px-4">
+          <div className="overflow-x-auto">
+            <div className="min-w-[320px]">
+              <ReactApexChart
+                type="bar"
+                series={branchChartSeries}
+                options={{
+                  ...branchChartOptions,
+                  chart: { ...branchChartOptions.chart, height: 300 },
+                  xaxis: {
+                    ...branchChartOptions.xaxis,
+                    labels: { style: { fontSize: '9px' } }
+                  },
+                  legend: {
+                    position: 'bottom',
+                    fontSize: '10px'
+                  }
+                }}
+                height={300}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )}
+  </div>
+)
 }

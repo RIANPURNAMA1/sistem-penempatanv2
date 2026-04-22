@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,6 +97,7 @@ const jenjangOptions = ["SD", "SMP", "SMA/SMK", "Perguruan Tinggi"];
 
 export default function KandidatListPage() {
   const { user } = useAuthStore();
+  const [searchParams] = useSearchParams();
   const [data, setData] = useState<Kandidat[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -124,6 +125,17 @@ export default function KandidatListPage() {
     id: number;
     nama: string;
   } | null>(null);
+
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    if (statusParam) {
+      setStatus(statusParam);
+    }
+    const progresParam = searchParams.get('progres');
+    if (progresParam) {
+      setProgres(progresParam);
+    }
+  }, [searchParams]);
 
   const load = () => {
     setLoading(true);
@@ -607,7 +619,162 @@ export default function KandidatListPage() {
           {loading && <span className="text-sm text-gray-500">Memuat...</span>}
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile: Card Layout */}
+        <div className="lg:hidden space-y-3 px-4 pb-4">
+          {loading ? (
+            <div className="text-center py-12">
+              <Loader2
+                size={24}
+                className="animate-spin text-gray-400 mx-auto"
+              />
+              <p className="text-gray-400 text-sm mt-2">Memuat data...</p>
+            </div>
+          ) : paginatedData.length === 0 ? (
+            <div className="text-center py-12">
+              <Users size={40} className="text-gray-300 mx-auto mb-2" />
+              <p className="text-gray-500">Tidak ada data</p>
+              <p className="text-gray-400 text-xs mt-1">
+                {hasActiveFilters ? "Coba ubah filter" : "Data belum tersedia"}
+              </p>
+            </div>
+          ) : (
+            paginatedData.map((item, index) => {
+              const stCfg = statusFormulirConfig[item.status_formulir] || {
+                label: item.status_formulir,
+                bg: "bg-gray-100",
+                text: "text-gray-700",
+              };
+              const globalIndex = (currentPage - 1) * itemsPerPage + index + 1;
+
+              return (
+                <div
+                  key={item.id}
+                  className="bg-white rounded-lg border shadow-sm p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={item.pas_foto || ""}
+                        alt="Foto"
+                        className="w-10 h-10 rounded-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                              item.nama || "?",
+                            )}`;
+                        }}
+                      />
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">
+                          {item.nama_romaji || item.nama || "-"}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {item.pendidikan_terakhir || "-"}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      #{globalIndex}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-gray-400">Cabang</span>
+                      <p className="text-gray-600">{item.nama_cabang || "-"}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">JK / Umur</span>
+                      <p className="text-gray-600">
+                        {item.jenis_kelamin === "Laki-laki" ? "L" : "P"} /{" "}
+                        {item.umur || "-"}
+                      </p>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-400">Bidang SSW</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {item.sertifikat_ssw ? (
+                          item.sertifikat_ssw
+                            .split(",")
+                            .slice(0, 3)
+                            .map((s: string, idx: number) => (
+                              <span
+                                key={idx}
+                                className="inline-flex px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded"
+                              >
+                                {s.trim()}
+                              </span>
+                            ))
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Status Formulir</span>
+                      <div className="mt-1">
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${stCfg.bg} ${stCfg.text}`}
+                        >
+                          {stCfg.label}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Status di Mendunia</span>
+                      <Select
+                        value={item.status_keberangkatan || ""}
+                        onValueChange={(v) =>
+                          handleUpdateKeberangkatan(item.id, v)
+                        }
+                      >
+                        <SelectTrigger
+                          className={`h-7 mt-1 text-xs ${item.status_keberangkatan ? keberangkatanConfig[item.status_keberangkatan]?.bg : "bg-gray-100"} border-0`}
+                        >
+                          <SelectValue placeholder="Pilih" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="stay">Stay</SelectItem>
+                          <SelectItem value="keluar">Keluar</SelectItem>
+                          <SelectItem value="terbang">Terbang</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-8 text-xs"
+                      onClick={() => {
+                        setHistoryKandidat({
+                          id: item.id,
+                          nama: item.nama_romaji || item.nama || "-",
+                        });
+                        setShowHistory(true);
+                      }}
+                    >
+                      <History size={14} className="mr-1" /> History
+                    </Button>
+                    <Link to={`/kandidat/${item.id}`} className="flex-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8 text-xs"
+                      >
+                        <Eye size={14} className="mr-1" /> Detail
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop: Table Layout */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr className="">
@@ -689,14 +856,20 @@ export default function KandidatListPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <img
-                            src={item.pas_foto || ""}
+                            src={
+                              item.pas_foto
+                                ? item.pas_foto
+                                : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                    item.nama || "User",
+                                  )}&background=random`
+                            }
                             alt="Foto"
                             className="w-8 h-8 rounded-full object-cover"
                             onError={(e) => {
                               (e.target as HTMLImageElement).src =
                                 `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                  item.nama || "?",
-                                )}`;
+                                  item.nama || "User",
+                                )}&background=random`;
                             }}
                           />
                           <div>
@@ -714,7 +887,7 @@ export default function KandidatListPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className="text-xs font-medium text-gray-500">
-                          {item.jenis_kelamin === "Laki-laki" ? "L" : "P"}
+                          {item.jenis_kelamin === "-"}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center text-gray-600 text-sm">

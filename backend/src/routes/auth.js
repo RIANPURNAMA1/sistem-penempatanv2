@@ -7,6 +7,9 @@ const pool = require('../config/database');
 router.post('/register', authCtrl.register);
 router.post('/login', authCtrl.login);
 router.get('/me', authenticate, authCtrl.getMe);
+router.put('/profile', authenticate, authCtrl.updateProfile);
+router.put('/password', authenticate, authCtrl.changePassword);
+router.post('/forgot-password', authCtrl.forgotPassword);
 
 // Get cabang list for registration (public)
 router.get('/cabang-list', async (req, res) => {

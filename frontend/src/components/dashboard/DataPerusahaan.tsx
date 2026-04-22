@@ -1,11 +1,16 @@
-import { Card, CardContent, CardHeader, CardTitle, Label } from '@/components/ui/components'
+import { Card, CardContent, Label } from '@/components/ui/components'
 import { Button } from '@/components/ui/button'
-import { Briefcase, Calendar, RefreshCw } from 'lucide-react'
+import { Briefcase, RefreshCw, ArrowRight } from 'lucide-react'
 import ReactApexChart from 'react-apexcharts'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 interface JobOrderStats {
-  bidang: string
+  id: number
+  nomor: string
+  bidang_ssw: string
+  nama_perusahaan: string
+  status_kelulusan: string
   count: number
 }
 
@@ -24,6 +29,7 @@ export default function DataPerusahaan({
   filterTanggalAkhir = '',
   onFilterChange 
 }: DataPerusahaanProps) {
+
   const [tanggalAwal, setTanggalAwal] = useState(filterTanggalAwal)
   const [tanggalAkhir, setTanggalAkhir] = useState(filterTanggalAkhir)
 
@@ -37,160 +43,141 @@ export default function DataPerusahaan({
     onFilterChange?.('', '')
   }
 
-  const handleChange = (type: 'awal' | 'akhir', value: string) => {
-    if (type === 'awal') {
-      setTanggalAwal(value)
-    } else {
-      setTanggalAkhir(value)
-    }
+  const totalJobOrder = stats.reduce((sum, item) => sum + item.count, 0)
+
+  // RESPONSIVE CHART HEIGHT
+  const chartHeight = window.innerWidth < 400 ? 260 : 320
+
+  const chartOptions: ApexCharts.ApexOptions = {
+    chart: {
+      type: 'bar',
+      height: chartHeight,
+      toolbar: { show: false },
+    },
+    plotOptions: {
+      bar: {
+        columnWidth: '60%',
+        borderRadius: 4,
+        distributed: true,
+      }
+    },
+    dataLabels: { enabled: true },
+    colors: ['#1A56DB', '#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE'],
+    xaxis: {
+      categories: stats.map(item => item.nomor),
+      labels: {
+        style: { fontSize: window.innerWidth < 400 ? '8px' : '10px' },
+        rotate: -45
+      }
+    },
+    yaxis: {
+      labels: {
+        style: { fontSize: '10px' }
+      }
+    },
+    grid: {
+      strokeDashArray: 4
+    },
+    legend: { show: false }
   }
 
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Briefcase size={16} className="text-[#1e3a5f]" />
-              Grafik Job Order Berdasarkan Bidang SSW
-            </CardTitle>
-            
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2">
-                <Calendar size={14} className="text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Filter Tanggal:</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <div className="space-y-1">
-                  <Label className="text-[10px] text-muted-foreground">Tanggal Awal</Label>
-                  <input
-                    type="date"
-                    value={tanggalAwal}
-                    onChange={(e) => handleChange('awal', e.target.value)}
-                    className="h-8 px-2 text-xs border rounded-md"
-                  />
-                </div>
-                
-                <span className="text-muted-foreground mt-4">-</span>
-                
-                <div className="space-y-1">
-                  <Label className="text-[10px] text-muted-foreground">Tanggal Akhir</Label>
-                  <input
-                    type="date"
-                    value={tanggalAkhir}
-                    onChange={(e) => handleChange('akhir', e.target.value)}
-                    className="h-8 px-2 text-xs border rounded-md"
-                  />
-                </div>
-              </div>
+  const series = [{
+    name: 'Kandidat',
+    data: stats.map(item => item.count)
+  }]
 
-              <div className="flex items-center gap-2 mt-4 md:mt-0">
-                <Button size="sm" variant="outline" onClick={handleFilter} disabled={loading}>
-                  <RefreshCw size={14} className="mr-1" /> Terapkan
-                </Button>
-                <Button size="sm" variant="ghost" onClick={handleReset}>
-                  Reset
-                </Button>
-              </div>
-            </div>
+  return (
+    <div className="space-y-4 sm:space-y-6">
+
+      {/* FILTER (RESPONSIVE) */}
+      <div className="bg-white p-3 sm:p-4 rounded-xl border shadow-sm flex flex-col sm:flex-row gap-3 sm:items-end">
+
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full">
+          <div className="flex-1">
+            <Label className="text-[10px] uppercase text-gray-400 mb-1 block">Mulai</Label>
+            <input
+              type="date"
+              value={tanggalAwal}
+              onChange={(e) => setTanggalAwal(e.target.value)}
+              className="w-full h-9 px-2 text-xs sm:text-sm border rounded-lg"
+            />
           </div>
-        </CardHeader>
-        
-        <CardContent>
+
+          <div className="flex-1">
+            <Label className="text-[10px] uppercase text-gray-400 mb-1 block">Selesai</Label>
+            <input
+              type="date"
+              value={tanggalAkhir}
+              onChange={(e) => setTanggalAkhir(e.target.value)}
+              className="w-full h-9 px-2 text-xs sm:text-sm border rounded-lg"
+            />
+          </div>
+        </div>
+
+        {/* BUTTON */}
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button size="sm" className="flex-1 sm:flex-none text-xs" onClick={handleFilter} disabled={loading}>
+            <RefreshCw size={12} className={`mr-1 ${loading ? 'animate-spin' : ''}`} />
+            Terapkan
+          </Button>
+          <Button size="sm" variant="ghost" className="flex-1 sm:flex-none text-xs" onClick={handleReset}>
+            Reset
+          </Button>
+        </div>
+      </div>
+
+      {/* CARD */}
+      <Card className="w-full bg-white rounded-xl border shadow-sm overflow-hidden">
+
+        {/* HEADER */}
+        <div className="p-4 sm:p-6 pb-0">
+          <h5 className="text-xl sm:text-3xl font-bold text-gray-900">
+            {totalJobOrder.toLocaleString()}
+          </h5>
+          <p className="text-xs sm:text-base text-gray-500 flex items-center gap-2 mt-1">
+            <Briefcase size={14} />
+            Total Job Order
+          </p>
+        </div>
+
+        <CardContent className="px-0">
+
+          {/* CHART */}
           {loading ? (
-            <div className="flex items-center justify-center h-80">
-              <p className="text-sm text-muted-foreground">Memuat data...</p>
+            <div className="flex items-center justify-center h-[250px] sm:h-[320px]">
+              <RefreshCw className="animate-spin text-blue-600" size={24} />
             </div>
           ) : stats.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-80">
-              <Briefcase size={48} className="text-muted-foreground/30 mb-3" />
-              <p className="text-sm text-muted-foreground">Belum ada data job order</p>
+            <div className="flex flex-col items-center justify-center h-[250px] sm:h-[320px] text-gray-400 text-xs">
+              <Briefcase size={40} className="mb-2 opacity-20" />
+              Tidak ada data
             </div>
           ) : (
-            <>
+            <div className="px-2 sm:px-4">
               <ReactApexChart
-                type="line"
-                series={[{
-                  name: 'Job Order',
-                  data: stats.map(item => item.count)
-                }]}
-                options={{
-                  chart: {
-                    height: 350,
-                    toolbar: { show: false },
-                    zoom: { enabled: false }
-                  },
-                  colors: ['#1e3a5f'],
-                  stroke: {
-                    curve: 'smooth',
-                    width: 3
-                  },
-                  fill: {
-                    type: 'gradient',
-                    gradient: {
-                      shadeIntensity: 1,
-                      opacityFrom: 0.4,
-                      opacityTo: 0.1,
-                      stops: [0, 90, 100]
-                    }
-                  },
-                  dataLabels: {
-                    enabled: true,
-                    style: {
-                      fontSize: '12px',
-                      fontWeight: 600
-                    }
-                  },
-                  xaxis: {
-                    categories: stats.map(item => item.bidang),
-                    labels: {
-                      rotate: -45,
-                      style: { fontSize: '11px' }
-                    }
-                  },
-                  yaxis: {
-                    title: { text: 'Jumlah' },
-                    labels: { formatter: (val) => val.toFixed(0) }
-                  },
-                  grid: {
-                    borderColor: '#f1f1f1',
-                    strokeDashArray: 4
-                  },
-                  markers: {
-                    size: 6
-                  },
-                  tooltip: {
-                    theme: 'light',
-                    y: { formatter: (val) => `${val} Job Order` }
-                  }
-                }}
-                height={350}
+                options={chartOptions}
+                series={series}
+                type="bar"
+                height={chartHeight}
               />
-
-              <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">Total Keseluruhan</p>
-                    <p className="text-xs text-muted-foreground">
-                      {stats.length} bidang SSW
-                      {(tanggalAwal || tanggalAkhir) && (
-                        <span className="ml-2">
-                          ({tanggalAwal && `dari ${tanggalAwal}`} {tanggalAwal && tanggalAkhir && '-'} {tanggalAkhir && `s/d ${tanggalAkhir}`})
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-[#1e3a5f]">
-                      {stats.reduce((sum, item) => sum + item.count, 0)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Job Order</p>
-                  </div>
-                </div>
-              </div>
-            </>
+            </div>
           )}
+
+          {/* FOOTER */}
+          <div className="border-t p-3 sm:p-5 flex flex-col sm:flex-row gap-2 sm:justify-between items-start sm:items-center text-xs sm:text-sm">
+
+            <span className="text-gray-500">
+              {stats.length} Job Order
+            </span>
+
+            <Link
+              to="/joborder"
+              className="text-blue-600 font-semibold flex items-center gap-1"
+            >
+              Detail
+              <ArrowRight size={12} />
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -3,15 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-// PERBAIKAN: Path biasanya ke ui/label bukan ui/components
+import { Label } from "@/components/ui/components";
 
 import { toast } from "@/hooks/useToast";
 import api from "@/lib/api";
 import { Eye, EyeOff, Loader2, RefreshCw } from "lucide-react";
-import { Label } from "@/components/ui/components";
 
-// PERBAIKAN: Jika gambar di folder public, panggil langsung via string path di tag img
-// Atau jika ingin tetap import, pindahkan logo4.png ke src/assets/logo4.png
 const LogoMenduniaJepang = "/images/logo4.png";
 
 export default function LoginPage() {
@@ -19,13 +16,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [captcha, setCaptcha] = useState("");
+  const [captcha] = useState("");
   const [captchaInput, setCaptchaInput] = useState("");
   const [captchaError, setCaptchaError] = useState(false);
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
 
-  // Generate random text CAPTCHA
   const generateCaptcha = () => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
     let result = "";
@@ -46,10 +42,9 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Check CAPTCHA
     if (captchaInput !== currentCaptcha.result) {
       setCaptchaError(true);
-      setCurrentCaptcha(generateCaptcha()); // Generate new captcha on failure
+      setCurrentCaptcha(generateCaptcha());
       setCaptchaInput("");
       return;
     }
@@ -58,7 +53,7 @@ export default function LoginPage() {
     try {
       const { data } = await api.post("/auth/login", { email, password });
       setAuth(data.user, data.token);
-      if (data.user.role === "kandidat") navigate("/formulir");
+      if (data.user.role === "kandidat") navigate("/kandidat-dashboard");
       else navigate("/dashboard");
     } catch (err: any) {
       toast({
@@ -66,7 +61,6 @@ export default function LoginPage() {
         description: err.response?.data?.message || "Terjadi kesalahan",
         variant: "destructive",
       });
-      // Generate new captcha on login failure
       setCurrentCaptcha(generateCaptcha());
       setCaptchaInput("");
     } finally {
@@ -76,50 +70,34 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#fafafa] flex">
-      {/* Left panel */}
       <div className="hidden lg:flex lg:w-1/2 bg-[#1e3a5f] text-white flex-col justify-between p-12">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center overflow-hidden p-1">
-            <img
-              src={LogoMenduniaJepang}
-              alt="Logo"
-              className="w-full h-full object-contain"
-            />
+            <img src={LogoMenduniaJepang} alt="Logo" className="w-full h-full object-contain" />
           </div>
           <span className="font-semibold text-lg">Sistem Penempatan</span>
         </div>
         <div>
           <p className="font-display text-5xl text-white leading-tight mb-6">
-            Matching
-            <br />
-            Kandidat
-            <br />
+            Sistem Penempatan Kandidat ke Jepang
           </p>
-          <p className="text-sm text-white/60 leading-relaxed max-w-xs">
-            Platform penempatan kerja ke Jepang yang menghubungkan kandidat
-            terbaik dengan perusahaan terpercaya.
+          <p className="text-white/70 text-lg">
+            Kelola data kandidat dan job order dengan mudah.
           </p>
         </div>
-        <p className="text-xs text-white/30 font-mono">
-          © 2026 Sistem Penempatan
-        </p>
+        <div />
       </div>
 
-      {/* Right panel */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-sm">
-          <div className="mb-8">
-            <div className="lg:hidden flex items-center gap-2 mb-8">
-              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center p-1">
-                {/* PERBAIKAN: Gunakan LogoMenduniaJepang bukan Logo */}
-                <img
-                  src={LogoMenduniaJepang}
-                  alt="Logo"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <span className="font-semibold text-sm">Sistem Penempatan</span>
+      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8">
+        <div className="w-full max-w-md space-y-8">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center p-1">
+              <img src={LogoMenduniaJepang} alt="Logo" className="w-full h-full object-contain" />
             </div>
+            <span className="font-semibold text-sm">Sistem Penempatan</span>
+          </div>
+
+          <div>
             <h1 className="text-2xl font-semibold text-foreground">
               Selamat datang kembali
             </h1>
@@ -162,16 +140,12 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* CAPTCHA */}
             <div className="space-y-2">
               <Label htmlFor="captcha">Verifikasi Keamanan</Label>
-
-              {/* TEXT + REFRESH */}
               <div className="flex items-center justify-between">
                 <span className="font-mono text-lg tracking-widest select-none">
                   {currentCaptcha.text}
                 </span>
-
                 <button
                   type="button"
                   onClick={handleRefreshCaptcha}
@@ -180,8 +154,6 @@ export default function LoginPage() {
                   <RefreshCw size={16} />
                 </button>
               </div>
-
-              {/* INPUT */}
               <Input
                 id="captcha"
                 type="text"
@@ -192,12 +164,11 @@ export default function LoginPage() {
                   setCaptchaError(false);
                 }}
               />
-
-              {/* ERROR */}
               {captchaError && (
                 <p className="text-sm text-red-500">Captcha salah</p>
               )}
             </div>
+
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
                 <>
@@ -210,23 +181,20 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
               Belum punya akun?{" "}
-              <Link
-                to="/register"
-                className="text-foreground font-medium hover:underline underline-offset-4"
-              >
+              <Link to="/register" className="text-foreground font-medium hover:underline underline-offset-4">
                 Daftar sekarang
               </Link>
-            </p>
+            </div>
+            <Link 
+              to="/forgot-password" 
+              className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4"
+            >
+              Lupa password?
+            </Link>
           </div>
-
-          {/* <div className="mt-8 p-4 bg-muted/50 rounded-lg border border-border">
-            <p className="text-xs font-mono text-muted-foreground mb-2">Demo akses:</p>
-            <p className="text-xs text-muted-foreground">Admin: <span className="font-mono">admin@kandidat.com</span></p>
-            <p className="text-xs text-muted-foreground">Password: <span className="font-mono">password</span></p>
-          </div> */}
         </div>
       </div>
     </div>

@@ -1,0 +1,13 @@
+export { default as Header } from "./Header";
+export { default as MainContent } from "./MainContent";
+export { default as Sidebar } from "./Sidebar";
+export { default as DataDiriCard } from "./DataDiriCard";
+export { default as KesehatanCard } from "./KesehatanCard";
+export { default as HealthChip } from "./HealthChip";
+export { default as PendidikanCard } from "./PendidikanCard";
+export { default as KeluargaCard } from "./KeluargaCard";
+export { default as PengalamanCard } from "./PengalamanCard";
+export { default as JepangCard } from "./JepangCard";
+export { default as MotivasiCard } from "./MotivasiCard";
+export { default as DokumenCard } from "./DokumenCard";
+export { default as DokumenRingkasanCard } from "./DokumenRingkasanCard";

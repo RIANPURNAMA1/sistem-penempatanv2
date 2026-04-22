@@ -176,9 +176,9 @@ const ssw_options = [
   "Restoran",
   "Driver",
   "Perhotelah",
-  " Perikanan",
-  "perbaikan dan perawatan mobil",
-  " Konstruksi",
+  "Perikanan",
+  "Perbaikan dan Perawatan Mobil",
+  "Konstruksi",
 ];
 
 const REQUIRED_DOCS = [

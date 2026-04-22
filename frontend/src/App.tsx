@@ -14,6 +14,8 @@ import FormulirPage from '@/pages/kandidat/FormulirPage'
 import KandidatDashboardPage from '@/pages/kandidat/KandidatDashboardPage'
 import DataSistemLamaPage from '@/pages/admin/DataSistemLamaPage'
 import CvPage from '@/pages/admin/CvPage'
+import ProfilPage from '@/pages/kandidat/ProfilPage'
+import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
 import { useAuthStore } from '@/store/authStore'
 
 function HomeRedirect() {
@@ -30,6 +32,7 @@ export default function App() {
         <Route path="/" element={<HomeRedirect />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         {/* Admin routes */}
         <Route path="/dashboard" element={
           <ProtectedRoute roles={['admin_penempatan', 'admin_cabang']}>
@@ -86,6 +89,11 @@ export default function App() {
         <Route path="/formulir" element={
           <ProtectedRoute roles={['kandidat']}>
             <FormulirPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/profil" element={
+          <ProtectedRoute roles={['kandidat']}>
+            <ProfilPage />
           </ProtectedRoute>
         } />
 

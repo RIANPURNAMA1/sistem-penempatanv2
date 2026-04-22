@@ -24,6 +24,7 @@ router.get('/', async (req, res) => {
         jo.*,
         p.nama_perusahaan,
         p.bidang_usaha,
+        jo.status_kelulusan,
         GROUP_CONCAT(k.nama_romaji ORDER BY k.nama_romaji SEPARATOR ', ') as nama_kandidat,
         GROUP_CONCAT(k.id ORDER BY k.id SEPARATOR ', ') as kandidat_ids
       FROM job_order jo

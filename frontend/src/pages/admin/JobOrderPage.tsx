@@ -431,7 +431,103 @@ export default function JobOrderPage() {
           )}
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile: Card Layout */}
+        <div className="md:hidden space-y-3 px-4 pb-4 mt-3">
+          {loading ? (
+            <div className="py-12 text-center">
+              <Loader2 className="animate-spin mx-auto" />
+              <p className="text-gray-400 text-sm mt-2">Memuat data...</p>
+            </div>
+          ) : paginatedData.length === 0 ? (
+            <div className="py-12 text-center">
+              <FileText size={40} className="text-gray-300 mx-auto mb-2" />
+              <p className="text-gray-500">Tidak ada data</p>
+              <p className="text-gray-400 text-xs mt-1">
+                {hasActiveFilters || debouncedSearch ? 'Coba ubah filter' : 'Data belum tersedia'}
+              </p>
+            </div>
+          ) : (
+            paginatedData.map((item, index) => {
+              const stCfg = statusConfig[item.status_kelulusan] || { label: item.status_kelulusan, bg: 'bg-gray-100', text: 'text-gray-700' }
+              const globalIndex = (currentPage - 1) * ITEMS_PER_PAGE + index + 1
+              
+              return (
+                <div key={item.id} className="bg-white rounded-lg border shadow-sm p-4 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">{item.nomor || '-'}</p>
+                      <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium mt-1 ${stCfg.bg} ${stCfg.text}`}>
+                        {stCfg.label}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-400">#{globalIndex}</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-gray-400">Perusahaan</span>
+                      <p className="text-gray-600">{item.nama_perusahaan || '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Bidang SSW</span>
+                      <p className="text-gray-600">{item.bidang_ssw || '-'}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-400">Kandidat</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {item.nama_kandidat ? item.nama_kandidat.split(', ').slice(0, 3).map((nama: string, idx: number) => (
+                          <span key={idx} className="inline-flex px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
+                            {nama.trim()}
+                          </span>
+                        )) : <span className="text-gray-400">-</span>}
+                        {item.nama_kandidat && item.nama_kandidat.split(', ').length > 3 && (
+                          <span className="text-xs text-gray-400">+{item.nama_kandidat.split(', ').length - 3}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Biaya</span>
+                      <p className="text-gray-600">{item.biaya_awal ? `Rp ${Number(item.biaya_awal).toLocaleString('id-ID')}` : '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Tanggal Terbit</span>
+                      <p className="text-gray-600">{formatDate(item.tanggal_terbit)}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2 border-t">
+                    <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => { setDetailItem(item); setShowDetailModal(true) }}>
+                      <Eye size={14} className="mr-1" /> Detail
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => handleEdit(item)}>
+                      <Edit size={14} className="mr-1" /> Edit
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1 h-8 text-xs text-red-500 border-red-200 hover:bg-red-50" onClick={() => handleDelete(item.id)}>
+                      <Trash2 size={14} className="mr-1" /> Hapus
+                    </Button>
+                  </div>
+                </div>
+              )
+            })
+          )}
+
+          {/* Mobile Pagination */}
+          {!loading && filteredData.length > 0 && (
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">{(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)} dari {filteredData.length}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}><ChevronLeft size={14} /></Button>
+                <span className="text-xs px-2">{currentPage}/{totalPages}</span>
+                <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}><ChevronRight size={14} /></Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop: Table Layout */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
@@ -527,8 +623,9 @@ export default function JobOrderPage() {
           </table>
         </div>
 
+        {/* Desktop Pagination */}
         {!loading && filteredData.length > 0 && (
-          <div className="px-4 py-3 border-t flex items-center justify-between bg-gray-50">
+          <div className="hidden md:flex px-4 py-3 border-t items-center justify-between bg-gray-50">
             <p className="text-xs text-gray-500">
               {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)} dari {filteredData.length}
             </p>

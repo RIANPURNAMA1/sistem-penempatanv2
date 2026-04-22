@@ -154,7 +154,83 @@ export default function UsersPage() {
           )}
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile: Card Layout */}
+        <div className="md:hidden space-y-3 px-4 pb-4 mt-3">
+          {loading ? (
+            <div className="py-12 text-center">
+              <Loader2 className="animate-spin mx-auto" />
+              <p className="text-gray-400 text-sm mt-2">Memuat data...</p>
+            </div>
+          ) : paginatedData.length === 0 ? (
+            <div className="py-12 text-center">
+              <Users size={40} className="text-gray-300 mx-auto mb-2" />
+              <p className="text-gray-500">Tidak ada data</p>
+              <p className="text-gray-400 text-xs mt-1">
+                {debouncedSearch ? 'Coba ubah pencarian' : 'Data belum tersedia'}
+              </p>
+            </div>
+          ) : (
+            paginatedData.map((item, index) => (
+              <div key={item.id} className="bg-white rounded-lg border shadow-sm p-4 space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium shrink-0">
+                      {item.nama.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">{item.nama}</p>
+                      <p className="text-xs text-gray-400">{item.email}</p>
+                    </div>
+                  </div>
+                  <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${item.status === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {item.status === 'aktif' ? 'Aktif' : 'Nonaktif'}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-gray-400">Role</span>
+                    <div className="mt-1">
+                      <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${roleBg[item.role] || 'bg-gray-100 text-gray-700'}`}>
+                        {roleLabel[item.role] || item.role}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Cabang</span>
+                    <p className="text-gray-600 mt-1">{item.nama_cabang || '-'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2 border-t">
+                  <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => openEdit(item)}>
+                    <Pencil size={14} className="mr-1" /> Edit
+                  </Button>
+                  <Button variant="outline" size="sm" className="flex-1 h-8 text-xs text-red-500 border-red-200 hover:bg-red-50" onClick={() => setDeleteId(item.id)}>
+                    <Trash2 size={14} className="mr-1" /> Hapus
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+
+          {/* Mobile Pagination */}
+          {!loading && filtered.length > 0 && (
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">{(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} dari {filtered.length}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}><ChevronLeft size={14} /></Button>
+                <span className="text-xs px-2">{currentPage}/{totalPages}</span>
+                <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}><ChevronRight size={14} /></Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop: Table Layout */}
+        <div className="hidden md:block overflow-x-auto ">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
@@ -231,8 +307,9 @@ export default function UsersPage() {
           </table>
         </div>
 
+        {/* Desktop Pagination */}
         {!loading && filtered.length > 0 && (
-          <div className="px-4 py-3 border-t flex items-center justify-between bg-gray-50">
+          <div className="hidden md:flex px-4 py-3 border-t items-center justify-between bg-gray-50">
             <p className="text-xs text-gray-500">
               {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} dari {filtered.length}
             </p>
@@ -264,8 +341,8 @@ export default function UsersPage() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <div className="bg-[#1e3a5f]  -m-6 mb-4 px-6 py-4 rounded-t-lg">
-            <h2 className="text-white font-semibold text-lg">{editItem ? 'Edit User' : 'Tambah User Baru'}</h2>
+          <div className="  -m-6 mb-4 px-6 py-4 rounded-t-lg">
+            <h2 className="font-semibold text-lg">{editItem ? 'Edit User' : 'Tambah User Baru'}</h2>
           </div>
           <div className="space-y-4 py-2">
             <div className="space-y-2">

@@ -1,3 +1,6 @@
 export { default as TemplateClassic } from './TemplateClassic'
 export { default as TemplateModern } from './TemplateModern'
 export { default as TemplateSimple } from './TemplateSimple'
+export { default as TemplateMadoka } from './TemplateMadoka'
+export { default as TemplateNawasena } from './TemplateNawasena'
+export { default as TemplateKaigo } from './TemplateKaigo'

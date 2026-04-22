@@ -11,40 +11,29 @@ interface Stats {
   total: number;
   byStatus: { status_formulir: string; count: number }[];
   byCabang: { nama_cabang: string; count: number }[];
-  bySSWGender?: {
-    ssw: string;
-    laki: number;
-    perempuan: number;
-    total: number;
-  }[];
-  bySSWProgres?: {
-    ssw: string;
-    progres: { status: string; count: number }[];
-  }[];
-  byCabangProgres?: {
-    nama_cabang: string;
-    status_progres: string;
-    count: number;
-  }[];
-  jftByGender?: { jenis_kelamin: string; has_jft: number; no_jft: number }[];
-  jftByCabang?: { nama_cabang: string; has_jft: number; no_jft: number }[];
-  sswByGender?: { jenis_kelamin: string; has_ssw: number; no_ssw: number }[];
-  sswByCabang?: { nama_cabang: string; has_ssw: number; no_ssw: number }[];
-  interviewByCabang?: { nama_cabang: string; interview: number; lulus: number }[];
-  interviewByGender?: { jenis_kelamin: string; interview: number; lulus: number }[];
+  bySSWGender?: any[];
+  bySSWProgres?: any[];
+  byCabangProgres?: any[];
+  jftByGender?: any[];
+  jftByCabang?: any[];
+  sswByGender?: any[];
+  sswByCabang?: any[];
+  interviewByCabang?: any[];
+  interviewByGender?: any[];
 }
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+
   const [activeTab, setActiveTab] = useState<
     "verifikasi" | "status" | "sertifikasi" | "job order" | "interview"
   >("verifikasi");
-  const [jobOrderStats, setJobOrderStats] = useState<
-    { bidang: string; count: number }[]
-  >([]);
+
+  const [jobOrderStats, setJobOrderStats] = useState<any[]>([]);
   const [loadingJobOrder, setLoadingJobOrder] = useState(false);
+
   const [filterTanggalAwal, setFilterTanggalAwal] = useState("");
   const [filterTanggalAkhir, setFilterTanggalAkhir] = useState("");
 
@@ -55,11 +44,9 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const fetchJobOrderData = (
-    tanggalAwal: string = "",
-    tanggalAkhir: string = "",
-  ) => {
+  const fetchJobOrderData = (tanggalAwal = "", tanggalAkhir = "") => {
     setLoadingJobOrder(true);
+
     let url = "/joborder";
     const params: string[] = [];
 
@@ -74,17 +61,17 @@ export default function DashboardPage() {
       .get(url)
       .then((r) => {
         const data = r.data.data || [];
-        const grouped: Record<string, number> = data.reduce(
-          (acc: Record<string, number>, item: any) => {
-            const bidang = item.bidang_ssw || "Lainnya";
-            acc[bidang] = (acc[bidang] || 0) + 1;
-            return acc;
-          },
-          {} as Record<string, number>,
-        );
-        const result = Object.entries(grouped)
-          .map(([bidang, count]) => ({ bidang, count }))
-          .sort((a, b) => b.count - a.count);
+        const result = data
+          .map((item: any) => ({
+            id: item.id,
+            nomor: item.nomor || "-",
+            bidang_ssw: item.bidang_ssw || "Lainnya",
+            nama_perusahaan: item.nama_perusahaan || "-",
+            status_kelulusan: item.status_kelulusan || "-",
+            count: item.kandidat_ids?.length || 0,
+          }))
+          .sort((a: any, b: any) => b.count - a.count);
+
         setJobOrderStats(result);
       })
       .finally(() => setLoadingJobOrder(false));
@@ -96,17 +83,22 @@ export default function DashboardPage() {
     }
   }, [activeTab]);
 
-  const handleFilterChange = (tanggalAwal: string, tanggalAkhir: string) => {
-    setFilterTanggalAwal(tanggalAwal);
-    setFilterTanggalAkhir(tanggalAkhir);
-    fetchJobOrderData(tanggalAwal, tanggalAkhir);
+  const handleFilterChange = (awal: string, akhir: string) => {
+    setFilterTanggalAwal(awal);
+    setFilterTanggalAkhir(akhir);
+    fetchJobOrderData(awal, akhir);
   };
 
   return (
-    <div className="page-container">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+    <div className="w-full max-w-full overflow-x-hidden px-3 sm:px-6 py-4 sm:py-6">
+
+      {/* HEADER */}
+      <div className="mb-5 sm:mb-8">
+        <h1 className="text-lg sm:text-2xl font-semibold truncate">
+          Dashboard
+        </h1>
+
+        <p className="text-[11px] sm:text-sm text-muted-foreground mt-1 leading-relaxed">
           Selamat datang, {user?.nama} —{" "}
           {new Date().toLocaleDateString("id-ID", {
             weekday: "long",
@@ -116,104 +108,76 @@ export default function DashboardPage() {
           })}
         </p>
       </div>
-      <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide sm:flex-wrap">
-        <button
-          onClick={() => setActiveTab("verifikasi")}
-          className={`whitespace-nowrap px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-            activeTab === "verifikasi"
-              ? "bg-[#1e3a5f] text-white shadow-sm"
-              : "bg-white text-muted-foreground hover:bg-muted border border-border"
-          }`}
-        >
-          Verifikasi
-        </button>
 
-        <button
-          onClick={() => setActiveTab("status")}
-          className={`whitespace-nowrap px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-            activeTab === "status"
-              ? "bg-[#1e3a5f] text-white shadow-sm"
-              : "bg-white text-muted-foreground hover:bg-muted border border-border"
-          }`}
-        >
-          Status
-        </button>
+      {/* TAB MENU (SUPER RESPONSIVE) */}
+      <div className="flex gap-2 mb-5 overflow-x-auto no-scrollbar">
 
-        <button
-          onClick={() => setActiveTab("sertifikasi")}
-          className={`whitespace-nowrap px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-            activeTab === "sertifikasi"
-              ? "bg-[#1e3a5f] text-white shadow-sm"
-              : "bg-white text-muted-foreground hover:bg-muted border border-border"
-          }`}
-        >
-          Sertifikasi
-        </button>
-
-        {user?.role === "admin_penempatan" && (
+        {[
+          { key: "verifikasi", label: "Verifikasi" },
+          { key: "status", label: "Status" },
+          { key: "sertifikasi", label: "Sertifikasi" },
+          ...(user?.role === "admin_penempatan"
+            ? [{ key: "job order", label: "Job Order" }]
+            : []),
+          { key: "interview", label: "Interview" },
+        ].map((tab) => (
           <button
-            onClick={() => setActiveTab("job order")}
-            className={`whitespace-nowrap px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-              activeTab === "job order"
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key as any)}
+            className={`flex-shrink-0 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-sm font-medium transition-all ${
+              activeTab === tab.key
                 ? "bg-[#1e3a5f] text-white shadow-sm"
-                : "bg-white text-muted-foreground hover:bg-muted border border-border"
+                : "bg-white text-muted-foreground border hover:bg-muted"
             }`}
           >
-            Job Order
+            {tab.label}
           </button>
-        )}
-
-        <button
-          onClick={() => setActiveTab("interview")}
-          className={`whitespace-nowrap px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-            activeTab === "interview"
-              ? "bg-[#1e3a5f] text-white shadow-sm"
-              : "bg-white text-muted-foreground hover:bg-muted border border-border"
-          }`}
-        >
-          Interview
-        </button>
+        ))}
       </div>
 
-      {activeTab === "verifikasi" && (
-        <VerifikasiPendaftaran stats={stats} loading={loading} />
-      )}
+      {/* CONTENT */}
+      <div className="space-y-4 sm:space-y-6">
 
-      {activeTab === "status" && (
-        <StatusKandidat
-          stats={stats?.bySSWGender}
-          bySSWProgres={stats?.bySSWProgres}
-          byCabangProgres={stats?.byCabangProgres}
-          loading={loading}
-        />
-      )}
+        {activeTab === "verifikasi" && (
+          <VerifikasiPendaftaran stats={stats} loading={loading} />
+        )}
 
-      {activeTab === "sertifikasi" && (
-        <SertifikasiKandidat
-          jftByGender={stats?.jftByGender}
-          jftByCabang={stats?.jftByCabang}
-          sswByGender={stats?.sswByGender}
-          sswByCabang={stats?.sswByCabang}
-          loading={loading}
-        />
-      )}
+        {activeTab === "status" && (
+          <StatusKandidat
+            stats={stats?.bySSWGender}
+            bySSWProgres={stats?.bySSWProgres}
+            byCabangProgres={stats?.byCabangProgres}
+            loading={loading}
+          />
+        )}
 
-      {activeTab === "job order" && (
-        <DataPerusahaan
-          stats={jobOrderStats}
-          loading={loadingJobOrder}
-          filterTanggalAwal={filterTanggalAwal}
-          filterTanggalAkhir={filterTanggalAkhir}
-          onFilterChange={handleFilterChange}
-        />
-      )}
+        {activeTab === "sertifikasi" && (
+          <SertifikasiKandidat
+            jftByGender={stats?.jftByGender}
+            jftByCabang={stats?.jftByCabang}
+            sswByGender={stats?.sswByGender}
+            sswByCabang={stats?.sswByCabang}
+            loading={loading}
+          />
+        )}
 
-      {activeTab === "interview" && (
-        <InterviewStats 
-          interviewByCabang={stats?.interviewByCabang} 
-          interviewByGender={stats?.interviewByGender} 
-        />
-      )}
+        {activeTab === "job order" && (
+          <DataPerusahaan
+            stats={jobOrderStats}
+            loading={loadingJobOrder}
+            filterTanggalAwal={filterTanggalAwal}
+            filterTanggalAkhir={filterTanggalAkhir}
+            onFilterChange={handleFilterChange}
+          />
+        )}
+
+        {activeTab === "interview" && (
+          <InterviewStats
+            interviewByCabang={stats?.interviewByCabang}
+            interviewByGender={stats?.interviewByGender}
+          />
+        )}
+      </div>
     </div>
   );
 }

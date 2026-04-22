@@ -831,11 +831,33 @@ const uploadDokumen = async (req, res) => {
 const getStats = async (req, res) => {
   try {
     const user = req.user;
-    let whereClause = '';
-    const params = [];
+    const { start_date, end_date, filter_type } = req.query;
+    
+    let dateFilter = '';
+    const dateParams = [];
+
+    if (filter_type === 'today') {
+      dateFilter = ' AND DATE(kp.created_at) = ?';
+      dateParams.push(new Date().toISOString().split('T')[0]);
+    } else if (filter_type === 'yesterday') {
+      dateFilter = ' AND DATE(kp.created_at) = ?';
+      dateParams.push(new Date(Date.now() - 86400000).toISOString().split('T')[0]);
+    } else if (filter_type === 'week') {
+      dateFilter = ' AND DATE(kp.created_at) >= ?';
+      dateParams.push(new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]);
+    } else if (filter_type === 'month') {
+      dateFilter = ' AND DATE(kp.created_at) >= ?';
+      dateParams.push(new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]);
+    } else if (start_date && end_date) {
+      dateFilter = ' AND DATE(kp.created_at) BETWEEN ? AND ?';
+      dateParams.push(start_date, end_date);
+    }
+
+    let whereClause = dateFilter ? `WHERE 1=1${dateFilter}` : '';
+    const params = [...dateParams];
 
     if (user.role === 'admin_cabang') {
-      whereClause = 'WHERE kp.cabang_id = ?';
+      whereClause += whereClause ? ' AND kp.cabang_id = ?' : 'WHERE kp.cabang_id = ?';
       params.push(user.cabang_id);
     }
 
@@ -848,7 +870,7 @@ const getStats = async (req, res) => {
       params
     );
 
-    const sswList     = ['Pengolahan Makanan','Pertanian','Kaigo (perawat)','Building Cleaning','Restoran','Driver'];
+    const sswList     = ['Pengolahan Makanan','Pertanian','Gaishoku','Kaigo (perawat)','Building Cleaning','Restoran','Driver','Perhotelah','Perbaikan dan Perawatan Mobil','Konstruksi','Perikanan'];
     const progresList = ['Job Matching','Pending','lamar ke perusahaan','Interview','Jadwalkan Interview Ulang','Lulus interview','Gagal Interview','Pemberkasan','Berangkat','Ditolak'];
     const bySSWGender  = [];
     const bySSWProgres = [];
@@ -919,11 +941,13 @@ const getStats = async (req, res) => {
       ${whereClause} GROUP BY kp.cabang_id, c.nama_cabang ORDER BY c.nama_cabang
     `, params);
 
-    // Interview & Lulus by Cabin
+    // Interview & Lulus by Cabin with Gender breakdown
     const [interviewByCabang] = await pool.query(`
       SELECT c.nama_cabang,
-        COUNT(DISTINCT CASE WHEN kp.status_progres IN ('Interview', 'Jadwalkan Interview Ulang') THEN kp.id END) as interview,
-        COUNT(DISTINCT CASE WHEN kp.status_progres = 'Lulus interview' THEN kp.id END) as lulus
+        COUNT(DISTINCT CASE WHEN kp.status_progres IN ('Interview', 'Jadwalkan Interview Ulang') AND kp.jenis_kelamin = 'Laki-laki' THEN kp.id END) as interview_laki,
+        COUNT(DISTINCT CASE WHEN kp.status_progres IN ('Interview', 'Jadwalkan Interview Ulang') AND kp.jenis_kelamin = 'Perempuan' THEN kp.id END) as interview_perempuan,
+        COUNT(DISTINCT CASE WHEN kp.status_progres = 'Lulus interview' AND kp.jenis_kelamin = 'Laki-laki' THEN kp.id END) as lulus_laki,
+        COUNT(DISTINCT CASE WHEN kp.status_progres = 'Lulus interview' AND kp.jenis_kelamin = 'Perempuan' THEN kp.id END) as lulus_perempuan
       FROM kandidat_profil kp
       LEFT JOIN cabang c ON kp.cabang_id = c.id
       ${whereClause}

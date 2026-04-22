@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/components'
 import { Download, FileSpreadsheet, File as FileWord, X } from 'lucide-react'
-import { TemplateClassic, TemplateModern, TemplateSimple } from './cv-templates'
+import { TemplateClassic, TemplateModern, TemplateSimple, TemplateMadoka, TemplateNawasena, TemplateKaigo } from './cv-templates'
 import { generateCVExcel, generateCVWord } from '@/lib/cvGenerator'
 import { toast } from '@/hooks/useToast'
 
-type CVTemplate = 'classic' | 'modern' | 'simple'
+type CVTemplate = 'violeta' | 'mendunia' | 'yambo' | 'madoka' | 'nawasena' | 'kaigo'
 
 interface KandidatCVPreviewProps {
   data: any
@@ -14,7 +14,7 @@ interface KandidatCVPreviewProps {
 }
 
 export default function KandidatCVPreview({ data, onClose }: KandidatCVPreviewProps) {
-  const [template, setTemplate] = useState<CVTemplate>('modern')
+  const [template, setTemplate] = useState<CVTemplate>('violeta')
   const [downloading, setDownloading] = useState(false)
 
   const handlePrint = () => {
@@ -72,14 +72,20 @@ export default function KandidatCVPreview({ data, onClose }: KandidatCVPreviewPr
 
   const renderTemplate = () => {
     switch (template) {
-      case 'classic':
+      case 'violeta':
         return <TemplateClassic data={data} />
-      case 'modern':
+      case 'mendunia':
         return <TemplateModern data={data} />
-      case 'simple':
+      case 'yambo':
         return <TemplateSimple data={data} />
+      case 'madoka':
+        return <TemplateMadoka data={data} />
+      case 'nawasena':
+        return <TemplateNawasena data={data} />
+      case 'kaigo':
+        return <TemplateKaigo data={data} />
       default:
-        return <TemplateModern data={data} />
+        return <TemplateClassic data={data} />
     }
   }
 
@@ -89,30 +95,54 @@ export default function KandidatCVPreview({ data, onClose }: KandidatCVPreviewPr
         <div className="flex items-center justify-between p-4 border-b bg-gray-50 shrink-0">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-semibold">Preview CV</h2>
-            <div className="flex items-center gap-1 bg-white rounded-lg p-1 border">
+            <div className="flex items-center gap-1 bg-white rounded-lg p-1 border flex-wrap">
               <Button
-                variant={template === 'classic' ? 'default' : 'ghost'}
+                variant={template === 'violeta' ? 'default' : 'ghost'}
                 size="sm"
-                onClick={() => setTemplate('classic')}
+                onClick={() => setTemplate('violeta')}
                 className="text-xs px-2"
               >
-                Classic
+                Violeta
               </Button>
               <Button
-                variant={template === 'modern' ? 'default' : 'ghost'}
+                variant={template === 'mendunia' ? 'default' : 'ghost'}
                 size="sm"
-                onClick={() => setTemplate('modern')}
+                onClick={() => setTemplate('mendunia')}
                 className="text-xs px-2"
               >
-                Modern
+                Mendunia
               </Button>
               <Button
-                variant={template === 'simple' ? 'default' : 'ghost'}
+                variant={template === 'yambo' ? 'default' : 'ghost'}
                 size="sm"
-                onClick={() => setTemplate('simple')}
+                onClick={() => setTemplate('yambo')}
                 className="text-xs px-2"
               >
-                Simple
+                Yambo
+              </Button>
+              <Button
+                variant={template === 'madoka' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setTemplate('madoka')}
+                className="text-xs px-2"
+              >
+                Madoka
+              </Button>
+              <Button
+                variant={template === 'nawasena' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setTemplate('nawasena')}
+                className="text-xs px-2"
+              >
+                Nawasena
+              </Button>
+              <Button
+                variant={template === 'kaigo' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setTemplate('kaigo')}
+                className="text-xs px-2"
+              >
+                Kaigo
               </Button>
             </div>
           </div>

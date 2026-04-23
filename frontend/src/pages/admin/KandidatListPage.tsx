@@ -126,28 +126,22 @@ export default function KandidatListPage() {
     nama: string;
   } | null>(null);
 
-  useEffect(() => {
-    const statusParam = searchParams.get('status');
-    if (statusParam) {
-      setStatus(statusParam);
-    }
-    const progresParam = searchParams.get('progres');
-    if (progresParam) {
-      setProgres(progresParam);
-    }
-  }, [searchParams]);
+  const statusParam = searchParams.get('status') || "";
+  const progresParam = searchParams.get('progres') || "";
 
   const load = () => {
     setLoading(true);
     setIsSearching(true);
     const params: any = {};
     if (debouncedSearch) params.search = debouncedSearch;
+    if (statusParam) params.status = statusParam;
     if (status) params.status = status;
     if (cabangFilter) params.cabang_id = cabangFilter;
     if (jenisKelamin) params.jenis_kelamin = jenisKelamin;
     if (umurMin) params.umur_min = umurMin;
     if (umurMax) params.umur_max = umurMax;
     if (bidangSSW) params.bidang_ssw = bidangSSW;
+    if (progresParam) params.status_progres = progresParam;
     if (progres) params.status_progres = progres;
     if (jenjang) params.jenjang = jenjang;
     if (statusKeberangkatan) params.status_keberangkatan = statusKeberangkatan;
@@ -200,6 +194,8 @@ export default function KandidatListPage() {
   useEffect(() => {
     load();
   }, [
+    statusParam,
+    progresParam,
     status,
     cabangFilter,
     jenisKelamin,
@@ -221,6 +217,8 @@ export default function KandidatListPage() {
     setCurrentPage(1);
   }, [
     debouncedSearch,
+    statusParam,
+    progresParam,
     status,
     cabangFilter,
     jenisKelamin,
@@ -686,7 +684,7 @@ export default function KandidatListPage() {
                     <div>
                       <span className="text-gray-400">JK / Umur</span>
                       <p className="text-gray-600">
-                        {item.jenis_kelamin === "Laki-laki" ? "L" : "P"} /{" "}
+                        {item.jenis_kelamin}
                         {item.umur || "-"}
                       </p>
                     </div>
@@ -887,7 +885,7 @@ export default function KandidatListPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className="text-xs font-medium text-gray-500">
-                          {item.jenis_kelamin === "-"}
+                          {item.jenis_kelamin || "-"}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center text-gray-600 text-sm">

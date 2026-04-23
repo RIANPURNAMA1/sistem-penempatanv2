@@ -118,9 +118,9 @@ export default function StatusKandidat({
 
   const filteredByCabangProgres = useMemo(() => {
     if (!byCabangProgres) return [];
-    return byCabangProgres.filter((d) =>
-      selectedProgress.has(d.status_progres),
-    );
+    return byCabangProgres
+      .filter((d) => d.nama_cabang && selectedProgress.has(d.status_progres))
+      .map((d) => ({ ...d, nama_cabang: d.nama_cabang?.trim() || d.nama_cabang }));
   }, [byCabangProgres, selectedProgress]);
 
   const selectedSSWData = activeSSW
@@ -446,20 +446,20 @@ export default function StatusKandidat({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ReactApexChart
+<ReactApexChart
               type="bar"
               series={progresList.map((progres) => ({
                 name: progres,
                 data: [
                   ...new Set(
                     filteredByCabangProgres.map(
-                      (d) => d.nama_cabang || "Tanpa Cabang",
+                      (d) => d.nama_cabang,
                     ),
                   ),
                 ].map((cabang) => {
                   const items = filteredByCabangProgres.filter(
                     (d) =>
-                      (d.nama_cabang || "Tanpa Cabang") === cabang &&
+                      d.nama_cabang === cabang &&
                       d.status_progres === progres,
                   );
                   return items.reduce((sum, item) => sum + item.count, 0);
@@ -488,11 +488,11 @@ export default function StatusKandidat({
                   },
                   formatter: (val: number) => (val > 0 ? val.toString() : ""),
                 },
-                xaxis: {
+xaxis: {
                   categories: [
                     ...new Set(
                       filteredByCabangProgres.map(
-                        (d) => d.nama_cabang || "Tanpa Cabang",
+                        (d) => d.nama_cabang,
                       ),
                     ),
                   ],

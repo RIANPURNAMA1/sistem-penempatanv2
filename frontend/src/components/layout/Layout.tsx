@@ -19,6 +19,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Search,
+  History,
 } from "lucide-react";
 
 interface NavItem {
@@ -77,6 +78,12 @@ const navItems: NavItem[] = [
     label: "Dashboard",
     href: "/kandidat-dashboard",
     icon: LayoutDashboard,
+    roles: ["kandidat"],
+  },
+  {
+    label: "History",
+    href: "/kandidat-history",
+    icon: History,
     roles: ["kandidat"],
   },
   {
@@ -267,82 +274,82 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-    {/* MAIN */}
-<div className="flex-1 flex flex-col">
+      {/* MAIN */}
+      <div className="flex-1 flex flex-col">
+        <header className="h-16 bg-white border-b px-3 sm:px-6 flex items-center justify-between sticky top-0 z-30 relative">
+          {/* LEFT */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden text-gray-600 hover:text-black"
+            >
+              <Menu size={20} />
+            </button>
+          </div>
 
-  <header className="h-16 bg-white border-b px-3 sm:px-6 flex items-center justify-between sticky top-0 z-30 relative">
+          {/* CENTER (SAFE MOBILE LOGO) */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:hidden max-w-[60%]">
+            <div className="flex items-center justify-center gap-2 truncate">
+              {/* LOGO */}
+              <img
+                src={LogoMenduniaJepang}
+                alt="Logo"
+                className="h-6 w-6 object-contain shrink-0"
+              />
 
-    {/* LEFT */}
-    <div className="flex items-center gap-2 shrink-0">
-      <button
-        onClick={() => setSidebarOpen(true)}
-        className="lg:hidden text-gray-600 hover:text-black"
-      >
-        <Menu size={20} />
-      </button>
-    </div>
+              {/* TEXT */}
+              <div className="leading-tight truncate">
+                <p className="text-[11px] font-semibold text-[#1e3a5f] truncate">
+                  Sistem
+                </p>
+                <p className="text-[10px] text-gray-400 truncate">Penempatan</p>
+              </div>
+            </div>
+          </div>
 
-    {/* CENTER (SAFE MOBILE LOGO) */}
-    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:hidden max-w-[60%]">
-      <div className="flex items-center justify-center gap-2 truncate">
+          {/* RIGHT */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* 🔍 Search icon (mobile) */}
+            {/* <Link
+              to="/kandidat"
+              className="md:hidden text-gray-500 hover:text-black"
+            >
+              <Search size={18} />
+            </Link> */}
 
-        {/* LOGO */}
-        <img
-          src={LogoMenduniaJepang}
-          alt="Logo"
-          className="h-6 w-6 object-contain shrink-0"
-        />
+            {/* 🔍 Search input (desktop) */}
+            <form
+              onSubmit={handleHeaderSearch}
+              className="hidden md:flex items-center bg-gray-100 rounded-lg px-2.5 py-1.5"
+            >
+              <button type="submit">
+                <Search
+                  size={14}
+                  className="text-gray-400 hover:text-gray-600"
+                />
+              </button>
+              <input
+                type="text"
+                placeholder="Cari kandidat..."
+                value={headerSearch}
+                onChange={(e) => setHeaderSearch(e.target.value)}
+                className="bg-transparent outline-none text-xs px-2 w-32"
+              />
+            </form>
 
-        {/* TEXT */}
-        <div className="leading-tight truncate">
-          <p className="text-[11px] font-semibold text-[#1e3a5f] truncate">
-            Sistem
-          </p>
-          <p className="text-[10px] text-gray-400 truncate">
-            Penempatan
-          </p>
-        </div>
+            {/* Avatar */}
+            <div className="w-8 h-8 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-xs font-semibold">
+              {user?.nama?.charAt(0)?.toUpperCase() || "U"}
+            </div>
+          </div>
+        </header>
 
+        <main className="flex-1 overflow-y-auto bg-[#fafafa] overflow-visible">
+          <div className="p-4 sm:p-6 animate-fade-in overflow-visible">
+            {children}
+          </div>
+        </main>
       </div>
-    </div>
-
-    {/* RIGHT */}
-    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-
-      {/* 🔍 Search icon (mobile) */}
-      <Link to="/kandidat" className="md:hidden text-gray-500 hover:text-black">
-        <Search size={18} />
-      </Link>
-
-      {/* 🔍 Search input (desktop) */}
-      <form onSubmit={handleHeaderSearch} className="hidden md:flex items-center bg-gray-100 rounded-lg px-2.5 py-1.5">
-        <button type="submit">
-          <Search size={14} className="text-gray-400 hover:text-gray-600" />
-        </button>
-        <input
-          type="text"
-          placeholder="Cari kandidat..."
-          value={headerSearch}
-          onChange={(e) => setHeaderSearch(e.target.value)}
-          className="bg-transparent outline-none text-xs px-2 w-32"
-        />
-      </form>
-
-      {/* Avatar */}
-      <div className="w-8 h-8 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-xs font-semibold">
-        {user?.nama?.charAt(0)?.toUpperCase() || "U"}
-      </div>
-
-    </div>
-  </header>
-
-  <main className="flex-1 overflow-y-auto bg-[#fafafa] overflow-visible">
-    <div className="p-4 sm:p-6 animate-fade-in overflow-visible">
-      {children}
-    </div>
-  </main>
-
-</div>
     </div>
   );
 }

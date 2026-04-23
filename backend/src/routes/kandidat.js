@@ -16,6 +16,7 @@ router.get('/my-profile', authorize('kandidat'), ctrl.getMyProfile);
 router.put('/my-profile', authorize('kandidat'), ctrl.updateMyProfile);
 router.post('/submit', authorize('kandidat'), ctrl.submitForm);
 router.post('/upload-dokumen', authorize('kandidat'), uploadDokumenMiddleware, ctrl.uploadDokumen);
+router.get('/history', authorize('kandidat'), ctrl.getMyHistory);
 
 // Admin access
 router.get('/', authorize('admin_penempatan', 'admin_cabang'), ctrl.getAll);

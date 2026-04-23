@@ -570,15 +570,30 @@ const migrations = [
        const [t] = await conn.query("SHOW TABLES LIKE 'notification_logs'");
        return t.length > 0;
      },
-     sql: `CREATE TABLE IF NOT EXISTS notification_logs (
-       id INT PRIMARY KEY AUTO_INCREMENT,
-       phone_number VARCHAR(20) NOT NULL,
-       message TEXT NOT NULL,
-       status ENUM('sent', 'failed', 'pending') DEFAULT 'pending',
-       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-     )`
-   },
-];
+sql: `CREATE TABLE IF NOT EXISTS notification_logs (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        phone_number VARCHAR(20) NOT NULL,
+        message TEXT NOT NULL,
+        status ENUM('sent', 'failed', 'pending') DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`
+    },
+    {
+      name: 'password_resets',
+      check: async (conn) => {
+        const [t] = await conn.query("SHOW TABLES LIKE 'password_resets'");
+        return t.length > 0;
+      },
+      sql: `CREATE TABLE IF NOT EXISTS password_resets (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        user_id INT NOT NULL,
+        otp VARCHAR(255) NOT NULL,
+        expired_at DATETIME NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )`
+    },
+  ];
 
 async function runMigrations() {
   let connection;

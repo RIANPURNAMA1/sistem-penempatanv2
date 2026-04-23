@@ -12,6 +12,7 @@ import JobOrderPage from '@/pages/admin/JobOrderPage'
 import UsersPage from '@/pages/admin/UsersPage'
 import FormulirPage from '@/pages/kandidat/FormulirPage'
 import KandidatDashboardPage from '@/pages/kandidat/KandidatDashboardPage'
+import KandidatHistoryPage from '@/pages/kandidat/KandidatHistoryPage'
 import DataSistemLamaPage from '@/pages/admin/DataSistemLamaPage'
 import CvPage from '@/pages/admin/CvPage'
 import ProfilPage from '@/pages/kandidat/ProfilPage'
@@ -84,6 +85,11 @@ export default function App() {
         <Route path="/kandidat-dashboard" element={
           <ProtectedRoute roles={['kandidat']}>
             <KandidatDashboardPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/kandidat-history" element={
+          <ProtectedRoute roles={['kandidat']}>
+            <KandidatHistoryPage />
           </ProtectedRoute>
         } />
         <Route path="/formulir" element={

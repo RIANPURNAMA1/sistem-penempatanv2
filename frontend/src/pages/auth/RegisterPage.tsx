@@ -11,19 +11,13 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react'
 const LogoMenduniaJepang = "/images/logo4.png"
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({ nama: '', email: '', password: '', cabang_id: '' })
+  const [form, setForm] = useState({ nama: '', email: '', password: '' })
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [cabangList, setCabangList] = useState<{ id: number; nama_cabang: string }[]>([])
   const navigate = useNavigate()
-
-  useEffect(() => {
-    api.get('/auth/cabang-list').then(r => setCabangList(r.data.data))
-  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.cabang_id) { toast({ title: 'Pilih cabang terlebih dahulu', variant: 'destructive' }); return }
     setLoading(true)
     try {
       await api.post('/auth/register', form)
@@ -81,19 +75,6 @@ export default function RegisterPage() {
               <Label>Email</Label>
               <Input type="email" placeholder="email@contoh.com" value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value })} required />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Cabang Mendunia</Label>
-              <Select onValueChange={v => setForm({ ...form, cabang_id: v })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih cabang..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {cabangList.map(c => (
-                    <SelectItem key={c.id} value={String(c.id)}>{c.nama_cabang}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Password</Label>

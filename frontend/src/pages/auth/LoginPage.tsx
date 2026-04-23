@@ -8,15 +8,24 @@ import { Label } from "@/components/ui/components";
 import { toast } from "@/hooks/useToast";
 import api from "@/lib/api";
 import { Eye, EyeOff, Loader2, RefreshCw } from "lucide-react";
+import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 
 const LogoMenduniaJepang = "/images/logo4.png";
+
+const GOOGLE_CLIENT_ID = "4045599268-6lqac9f6gf61a24uku9lc621e4pkt88t.apps.googleusercontent.com";
+
+const GOOGLE_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:5175",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5175",
+];
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [captcha] = useState("");
   const [captchaInput, setCaptchaInput] = useState("");
   const [captchaError, setCaptchaError] = useState(false);
   const { setAuth } = useAuthStore();
@@ -68,135 +77,197 @@ export default function LoginPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#fafafa] flex">
-      <div className="hidden lg:flex lg:w-1/2 bg-[#1e3a5f] text-white flex-col justify-between p-12">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center overflow-hidden p-1">
-            <img src={LogoMenduniaJepang} alt="Logo" className="w-full h-full object-contain" />
-          </div>
-          <span className="font-semibold text-lg">Sistem Penempatan</span>
-        </div>
-        <div>
-          <p className="font-display text-5xl text-white leading-tight mb-6">
-            Sistem Penempatan Kandidat ke Jepang
-          </p>
-          <p className="text-white/70 text-lg">
-            Kelola data kandidat dan job order dengan mudah.
-          </p>
-        </div>
-        <div />
-      </div>
+  const handleGoogleLogin = async (credentialResponse: any) => {
+    setLoading(true);
+    try {
+      console.log('Google credential response:', credentialResponse);
+      const { data } = await api.post("/auth/google", { googleToken: credentialResponse.credential });
+      setAuth(data.user, data.token);
+      if (data.user.role === "kandidat") navigate("/kandidat-dashboard");
+      else navigate("/dashboard");
+    } catch (err: any) {
+      console.error('Google login error:', err);
+      const errorMsg = err.response?.data?.message || err.message || "Terjadi kesalahan";
+      
+      if (errorMsg.includes('origin_mismatch') || errorMsg.includes('id')) {
+        toast({
+          title: "Konfigurasi Google Error",
+          description: "Domain belum terdaftar di Google Console. Hubungi admin.",
+          variant: "destructive",
+        });
+      } else if (errorMsg.includes('403')) {
+        toast({
+          title: "Google Blocked",
+          description: "App blm disetujui Google. Coba pilih menu lain atau hubungi admin.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Login Google gagal",
+          description: errorMsg,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8">
-        <div className="w-full max-w-md space-y-8">
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <div className="min-h-screen bg-[#fafafa] flex">
+        <div className="hidden lg:flex lg:w-1/2 bg-[#1e3a5f] text-white flex-col justify-between p-12">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center p-1">
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center overflow-hidden p-1">
               <img src={LogoMenduniaJepang} alt="Logo" className="w-full h-full object-contain" />
             </div>
-            <span className="font-semibold text-sm">Sistem Penempatan</span>
+            <span className="font-semibold text-lg">Sistem Penempatan</span>
           </div>
-
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">
-              Selamat datang kembali
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Masuk ke akun Anda untuk melanjutkan
+            <p className="font-display text-5xl text-white leading-tight mb-6">
+              Sistem Penempatan Kandidat ke Jepang
+            </p>
+            <p className="text-white/70 text-lg">
+              Kelola data kandidat dan job order dengan mudah.
             </p>
           </div>
+          <div />
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="email@contoh.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+        <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8">
+          <div className="w-full max-w-md space-y-8">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center p-1">
+                <img src={LogoMenduniaJepang} alt="Logo" className="w-full h-full object-contain" />
+              </div>
+              <span className="font-semibold text-sm">Sistem Penempatan</span>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
+
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground">
+                Selamat datang kembali
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Masuk ke akun Anda untuk melanjutkan
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="password"
-                  type={showPw ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="email@contoh.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="pr-10"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPw ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="captcha">Verifikasi Keamanan</Label>
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-lg tracking-widest select-none">
+                    {currentCaptcha.text}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleRefreshCaptcha}
+                    className="text-muted-foreground hover:text-foreground transition"
+                  >
+                    <RefreshCw size={16} />
+                  </button>
+                </div>
+                <Input
+                  id="captcha"
+                  type="text"
+                  placeholder="Ketik captcha"
+                  value={captchaInput}
+                  onChange={(e) => {
+                    setCaptchaInput(e.target.value);
+                    setCaptchaError(false);
+                  }}
+                />
+                {captchaError && (
+                  <p className="text-sm text-red-500">Captcha salah</p>
+                )}
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 size={16} className="mr-2 animate-spin" />
+                    Memproses...
+                  </>
+                ) : (
+                  "Masuk"
+                )}
+              </Button>
+            </form>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-muted-foreground">
+                  Atau lanjutkan dengan
+                </span>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="captcha">Verifikasi Keamanan</Label>
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-lg tracking-widest select-none">
-                  {currentCaptcha.text}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleRefreshCaptcha}
-                  className="text-muted-foreground hover:text-foreground transition"
-                >
-                  <RefreshCw size={16} />
-                </button>
-              </div>
-              <Input
-                id="captcha"
-                type="text"
-                placeholder="Ketik captcha"
-                value={captchaInput}
-                onChange={(e) => {
-                  setCaptchaInput(e.target.value);
-                  setCaptchaError(false);
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleLogin}
+                onError={() => {
+                  toast({
+                    title: "Login Google gagal",
+                    description: "Terjadi kesalahan dengan Google",
+                    variant: "destructive",
+                  });
                 }}
               />
-              {captchaError && (
-                <p className="text-sm text-red-500">Captcha salah</p>
-              )}
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 size={16} className="mr-2 animate-spin" />
-                  Memproses...
-                </>
-              ) : (
-                "Masuk"
-              )}
-            </Button>
-          </form>
-
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              Belum punya akun?{" "}
-              <Link to="/register" className="text-foreground font-medium hover:underline underline-offset-4">
-                Daftar sekarang
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Belum punya akun?{" "}
+                <Link to="/register" className="text-foreground font-medium hover:underline underline-offset-4">
+                  Daftar sekarang
+                </Link>
+              </div>
+              <Link 
+                to="/forgot-password" 
+                className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4"
+              >
+                Lupa password?
               </Link>
             </div>
-            <Link 
-              to="/forgot-password" 
-              className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4"
-            >
-              Lupa password?
-            </Link>
           </div>
         </div>
       </div>
-    </div>
+    </GoogleOAuthProvider>
   );
 }

@@ -101,6 +101,7 @@ const getAll = async (req, res) => {
       bidang_ssw,
       status_progres,
       jenjang,
+      status_keberangkatan,
     } = req.query;
 
     const user = req.user;
@@ -114,7 +115,7 @@ const getAll = async (req, res) => {
         u.nama, 
         u.email, 
         u.status as user_status, 
-        c.nama_cabang, 
+        TRIM(c.nama_cabang) as nama_cabang, 
         kp.pendidikan_terakhir,
         (
           SELECT kd.path_file
@@ -187,6 +188,11 @@ const getAll = async (req, res) => {
     if (jenjang) {
       query += " AND kp.pendidikan_terakhir = ?";
       params.push(jenjang);
+    }
+
+    if (status_keberangkatan) {
+      query += " AND kp.status_keberangkatan = ?";
+      params.push(status_keberangkatan);
     }
 
     query += " ORDER BY kp.updated_at DESC";
@@ -424,6 +430,7 @@ const updateMyProfile = async (req, res) => {
     const kandidatId = existing[0].id;
 
     const allowedFields = [
+      'cabang_id',
       'nama_katakana','nama_romaji','tempat_lahir','tanggal_lahir','umur','jenis_kelamin',
       'status_pernikahan','jumlah_anak','agama','tinggi_badan','berat_badan','golongan_darah',
       'tangan_dominan','ukuran_baju','lingkar_pinggang','panjang_telapak_kaki','sim_dimiliki',
@@ -862,11 +869,16 @@ const getStats = async (req, res) => {
     }
 
     const [total]    = await pool.query(`SELECT COUNT(*) as total FROM kandidat_profil kp ${whereClause}`, params);
-    const [byStatus] = await pool.query(`SELECT status_formulir, COUNT(*) as count FROM kandidat_profil kp ${whereClause} GROUP BY status_formulir`, params);
-    const [byCabang] = await pool.query(`SELECT c.nama_cabang, COUNT(kp.id) as count FROM kandidat_profil kp LEFT JOIN cabang c ON kp.cabang_id = c.id ${whereClause} GROUP BY kp.cabang_id, c.nama_cabang`, params);
+    
+    const allStatusWhere = whereClause || 'WHERE 1=1';
+    const [byStatus] = await pool.query(`SELECT status_formulir, COUNT(*) as count FROM kandidat_profil kp ${allStatusWhere} GROUP BY status_formulir`, params);
+    
+    const approvedWhere = whereClause ? whereClause + ' AND kp.status_formulir = ' + pool.escape('approved') : 'WHERE kp.status_formulir = ' + pool.escape('approved');
+    const [byCabang] = await pool.query(`SELECT TRIM(c.nama_cabang) as nama_cabang, COUNT(kp.id) as count FROM kandidat_profil kp LEFT JOIN cabang c ON kp.cabang_id = c.id ${approvedWhere} GROUP BY kp.cabang_id, c.nama_cabang`, params);
 
+    const approvedProfilesWhere = whereClause ? whereClause + ' AND kp.status_formulir = ' + pool.escape('approved') : 'WHERE kp.status_formulir = ' + pool.escape('approved');
     const [allProfiles] = await pool.query(
-      `SELECT kp.sertifikat_ssw, kp.jenis_kelamin, kp.status_progres FROM kandidat_profil kp ${whereClause}`,
+      `SELECT kp.sertifikat_ssw, kp.jenis_kelamin, kp.status_progres FROM kandidat_profil kp ${approvedProfilesWhere}`,
       params
     );
 
@@ -893,13 +905,14 @@ const getStats = async (req, res) => {
     });
 
     const [byCabangProgres] = await pool.query(`
-      SELECT c.nama_cabang, kp.status_progres, COUNT(kp.id) as count
+      SELECT TRIM(c.nama_cabang) as nama_cabang, kp.status_progres, COUNT(kp.id) as count
       FROM kandidat_profil kp
       LEFT JOIN cabang c ON kp.cabang_id = c.id
-      ${whereClause}
+      ${whereClause} AND kp.status_formulir = 'approved'
       GROUP BY kp.cabang_id, c.nama_cabang, kp.status_progres
       ORDER BY c.nama_cabang, kp.status_progres
     `, params);
+    console.log('byCabangProgres:', byCabangProgres);
 
     const jftWhere = whereClause ? whereClause : 'WHERE 1=1';
 
@@ -941,19 +954,47 @@ const getStats = async (req, res) => {
       ${whereClause} GROUP BY kp.cabang_id, c.nama_cabang ORDER BY c.nama_cabang
     `, params);
 
-    // Interview & Lulus by Cabin with Gender breakdown
+// Interview & Lulus by Cabin with Gender breakdown (use kandidat_history like the stats)
+    let interviewFilter = '';
+    const interviewParams = [];
+
+    if (filter_type === 'today') {
+      interviewFilter = ' AND DATE(kh.created_at) = ?';
+      interviewParams.push(new Date().toISOString().split('T')[0]);
+    } else if (filter_type === 'yesterday') {
+      interviewFilter = ' AND DATE(kh.created_at) = ?';
+      interviewParams.push(new Date(Date.now() - 86400000).toISOString().split('T')[0]);
+    } else if (filter_type === 'week') {
+      interviewFilter = ' AND DATE(kh.created_at) >= ?';
+      interviewParams.push(new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]);
+    } else if (filter_type === 'month') {
+      interviewFilter = ' AND DATE(kh.created_at) >= ?';
+      interviewParams.push(new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]);
+    } else if (start_date && end_date) {
+      interviewFilter = ' AND DATE(kh.created_at) BETWEEN ? AND ?';
+      interviewParams.push(start_date, end_date);
+    }
+
+    if (user.role === 'admin_cabang') {
+      interviewFilter += ' AND kp.cabang_id = ?';
+      interviewParams.push(user.cabang_id);
+    }
+
     const [interviewByCabang] = await pool.query(`
       SELECT c.nama_cabang,
-        COUNT(DISTINCT CASE WHEN kp.status_progres IN ('Interview', 'Jadwalkan Interview Ulang') AND kp.jenis_kelamin = 'Laki-laki' THEN kp.id END) as interview_laki,
-        COUNT(DISTINCT CASE WHEN kp.status_progres IN ('Interview', 'Jadwalkan Interview Ulang') AND kp.jenis_kelamin = 'Perempuan' THEN kp.id END) as interview_perempuan,
-        COUNT(DISTINCT CASE WHEN kp.status_progres = 'Lulus interview' AND kp.jenis_kelamin = 'Laki-laki' THEN kp.id END) as lulus_laki,
-        COUNT(DISTINCT CASE WHEN kp.status_progres = 'Lulus interview' AND kp.jenis_kelamin = 'Perempuan' THEN kp.id END) as lulus_perempuan
-      FROM kandidat_profil kp
+        COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value IN ('Interview', 'Jadwalkan Interview Ulang') AND kp.jenis_kelamin = 'Laki-laki' THEN kh.kandidat_id END) as interview_laki,
+        COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value IN ('Interview', 'Jadwalkan Interview Ulang') AND kp.jenis_kelamin = 'Perempuan' THEN kh.kandidat_id END) as interview_perempuan,
+        COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value = 'Lulus interview' AND kp.jenis_kelamin = 'Laki-laki' THEN kh.kandidat_id END) as lulus_laki,
+        COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value = 'Lulus interview' AND kp.jenis_kelamin = 'Perempuan' THEN kh.kandidat_id END) as lulus_perempuan
+      FROM kandidat_history kh
+      JOIN kandidat_profil kp ON kh.kandidat_id = kp.id
       LEFT JOIN cabang c ON kp.cabang_id = c.id
-      ${whereClause}
+      WHERE kh.field_name = 'status_progres' ${interviewFilter}
       GROUP BY kp.cabang_id, c.nama_cabang
       ORDER BY c.nama_cabang
-    `, params);
+    `, interviewParams);
+
+    console.log('interviewByCabang:', interviewByCabang);
 
     // Interview & Lulus by Gender
     const [interviewByGender] = await pool.query(`
@@ -1015,6 +1056,36 @@ const getHistory = async (req, res) => {
       WHERE kh.kandidat_id = ?
       ORDER BY kh.created_at DESC
     `, [req.params.id]);
+
+    res.json({ success: true, data: history });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// GET MY HISTORY (for kandidat)
+// ============================================================
+const getMyHistory = async (req, res) => {
+  try {
+    const [profil] = await pool.query(
+      'SELECT id FROM kandidat_profil WHERE user_id = ?',
+      [req.user.id]
+    );
+
+    if (!profil.length) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const kandidatId = profil[0].id;
+
+    const [history] = await pool.query(`
+      SELECT kh.*
+      FROM kandidat_history kh
+      WHERE kh.kandidat_id = ?
+      ORDER BY kh.created_at DESC
+      LIMIT 50
+    `, [kandidatId]);
 
     res.json({ success: true, data: history });
   } catch (err) {
@@ -1139,6 +1210,6 @@ const updateProfileByAdmin = async (req, res) => {
 module.exports = {
   getAll, getById, getMyProfile, updateMyProfile,
   updateStatus, updateProgres, updateKeberangkatan, updateProgresLengkap,
-  submitForm, uploadDokumen, getStats, addHistory, getHistory, getInterviewStats,
+  submitForm, uploadDokumen, getStats, addHistory, getHistory, getMyHistory, getInterviewStats,
   updateProfileByAdmin,
 };

@@ -766,9 +766,20 @@ const fields = [
 
 
 const dateFields = [
-  'jadwal_interview','tgl_setsumeikai','tgl_mensetsu_1','tgl_mensetsu_2',
-  'terbit_kontrak','terbit_paspor','masuk_imigrasi','coe_terbit',
-  'ektkln_pembuatan','jadwal_penerbangan'
+  'jadwal_interview',
+  'tgl_setsumeikai',
+  'tgl_mensetsu_1',
+  'tgl_mensetsu_2',
+  'terbit_kontrak',
+  'terbit_paspor',
+  'masuk_imigrasi',
+  'coe_terbit',
+  'ektkln_pembuatan',
+  'jadwal_penerbangan',
+
+  // 🔥 TAMBAHAN YANG KAMU LUPA
+  'dokumen_dikirim',
+  'dokumen_dikirim_2'
 ];
 
 const numberFields = [

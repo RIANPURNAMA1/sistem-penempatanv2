@@ -748,97 +748,145 @@ const updateKeberangkatan = async (req, res) => {
   }
 };
 
+
+
 // ============================================================
-// UPDATE PROGRES LENGKAP + NOTIFIKASI WA DINAMIS
+// UPDATE PROGRES LENGKAP (FINAL FIX - ANTI ERROR)
 // ============================================================
 const updateProgresLengkap = async (req, res) => {
-  try {
-    const fields = [
-      'status_progres','nama_perusahaan','bidang_ssw','detail_pekerjaan',
-      'jadwal_interview','catatan_interview','tgl_setsumeikai','tgl_mensetsu_1',
-      'tgl_mensetsu_2','catatan_mensetsu','biaya_pemberkasan','adm_tahap_1',
-      'adm_tahap_2','dokumen_dikirim','terbit_kontrak','kontrak_dikirim_tsk',
-      'terbit_paspor','masuk_imigrasi','coe_terbit','ektkln_pembuatan',
-      'dokumen_dikirim_2','visa','jadwal_penerbangan',
-    ];
+try {
+const fields = [
+'status_progres','nama_perusahaan','bidang_ssw','detail_pekerjaan',
+'jadwal_interview','catatan_interview','tgl_setsumeikai','tgl_mensetsu_1',
+'tgl_mensetsu_2','catatan_mensetsu','biaya_pemberkasan','adm_tahap_1',
+'adm_tahap_2','dokumen_dikirim','terbit_kontrak','kontrak_dikirim_tsk',
+'terbit_paspor','masuk_imigrasi','coe_terbit','ektkln_pembuatan',
+'dokumen_dikirim_2','visa','jadwal_penerbangan',
+];
 
-    const updates = [];
-    const values  = [];
 
-    for (const field of fields) {
-      if (req.body[field] !== undefined) {
-        updates.push(`${field} = ?`);
-        values.push(req.body[field]);
-      }
-    }
+const dateFields = [
+  'jadwal_interview','tgl_setsumeikai','tgl_mensetsu_1','tgl_mensetsu_2',
+  'terbit_kontrak','terbit_paspor','masuk_imigrasi','coe_terbit',
+  'ektkln_pembuatan','jadwal_penerbangan'
+];
 
-    if (updates.length === 0)
-      return res.status(400).json({ success: false, message: 'Tidak ada data untuk diupdate' });
+const numberFields = [
+  'biaya_pemberkasan','adm_tahap_1','adm_tahap_2'
+];
 
-    const [kandidat] = await pool.query(
-      'SELECT nama_romaji, nomor_hp FROM kandidat_profil WHERE id = ?',
-      [req.params.id]
-    );
-
-    if (!kandidat.length)
-      return res.status(404).json({ success: false, message: 'Kandidat tidak ditemukan' });
-
-    const { nama_romaji, nomor_hp } = kandidat[0];
-
-    values.push(req.params.id);
-    await pool.query(`UPDATE kandidat_profil SET ${updates.join(', ')} WHERE id = ?`, values);
-
-    for (const field of fields) {
-      if (req.body[field] !== undefined) {
-        await addHistory(
-          req.params.id, req.user?.id || null, req.user?.nama || 'System',
-          'progres_lengkap', field, null, req.body[field],
-          `Mengupdate data progres`
-        );
-      }
-    }
-
-    if (nomor_hp) {
-      const status    = req.body.status_progres;
-      const perusahaan = req.body.nama_perusahaan || '-';
-      const bidang    = req.body.bidang_ssw || '-';
-      const detail    = req.body.detail_pekerjaan || '-';
-      const jadwal    = req.body.jadwal_interview || '-';
-      const catatan   = req.body.catatan_interview || '-';
-
-      let pesanWA =
-        `Halo ${nama_romaji}, 👋\n\n` +
-        `Ada pembaruan mengenai *Progres Pendaftaran* Anda:\n\n` +
-        `*STATUS:* ${status}\n`;
-
-      if (status === 'Interview' || status === 'Jadwalkan Interview Ulang') {
-        pesanWA +=
-          `\n*🏢 JOB / PERUSAHAAN*` +
-          `\nNama Perusahaan: ${perusahaan}` +
-          `\nBidang SSW: ${bidang}` +
-          `\nDetail Pekerjaan: ${detail}\n` +
-          `\n*🗓️ JADWAL INTERVIEW*` +
-          `\nJadwal: ${jadwal}` +
-          `\nCatatan: ${catatan}\n`;
-      } else if (['Lulus interview', 'Pemberkasan', 'Berangkat'].includes(status)) {
-        pesanWA += `\nSelamat! Progres Anda berlanjut ke tahap *${status}*. Silakan lengkapi dokumen yang diperlukan di dashboard.\n`;
-      } else if (['Gagal Interview', 'Ditolak'].includes(status)) {
-        pesanWA += `\nMohon maaf, Anda dinyatakan *${status}*. Jangan menyerah dan silakan coba lowongan lainnya.\n`;
-      } else {
-        pesanWA += `\nSaat ini progres Anda sedang dalam tahap *${status}*. Mohon tunggu update selanjutnya.\n`;
-      }
-
-      pesanWA += `\n_Pesan otomatis dari Sistem Penempatan Kandidat._`;
-
-      await sendWhatsApp(nomor_hp, pesanWA);
-    }
-
-    res.json({ success: true, message: 'Data progres berhasil disimpan dan notifikasi terkirim' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
+const isValidDate = (val) => {
+  return /^\d{4}-\d{2}-\d{2}$/.test(val);
 };
+
+const updates = [];
+const values = [];
+
+for (const field of fields) {
+  if (req.body[field] !== undefined) {
+    let value = req.body[field];
+
+    // =========================
+    // HANDLE DATE
+    // =========================
+    if (dateFields.includes(field)) {
+      if (!value || value === '') {
+        value = null;
+      } else {
+        // normalize ISO → YYYY-MM-DD
+        if (value.includes('T')) {
+          value = value.split('T')[0];
+        }
+
+        if (!isValidDate(value)) {
+          return res.status(400).json({
+            success: false,
+            message: `Format tanggal salah pada field ${field}`
+          });
+        }
+      }
+    }
+
+    // =========================
+    // HANDLE NUMBER
+    // =========================
+    if (numberFields.includes(field)) {
+      value = value === '' ? null : Number(value);
+
+      if (value !== null && isNaN(value)) {
+        return res.status(400).json({
+          success: false,
+          message: `Field ${field} harus berupa angka`
+        });
+      }
+    }
+
+    updates.push(`${field} = ?`);
+    values.push(value);
+  }
+}
+
+if (updates.length === 0) {
+  return res.status(400).json({
+    success: false,
+    message: 'Tidak ada data untuk diupdate'
+  });
+}
+
+const [kandidat] = await pool.query(
+  'SELECT nama_romaji, nomor_hp FROM kandidat_profil WHERE id = ?',
+  [req.params.id]
+);
+
+if (!kandidat.length) {
+  return res.status(404).json({
+    success: false,
+    message: 'Kandidat tidak ditemukan'
+  });
+}
+
+const { nama_romaji, nomor_hp } = kandidat[0];
+
+values.push(req.params.id);
+
+await pool.query(
+  `UPDATE kandidat_profil SET ${updates.join(', ')} WHERE id = ?`,
+  values
+);
+
+// =========================
+// WHATSAPP
+// =========================
+if (nomor_hp) {
+  const status = req.body.status_progres || 'Update terbaru';
+
+  let pesanWA =
+    `Halo ${nama_romaji}, 👋\n\n` +
+    `Ada pembaruan progres Anda:\n\n` +
+    `*STATUS:* ${status}\n\n` +
+    `_Pesan otomatis sistem_`;
+
+  await sendWhatsApp(nomor_hp, pesanWA);
+}
+
+res.json({
+  success: true,
+  message: 'Berhasil update tanpa error'
+});
+
+
+} catch (err) {
+console.error('❌ ERROR:', err);
+
+res.status(500).json({
+  success: false,
+  message: err.sqlMessage || err.message
+});
+
+}
+};
+
+
 
 // ============================================================
 // SUBMIT FORM

@@ -183,7 +183,6 @@ const migrations = [
       FOREIGN KEY (kandidat_id) REFERENCES kandidat_profil(id) ON DELETE CASCADE
     )`
   },
-
   {
     name: 'create_kandidat_pengalaman_kerja',
     check: async (conn) => {
@@ -406,212 +405,224 @@ const migrations = [
     )`
   },
   {
+    // ✅ FIX: Cek dulu apakah kolom kandidat_id ada di job_order sebelum migrasi
     name: 'migrate_existing_joborder_kandidat',
     check: async (conn) => {
       const [t] = await conn.query("SHOW TABLES LIKE 'job_order_kandidat'");
       if (t.length === 0) return false;
       const [cnt] = await conn.query('SELECT COUNT(*) as cnt FROM job_order_kandidat');
       return cnt[0].cnt > 0;
-},
-    sql: `INSERT IGNORE INTO job_order_kandidat (job_order_id, kandidat_id)
-      SELECT id, kandidat_id FROM job_order WHERE kandidat_id IS NOT NULL`
+    },
+    run: async (conn) => {
+      // Cek apakah kolom kandidat_id ada di tabel job_order
+      const [cols] = await conn.query('SHOW COLUMNS FROM job_order LIKE "kandidat_id"');
+      if (cols.length === 0) {
+        // Kolom tidak ada, tidak ada data yang perlu dimigrasikan — skip
+        console.log('   ℹ️  Kolom kandidat_id tidak ditemukan di job_order, migration dilewati');
+        return;
+      }
+      await conn.query(`
+        INSERT IGNORE INTO job_order_kandidat (job_order_id, kandidat_id)
+        SELECT id, kandidat_id FROM job_order WHERE kandidat_id IS NOT NULL
+      `);
+    }
   },
-   {
-     name: 'create_cv_data',
-     check: async (conn) => {
-       const [t] = await conn.query("SHOW TABLES LIKE 'cv_data'");
-       return t.length > 0;
-     },
-     sql: `CREATE TABLE IF NOT EXISTS cv_data (
-       id INT PRIMARY KEY AUTO_INCREMENT,
-       user_id INT,
-       email VARCHAR(150),
-       cabang_id INT,
-       batch VARCHAR(50),
-       no_telepon VARCHAR(20),
-       no_orang_tua VARCHAR(20),
-       bidang_sertifikasi VARCHAR(100),
-       bidang_sertifikasi_lainnya VARCHAR(200),
-       program_pertanian_kawakami VARCHAR(10),
-       sertifikat_files TEXT,
-       pas_foto TEXT,
-       pas_foto_cv VARCHAR(500),
-       nama_lengkap_romaji VARCHAR(200),
-       nama_lengkap_katakana VARCHAR(200),
-       nama_panggilan_romaji VARCHAR(100),
-       nama_panggilan_katakana VARCHAR(100),
-       jenis_kelamin VARCHAR(50),
-       agama VARCHAR(50),
-       agama_lainnya VARCHAR(100),
-       tanggal_lahir DATE,
-       tempat_lahir VARCHAR(100),
-       usia VARCHAR(10),
-       alamat_lengkap TEXT,
-       provinsi VARCHAR(100),
-       kabupaten VARCHAR(100),
-       kecamatan VARCHAR(100),
-       kelurahan VARCHAR(100),
-       email_aktif VARCHAR(150),
-       status_perkawinan VARCHAR(50),
-       status_perkawinan_lainnya VARCHAR(100),
-       golongan_darah VARCHAR(10),
-       surat_izin_mengemudi VARCHAR(10),
-       jenis_sim VARCHAR(50),
-       merokok VARCHAR(10),
-       minum_alkohol VARCHAR(10),
-       bertato VARCHAR(10),
-       tinggi_badan VARCHAR(10),
-       berat_badan VARCHAR(10),
-       ukuran_pinggang VARCHAR(10),
-       ukuran_sepatu VARCHAR(10),
-       ukuran_atasan_baju VARCHAR(10),
-       ukuran_atasan_baju_lainnya VARCHAR(50),
-       ukuran_celana VARCHAR(10),
-       tangan_dominan VARCHAR(20),
-       kemampuan_penglihatan_mata VARCHAR(50),
-       kemampuan_pendengaran VARCHAR(50),
-       kemampuan_penglihatan_mata_lainnya VARCHAR(50),
-       sudah_vaksin_berapa_kali VARCHAR(50),
-       sudah_vaksin_berapa_kali_lainnya VARCHAR(100),
-       kesehatan_badan VARCHAR(50),
-       penyakit_cedera_masa_lalu TEXT,
-       hobi TEXT,
-       rencana_sumber_biaya_keberangkatan VARCHAR(100),
-       perkiraan_biaya VARCHAR(100),
-       Biaya_keberangkatan_sebelumnya_jisshu VARCHAR(100),
-       lama_belajar_di_mendunia VARCHAR(100),
-       kemampuan_bahasa_jepang VARCHAR(10),
-       kemampuan_pemahaman_ssw VARCHAR(10),
-       kelincahan_dalam_bekerja VARCHAR(10),
-       kekuatan_tindakan VARCHAR(10),
-       kemampuan_berbahasa_inggris VARCHAR(10),
-       kemampuan_berbahasa_inggris_lainnya VARCHAR(50),
-       kebugaran_jasmani_seminggu VARCHAR(50),
-       kebugaran_jasmani_seminggu_lainnya VARCHAR(100),
-       bersedia_kerja_shift VARCHAR(10),
-       bersedia_lembur VARCHAR(10),
-       bersedia_hari_libur VARCHAR(10),
-       menggunakan_kacamata VARCHAR(10),
-       ada_keluarga_di_jepang VARCHAR(10),
-       hubungan_keluarga_di_jepang VARCHAR(100),
-       status_kerabat_di_jepang VARCHAR(100),
-       status_kerabat_di_jepang_lainnya VARCHAR(100),
-       ingin_bekerja_berapa_tahun VARCHAR(50),
-       ingin_bekerja_berapa_tahun_lainnya VARCHAR(100),
-       ingin_pulang_berapa_kali VARCHAR(50),
-       kelebihan_diri TEXT,
-       komentar_guru_kelebihan_diri TEXT,
-       kekurangan_diri TEXT,
-       komentar_guru_kekurangan_diri TEXT,
-       ketertarikan_terhadap_jepang TEXT,
-       orang_yang_dihormati TEXT,
-       point_plus_diri TEXT,
-       keahlian_khusus TEXT,
-       istri_nama VARCHAR(200),
-       istri_usia VARCHAR(10),
-       istri_pekerjaan VARCHAR(100),
-       anak_nama VARCHAR(200),
-       anak_jenis_kelamin VARCHAR(20),
-       anak_usia VARCHAR(10),
-       anak_pendidikan VARCHAR(100),
-       ibu_nama VARCHAR(200),
-       ibu_usia VARCHAR(10),
-       ibu_pekerjaan VARCHAR(100),
-       ayah_nama VARCHAR(200),
-       ayah_usia VARCHAR(10),
-       ayah_pekerjaan VARCHAR(100),
-       kakak_nama VARCHAR(200),
-       kakak_usia VARCHAR(10),
-       kakak_jenis_kelamin VARCHAR(20),
-       kakak_pekerjaan VARCHAR(100),
-       kakak_status VARCHAR(50),
-       adik_nama VARCHAR(200),
-       adik_usia VARCHAR(10),
-       adik_jenis_kelamin VARCHAR(20),
-       adik_pekerjaan VARCHAR(100),
-       adik_status VARCHAR(50),
-       rata_rata_penghasilan_keluarga VARCHAR(50),
-       gaji_keluarga VARCHAR(50),
-       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-       deleted_at TIMESTAMP NULL
-     )`
-   },
-   {
-     name: 'create_pendaftaran_sistem_lama',
-     check: async (conn) => {
-       const [t] = await conn.query("SHOW TABLES LIKE 'pendaftaran_sistem_lama'");
-       return t.length > 0;
-     },
-     sql: `CREATE TABLE IF NOT EXISTS pendaftaran_sistem_lama (
-       id INT PRIMARY KEY AUTO_INCREMENT,
-       nama VARCHAR(200) NOT NULL,
-       nik VARCHAR(50) NOT NULL UNIQUE,
-       jenis_kelamin ENUM('Laki-laki', 'Perempuan') NULL,
-       agama VARCHAR(50) NULL,
-       tempat_lahir VARCHAR(100) NULL,
-       tempat_tanggal_lahir VARCHAR(100) NULL,
-       pendidikan_terakhir VARCHAR(100) NULL,
-       status VARCHAR(50) NULL,
-       id_prometric VARCHAR(100) NULL,
-       status_jft VARCHAR(50) NULL,
-       status_ssw VARCHAR(50) NULL,
-       verifikasi VARCHAR(50) NULL,
-       foto VARCHAR(255) NULL,
-       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-       cabang_id INT NULL,
-       FOREIGN KEY (cabang_id) REFERENCES cabang(id) ON DELETE SET NULL
-     )`
-   },
-   {
-     name: 'create_notification_logs',
-     check: async (conn) => {
-       const [t] = await conn.query("SHOW TABLES LIKE 'notification_logs'");
-       return t.length > 0;
-     },
-sql: `CREATE TABLE IF NOT EXISTS notification_logs (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        phone_number VARCHAR(20) NOT NULL,
-        message TEXT NOT NULL,
-        status ENUM('sent', 'failed', 'pending') DEFAULT 'pending',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )`
+  {
+    name: 'create_cv_data',
+    check: async (conn) => {
+      const [t] = await conn.query("SHOW TABLES LIKE 'cv_data'");
+      return t.length > 0;
     },
-    {
-      name: 'password_resets',
-      check: async (conn) => {
-        const [t] = await conn.query("SHOW TABLES LIKE 'password_resets'");
-        return t.length > 0;
-      },
-      sql: `CREATE TABLE IF NOT EXISTS password_resets (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        user_id INT NOT NULL,
-        otp VARCHAR(255) NOT NULL,
-        expired_at DATETIME NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )`
+    sql: `CREATE TABLE IF NOT EXISTS cv_data (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      user_id INT,
+      email VARCHAR(150),
+      cabang_id INT,
+      batch VARCHAR(50),
+      no_telepon VARCHAR(20),
+      no_orang_tua VARCHAR(20),
+      bidang_sertifikasi VARCHAR(100),
+      bidang_sertifikasi_lainnya VARCHAR(200),
+      program_pertanian_kawakami VARCHAR(10),
+      sertifikat_files TEXT,
+      pas_foto TEXT,
+      pas_foto_cv VARCHAR(500),
+      nama_lengkap_romaji VARCHAR(200),
+      nama_lengkap_katakana VARCHAR(200),
+      nama_panggilan_romaji VARCHAR(100),
+      nama_panggilan_katakana VARCHAR(100),
+      jenis_kelamin VARCHAR(50),
+      agama VARCHAR(50),
+      agama_lainnya VARCHAR(100),
+      tanggal_lahir DATE,
+      tempat_lahir VARCHAR(100),
+      usia VARCHAR(10),
+      alamat_lengkap TEXT,
+      provinsi VARCHAR(100),
+      kabupaten VARCHAR(100),
+      kecamatan VARCHAR(100),
+      kelurahan VARCHAR(100),
+      email_aktif VARCHAR(150),
+      status_perkawinan VARCHAR(50),
+      status_perkawinan_lainnya VARCHAR(100),
+      golongan_darah VARCHAR(10),
+      surat_izin_mengemudi VARCHAR(10),
+      jenis_sim VARCHAR(50),
+      merokok VARCHAR(10),
+      minum_alkohol VARCHAR(10),
+      bertato VARCHAR(10),
+      tinggi_badan VARCHAR(10),
+      berat_badan VARCHAR(10),
+      ukuran_pinggang VARCHAR(10),
+      ukuran_sepatu VARCHAR(10),
+      ukuran_atasan_baju VARCHAR(10),
+      ukuran_atasan_baju_lainnya VARCHAR(50),
+      ukuran_celana VARCHAR(10),
+      tangan_dominan VARCHAR(20),
+      kemampuan_penglihatan_mata VARCHAR(50),
+      kemampuan_pendengaran VARCHAR(50),
+      kemampuan_penglihatan_mata_lainnya VARCHAR(50),
+      sudah_vaksin_berapa_kali VARCHAR(50),
+      sudah_vaksin_berapa_kali_lainnya VARCHAR(100),
+      kesehatan_badan VARCHAR(50),
+      penyakit_cedera_masa_lalu TEXT,
+      hobi TEXT,
+      rencana_sumber_biaya_keberangkatan VARCHAR(100),
+      perkiraan_biaya VARCHAR(100),
+      Biaya_keberangkatan_sebelumnya_jisshu VARCHAR(100),
+      lama_belajar_di_mendunia VARCHAR(100),
+      kemampuan_bahasa_jepang VARCHAR(10),
+      kemampuan_pemahaman_ssw VARCHAR(10),
+      kelincahan_dalam_bekerja VARCHAR(10),
+      kekuatan_tindakan VARCHAR(10),
+      kemampuan_berbahasa_inggris VARCHAR(10),
+      kemampuan_berbahasa_inggris_lainnya VARCHAR(50),
+      kebugaran_jasmani_seminggu VARCHAR(50),
+      kebugaran_jasmani_seminggu_lainnya VARCHAR(100),
+      bersedia_kerja_shift VARCHAR(10),
+      bersedia_lembur VARCHAR(10),
+      bersedia_hari_libur VARCHAR(10),
+      menggunakan_kacamata VARCHAR(10),
+      ada_keluarga_di_jepang VARCHAR(10),
+      hubungan_keluarga_di_jepang VARCHAR(100),
+      status_kerabat_di_jepang VARCHAR(100),
+      status_kerabat_di_jepang_lainnya VARCHAR(100),
+      ingin_bekerja_berapa_tahun VARCHAR(50),
+      ingin_bekerja_berapa_tahun_lainnya VARCHAR(100),
+      ingin_pulang_berapa_kali VARCHAR(50),
+      kelebihan_diri TEXT,
+      komentar_guru_kelebihan_diri TEXT,
+      kekurangan_diri TEXT,
+      komentar_guru_kekurangan_diri TEXT,
+      ketertarikan_terhadap_jepang TEXT,
+      orang_yang_dihormati TEXT,
+      point_plus_diri TEXT,
+      keahlian_khusus TEXT,
+      istri_nama VARCHAR(200),
+      istri_usia VARCHAR(10),
+      istri_pekerjaan VARCHAR(100),
+      anak_nama VARCHAR(200),
+      anak_jenis_kelamin VARCHAR(20),
+      anak_usia VARCHAR(10),
+      anak_pendidikan VARCHAR(100),
+      ibu_nama VARCHAR(200),
+      ibu_usia VARCHAR(10),
+      ibu_pekerjaan VARCHAR(100),
+      ayah_nama VARCHAR(200),
+      ayah_usia VARCHAR(10),
+      ayah_pekerjaan VARCHAR(100),
+      kakak_nama VARCHAR(200),
+      kakak_usia VARCHAR(10),
+      kakak_jenis_kelamin VARCHAR(20),
+      kakak_pekerjaan VARCHAR(100),
+      kakak_status VARCHAR(50),
+      adik_nama VARCHAR(200),
+      adik_usia VARCHAR(10),
+      adik_jenis_kelamin VARCHAR(20),
+      adik_pekerjaan VARCHAR(100),
+      adik_status VARCHAR(50),
+      rata_rata_penghasilan_keluarga VARCHAR(50),
+      gaji_keluarga VARCHAR(50),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      deleted_at TIMESTAMP NULL
+    )`
+  },
+  {
+    name: 'create_pendaftaran_sistem_lama',
+    check: async (conn) => {
+      const [t] = await conn.query("SHOW TABLES LIKE 'pendaftaran_sistem_lama'");
+      return t.length > 0;
     },
-  ];
+    sql: `CREATE TABLE IF NOT EXISTS pendaftaran_sistem_lama (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      nama VARCHAR(200) NOT NULL,
+      nik VARCHAR(50) NOT NULL UNIQUE,
+      jenis_kelamin ENUM('Laki-laki', 'Perempuan') NULL,
+      agama VARCHAR(50) NULL,
+      tempat_lahir VARCHAR(100) NULL,
+      tempat_tanggal_lahir VARCHAR(100) NULL,
+      pendidikan_terakhir VARCHAR(100) NULL,
+      status VARCHAR(50) NULL,
+      id_prometric VARCHAR(100) NULL,
+      status_jft VARCHAR(50) NULL,
+      status_ssw VARCHAR(50) NULL,
+      verifikasi VARCHAR(50) NULL,
+      foto VARCHAR(255) NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      cabang_id INT NULL,
+      FOREIGN KEY (cabang_id) REFERENCES cabang(id) ON DELETE SET NULL
+    )`
+  },
+  {
+    name: 'create_notification_logs',
+    check: async (conn) => {
+      const [t] = await conn.query("SHOW TABLES LIKE 'notification_logs'");
+      return t.length > 0;
+    },
+    sql: `CREATE TABLE IF NOT EXISTS notification_logs (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      phone_number VARCHAR(20) NOT NULL,
+      message TEXT NOT NULL,
+      status ENUM('sent', 'failed', 'pending') DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`
+  },
+  {
+    name: 'password_resets',
+    check: async (conn) => {
+      const [t] = await conn.query("SHOW TABLES LIKE 'password_resets'");
+      return t.length > 0;
+    },
+    sql: `CREATE TABLE IF NOT EXISTS password_resets (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      user_id INT NOT NULL,
+      otp VARCHAR(255) NOT NULL,
+      expired_at DATETIME NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )`
+  },
+];
 
 async function runMigrations() {
   let connection;
   try {
     console.log('🔄 Connecting to database...');
     connection = await pool.getConnection();
-    
+
     await connection.query(`CREATE TABLE IF NOT EXISTS migrations (
       id INT PRIMARY KEY AUTO_INCREMENT,
       name VARCHAR(255) UNIQUE NOT NULL,
       executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
-    
+
     console.log('📦 Checking migrations...\n');
-    
+
     for (const migration of migrations) {
       const [rows] = await connection.query('SELECT * FROM migrations WHERE name = ?', [migration.name]);
-      
+
       if (rows.length === 0) {
         const alreadyExists = await migration.check(connection);
         if (alreadyExists) {
@@ -619,7 +630,12 @@ async function runMigrations() {
           console.log(`⏭️  Skipped: ${migration.name} (already exists)\n`);
         } else {
           console.log(`▶ Running: ${migration.name}`);
-          await connection.query(migration.sql);
+          // ✅ Support migration dengan custom run() atau sql biasa
+          if (typeof migration.run === 'function') {
+            await migration.run(connection);
+          } else {
+            await connection.query(migration.sql);
+          }
           await connection.query('INSERT INTO migrations (name) VALUES (?)', [migration.name]);
           console.log(`✅ Done: ${migration.name}\n`);
         }
@@ -627,7 +643,7 @@ async function runMigrations() {
         console.log(`⏭️  Skipped: ${migration.name} (already executed)`);
       }
     }
-    
+
     console.log('🎉 All migrations completed!');
   } catch (error) {
     console.error('❌ Migration failed:', error.message);
@@ -640,5 +656,6 @@ async function runMigrations() {
 
 runMigrations();
 
-
 }
+
+module.exports = pool;

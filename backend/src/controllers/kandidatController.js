@@ -421,15 +421,17 @@ const getMyProfile = async (req, res) => {
 const updateMyProfile = async (req, res) => {
   const conn = await pool.getConnection();
 
-  // 🔥 Helper
+  // 🔥 Helpers
   const toNull = (val) => (val === '' || val === undefined ? null : val);
 
-  const sanitizeObject = (obj) => {
-    const result = {};
-    for (let key in obj) {
-      result[key] = obj[key] === '' ? null : obj[key];
+  // ✅ FIX: Konversi ISO date string ke format YYYY-MM-DD yang diterima MySQL
+  const toDateOnly = (val) => {
+    if (!val || val === '') return null;
+    try {
+      return new Date(val).toISOString().split('T')[0];
+    } catch {
+      return null;
     }
-    return result;
   };
 
   try {
@@ -473,14 +475,23 @@ const updateMyProfile = async (req, res) => {
       'sumber_biaya','biaya_disiapkan','status_formulir',
     ];
 
+    // Field yang bertipe DATE — perlu konversi khusus
+    const dateFields = ['tanggal_lahir'];
+
     let updates = {};
 
     allowedFields.forEach((f) => {
       if (profileData[f] !== undefined) {
-        updates[f] = toNull(profileData[f]);
+        // ✅ FIX: Gunakan toDateOnly untuk field date
+        if (dateFields.includes(f)) {
+          updates[f] = toDateOnly(profileData[f]);
+        } else {
+          updates[f] = toNull(profileData[f]);
+        }
       }
     });
 
+    // ✅ FIX: penghasilan_keluarga dihandle terpisah karena di-destructure dari req.body
     if (penghasilan_keluarga !== undefined) {
       updates['penghasilan_keluarga'] = toNull(penghasilan_keluarga);
     }
@@ -607,7 +618,6 @@ const updateMyProfile = async (req, res) => {
     conn.release();
   }
 };
-
 // ============================================================
 // UPDATE STATUS FORMULIR (oleh admin) + NOTIFIKASI WA
 // ============================================================

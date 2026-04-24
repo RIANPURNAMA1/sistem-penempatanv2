@@ -1,7 +1,10 @@
 import axios from 'axios'
 
+const apiUrl = import.meta.env.VITE_API_URL || ''
+const isLocalhost = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1')
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: isLocalhost ? '/api' : apiUrl,
   headers: { 'Content-Type': 'application/json' }
 })
 

@@ -4,6 +4,8 @@ import { Printer } from 'lucide-react'
 import { useRef } from 'react'
 import { CvData } from './DataCvTable'
 
+const UPLOADS_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/uploads` : 'https://api.penempatan.mendunia.id/uploads'
+
 interface CvTemplateVioletaProps {
   cv: CvData | null
   open: boolean
@@ -325,7 +327,7 @@ export default function CvTemplateVioleta({ cv, open, onOpenChange }: CvTemplate
                 <div style={{ position: 'relative', width: '140px', height: '200px' }}>
                   {cv.pas_foto_cv ? (
                     <img 
-                      src={`http://127.0.0.1:8000/${cv.pas_foto_cv}`} 
+                      src={`${UPLOADS_URL}/${cv.pas_foto_cv}`} 
                       alt="Foto" 
                       style={{ width: '100%', height: '200px', objectFit: 'cover' }}
                     />

@@ -6,6 +6,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Search, X, Eye, Loader2, ChevronLeft, ChevronRight, FileText, Download, Image, File, FileDown } from 'lucide-react'
 import { toast } from '@/hooks/useToast'
 
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.penempatan.mendunia.id'
+const UPLOADS_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/uploads` : 'https://api.penempatan.mendunia.id/uploads'
+
 export interface CvData {
   id: number
   user_id: number
@@ -147,7 +150,7 @@ export default function DataCvTable({ onSelect }: DataCvTableProps) {
 
   const load = () => {
     setLoading(true)
-    fetch('https://matchingjob.mendunia.id/api/cv/all')
+    fetch(`${API_URL}/api/cv/all`)
       .then(r => r.json())
       .then(r => {
         if (r.data) setData(r.data)
@@ -323,7 +326,7 @@ export default function DataCvTable({ onSelect }: DataCvTableProps) {
                 <h4 className="font-bold text-blue-600 text-sm mb-2 border-b pb-1">FOTO</h4>
                 {selectedCv.pas_foto_cv && (
                   <img 
-                    src={`http://127.0.0.1:8000/${selectedCv.pas_foto_cv}`} 
+                    src={`${UPLOADS_URL}/${selectedCv.pas_foto_cv}`} 
                     alt="Foto CV" 
                     className="w-full max-w-[180px] rounded-lg border mb-3"
                   />
@@ -449,7 +452,7 @@ export default function DataCvTable({ onSelect }: DataCvTableProps) {
                       return (
                         <a 
                           key={i} 
-                          href={`http://127.0.0.1:8000/${file}`} 
+                          href={`${UPLOADS_URL}/${file}`} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"

@@ -60,9 +60,11 @@ export default function DataSistemLamaPage() {
     setShowKandidatModal(true)
   }
 
+  const API_URL = import.meta.env.VITE_API_URL || 'https://api.penempatan.mendunia.id'
+
   const load = () => {
     setLoading(true)
-    fetch('https://matchingjob.mendunia.id/api/pendaftaran')
+    fetch(`${API_URL}/api/pendaftaran`)
       .then(r => r.json())
       .then(r => {
         if (r.success) {
@@ -79,7 +81,7 @@ export default function DataSistemLamaPage() {
 
   useEffect(() => { load() }, [])
   useEffect(() => {
-    fetch('https://matchingjob.mendunia.id/api/kandidat')
+    fetch(`${API_URL}/api/kandidat`)
       .then(r => r.json())
       .then(r => { if (r.success) setKandidatData(r.data) })
       .catch(() => {})

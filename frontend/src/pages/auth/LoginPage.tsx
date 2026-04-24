@@ -19,6 +19,8 @@ const GOOGLE_ORIGINS = [
   "http://localhost:5175",
   "http://127.0.0.1:5173",
   "http://127.0.0.1:5175",
+  "https://penempatan.mendunia.id",
+  "https://api.penempatan.mendunia.id",
 ];
 
 export default function LoginPage() {

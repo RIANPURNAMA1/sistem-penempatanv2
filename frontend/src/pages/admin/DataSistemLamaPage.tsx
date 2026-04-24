@@ -60,7 +60,7 @@ export default function DataSistemLamaPage() {
     setShowKandidatModal(true)
   }
 
-  const API_URL = import.meta.env.VITE_API_URL || 'https://api.penempatan.mendunia.id'
+  const API_URL = 'https://matchingjob.mendunia.id'
 
   const load = () => {
     setLoading(true)

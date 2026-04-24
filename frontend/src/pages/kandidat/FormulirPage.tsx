@@ -384,9 +384,9 @@ export default function FormulirPage() {
         timeout: 60000,
       });
       toast({ title: "Dokumen berhasil diupload", variant: "success" as any });
-      
+
       const newDokumen = { jenis_dokumen: jenis, nama_file: file.name };
-      
+
       if (sswIndex !== undefined) {
         setSertifikatSsw((p: any) => {
           const arr = [...p];
@@ -423,6 +423,7 @@ export default function FormulirPage() {
 
   return (
     <div className="page-container max-w-4xl">
+      {/* ── Header ── */}
       <div className="mb-6">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
@@ -443,35 +444,67 @@ export default function FormulirPage() {
         )}
       </div>
 
-      <div className="mb-6 overflow-x-auto pb-2">
-        <div className="flex gap-1 min-w-max">
+      {/* ── Step Navigation ──
+          Desktop  : flex scroll row dengan label teks penuh
+          Mobile (≤400px) : grid 5 kolom, icon + label pendek, semua step terlihat
+      */}
+      <div className="mb-6">
+        {/* Mobile grid — tampil di bawah sm, tersembunyi di sm ke atas */}
+        <div className="grid grid-cols-5 gap-1 sm:hidden">
           {STEPS.map((s) => {
             const Icon = s.icon;
             return (
               <button
                 key={s.id}
                 onClick={() => setStep(s.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                className={`flex flex-col items-center justify-center gap-0.5 px-1 py-2 rounded-lg transition-all min-w-0 ${
                   step === s.id
                     ? "bg-[#1e3a5f] text-white"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >
                 <Icon size={14} />
-                <span className="hidden sm:inline">{s.label}</span>
+                <span className="text-[9px] font-medium truncate w-full text-center leading-tight">
+                  {s.label}
+                </span>
               </button>
             );
           })}
         </div>
+
+        {/* Desktop scroll row — tersembunyi di bawah sm, tampil di sm ke atas */}
+        <div className="hidden sm:block -mx-4 px-4 overflow-x-auto pb-2 sm:mx-0 sm:px-0">
+          <div className="flex gap-1 min-w-max pr-4">
+            {STEPS.map((s) => {
+              const Icon = s.icon;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setStep(s.id)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                    step === s.id
+                      ? "bg-[#1e3a5f] text-white"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <Icon size={14} />
+                  <span>{s.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      <div className="h-1 bg-muted rounded-full mb-6">
+      {/* ── Progress Bar ── */}
+      <div className="h-1 bg-muted rounded-full mb-6 mx-4 sm:mx-0">
         <div
           className="h-full bg-foreground rounded-full transition-all"
           style={{ width: `${(step / STEPS.length) * 100}%` }}
         />
       </div>
 
+      {/* ── Form Card ── */}
       <Card>
         <CardContent className="pt-6 pb-8">
           {step === 1 && (
@@ -490,7 +523,11 @@ export default function FormulirPage() {
 
           {step === 3 && (
             <FormStep3_Pendidikan
-              form={{ ...form, setPendidikanTerakhir: (v: string) => setForm((p: any) => ({ ...p, pendidikan_terakhir: v })) }}
+              form={{
+                ...form,
+                setPendidikanTerakhir: (v: string) =>
+                  setForm((p: any) => ({ ...p, pendidikan_terakhir: v })),
+              }}
               setPendidikan={setPendidikan}
               errors={errors}
             />
@@ -560,26 +597,49 @@ export default function FormulirPage() {
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between mt-6">
+      {/* ── Action Buttons ──
+          Mobile (≤400px): tombol Simpan hanya tampilkan icon, label dipersingkat
+          Desktop: tampil normal dengan teks lengkap
+      */}
+      <div className="flex items-center justify-between mt-6 gap-2">
+        {/* Tombol Sebelumnya */}
         <Button
           variant="outline"
+          size="sm"
           onClick={() => setStep((s) => Math.max(1, s - 1))}
           disabled={step === 1}
+          className="flex-shrink-0 text-xs sm:text-sm px-2 sm:px-4"
         >
-          <ChevronLeft size={16} className="mr-1" />
-          Sebelumnya
+          <ChevronLeft size={14} className="mr-0.5 sm:mr-1" />
+          {/* Label panjang di sm ke atas, pendek di mobile */}
+          <span className="hidden sm:inline">Sebelumnya</span>
+          <span className="sm:hidden">Kembali</span>
         </Button>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={handleSave} disabled={saving || isSubmitted}>
+
+        {/* Grup tombol kanan */}
+        <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+          {/* Tombol Simpan */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSave}
+            disabled={saving || isSubmitted}
+            className="text-xs sm:text-sm px-2 sm:px-4"
+          >
             {saving ? (
-              <Loader2 size={14} className="mr-2 animate-spin" />
+              <Loader2 size={13} className="animate-spin" />
             ) : (
-              <Save size={14} className="mr-2" />
+              <Save size={13} className="sm:mr-1.5" />
             )}
-            Simpan
+            {/* Sembunyikan teks di mobile, tampilkan di sm ke atas */}
+            <span className="hidden sm:inline">Simpan</span>
           </Button>
+
+          {/* Tombol Lanjut / Kirim */}
           {step < STEPS.length ? (
             <Button
+              size="sm"
+              className="text-xs sm:text-sm px-2 sm:px-4"
               onClick={() => {
                 if (validateStep(step)) {
                   setStep((s) => Math.min(STEPS.length, s + 1));
@@ -593,11 +653,14 @@ export default function FormulirPage() {
                 }
               }}
             >
-              Lanjut
-              <ChevronRight size={16} className="ml-1" />
+              {/* Label pendek di mobile, panjang di sm ke atas */}
+              <span className="hidden sm:inline">Lanjut</span>
+              <span className="sm:hidden">Lanjut</span>
+              <ChevronRight size={14} className="ml-0.5 sm:ml-1" />
             </Button>
           ) : (
             <Button
+              size="sm"
               onClick={async () => {
                 const allStepsValid = [1, 2, 3, 5, 6, 7, 8, 9].every((s) => validateStep(s));
                 if (!allStepsValid) {
@@ -611,14 +674,20 @@ export default function FormulirPage() {
                 handleSubmit();
               }}
               disabled={submitting || isSubmitted}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-emerald-600 hover:bg-emerald-700 text-xs sm:text-sm px-2 sm:px-4"
             >
               {submitting ? (
-                <Loader2 size={14} className="mr-2 animate-spin" />
+                <Loader2 size={13} className="animate-spin" />
               ) : (
-                <Send size={14} className="mr-2" />
+                <Send size={13} className="sm:mr-1.5" />
               )}
-              {isSubmitted ? "Sudah Terkirim" : "Kirim Formulir"}
+              {/* Label dipendekkan di mobile */}
+              <span className="hidden sm:inline">
+                {isSubmitted ? "Sudah Terkirim" : "Kirim Formulir"}
+              </span>
+              <span className="sm:hidden">
+                {isSubmitted ? "Terkirim" : "Kirim"}
+              </span>
             </Button>
           )}
         </div>

@@ -55,7 +55,7 @@ const mappingSertifikat: Record<string, string> = {
   'Hanya JFT': '国際交流基金日本語基礎テスト',
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.penempatan.mendunia.id'
+const API_URL = 'https://matchingjob.mendunia.id'
 
 export default function CvPage() {
   const { id } = useParams()

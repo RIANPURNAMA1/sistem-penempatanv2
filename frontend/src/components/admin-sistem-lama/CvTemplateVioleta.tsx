@@ -4,7 +4,7 @@ import { Printer } from 'lucide-react'
 import { useRef } from 'react'
 import { CvData } from './DataCvTable'
 
-const UPLOADS_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/uploads` : 'https://api.penempatan.mendunia.id/uploads'
+const UPLOADS_URL = 'https://matchingjob.mendunia.id/uploads'
 
 interface CvTemplateVioletaProps {
   cv: CvData | null

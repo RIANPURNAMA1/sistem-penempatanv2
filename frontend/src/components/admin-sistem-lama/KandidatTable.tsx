@@ -9,7 +9,7 @@ import { toast } from '@/hooks/useToast'
 import api from '@/lib/api'
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.penempatan.mendunia.id'
+const API_URL = 'https://matchingjob.mendunia.id'
 
 const updateApi = axios.create({
   baseURL: `${API_URL}/api`,

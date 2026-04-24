@@ -6,8 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Search, X, Eye, Loader2, ChevronLeft, ChevronRight, FileText, Download, Image, File, FileDown } from 'lucide-react'
 import { toast } from '@/hooks/useToast'
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.penempatan.mendunia.id'
-const UPLOADS_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/uploads` : 'https://api.penempatan.mendunia.id/uploads'
+const API_URL = 'https://matchingjob.mendunia.id'
+const UPLOADS_URL = 'https://matchingjob.mendunia.id/uploads'
 
 export interface CvData {
   id: number

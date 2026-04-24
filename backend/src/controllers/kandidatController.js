@@ -414,24 +414,49 @@ const getMyProfile = async (req, res) => {
 // ============================================================
 // UPDATE MY PROFILE
 // ============================================================
+// ============================================================
+// UPDATE MY PROFILE (FIXED & SAFE)
+// ============================================================
+
 const updateMyProfile = async (req, res) => {
   const conn = await pool.getConnection();
+
+  // 🔥 Helper
+  const toNull = (val) => (val === '' || val === undefined ? null : val);
+
+  const sanitizeObject = (obj) => {
+    const result = {};
+    for (let key in obj) {
+      result[key] = obj[key] === '' ? null : obj[key];
+    }
+    return result;
+  };
+
   try {
     await conn.beginTransaction();
 
     const { pendidikan, pengalaman, keluarga, penghasilan_keluarga, ...profileData } = req.body;
 
     const [existing] = await conn.query(
-      'SELECT id FROM kandidat_profil WHERE user_id = ?', [req.user.id]
+      'SELECT id FROM kandidat_profil WHERE user_id = ?',
+      [req.user.id]
     );
-    if (!existing.length)
-      return res.status(404).json({ success: false, message: 'Profil tidak ditemukan' });
+
+    if (!existing.length) {
+      return res.status(404).json({
+        success: false,
+        message: 'Profil tidak ditemukan'
+      });
+    }
 
     const kandidatId = existing[0].id;
 
+    // ============================================================
+    // UPDATE PROFIL UTAMA
+    // ============================================================
+
     const allowedFields = [
-      'cabang_id',
-      'nama_katakana','nama_romaji','tempat_lahir','tanggal_lahir','umur','jenis_kelamin',
+      'cabang_id','nama_katakana','nama_romaji','tempat_lahir','tanggal_lahir','umur','jenis_kelamin',
       'status_pernikahan','jumlah_anak','agama','tinggi_badan','berat_badan','golongan_darah',
       'tangan_dominan','ukuran_baju','lingkar_pinggang','panjang_telapak_kaki','sim_dimiliki',
       'nomor_hp','email_kontak','alamat_lengkap','kontak_ortu_nama','kontak_ortu_hp',
@@ -448,9 +473,17 @@ const updateMyProfile = async (req, res) => {
       'sumber_biaya','biaya_disiapkan','status_formulir',
     ];
 
-    const updates = {};
-    allowedFields.forEach(f => { if (profileData[f] !== undefined) updates[f] = profileData[f]; });
-    if (penghasilan_keluarga !== undefined) updates['penghasilan_keluarga'] = penghasilan_keluarga;
+    let updates = {};
+
+    allowedFields.forEach((f) => {
+      if (profileData[f] !== undefined) {
+        updates[f] = toNull(profileData[f]);
+      }
+    });
+
+    if (penghasilan_keluarga !== undefined) {
+      updates['penghasilan_keluarga'] = toNull(penghasilan_keluarga);
+    }
 
     if (Object.keys(updates).length > 0) {
       const setClause = Object.keys(updates).map(k => `${k} = ?`).join(', ');
@@ -460,48 +493,116 @@ const updateMyProfile = async (req, res) => {
       );
     }
 
+    // ============================================================
+    // PENDIDIKAN
+    // ============================================================
+
     if (pendidikan && Array.isArray(pendidikan)) {
-      await conn.query('DELETE FROM kandidat_pendidikan WHERE kandidat_id = ?', [kandidatId]);
+      await conn.query(
+        'DELETE FROM kandidat_pendidikan WHERE kandidat_id = ?',
+        [kandidatId]
+      );
+
       for (const p of pendidikan) {
         if (p.nama_sekolah || p.jenjang) {
           await conn.query(
-            'INSERT INTO kandidat_pendidikan (kandidat_id, jenjang, nama_sekolah, bulan_masuk, tahun_masuk, bulan_lulus, tahun_lulus, jurusan) VALUES (?,?,?,?,?,?,?,?)',
-            [kandidatId, p.jenjang, p.nama_sekolah, p.bulan_masuk, p.tahun_masuk, p.bulan_lulus, p.tahun_lulus, p.jurusan]
+            `INSERT INTO kandidat_pendidikan 
+            (kandidat_id, jenjang, nama_sekolah, bulan_masuk, tahun_masuk, bulan_lulus, tahun_lulus, jurusan)
+            VALUES (?,?,?,?,?,?,?,?)`,
+            [
+              kandidatId,
+              p.jenjang || null,
+              p.nama_sekolah || null,
+              p.bulan_masuk || null,
+              toNull(p.tahun_masuk),
+              p.bulan_lulus || null,
+              toNull(p.tahun_lulus),
+              p.jurusan || null
+            ]
           );
         }
       }
     }
 
+    // ============================================================
+    // PENGALAMAN
+    // ============================================================
+
     if (pengalaman && Array.isArray(pengalaman)) {
-      await conn.query('DELETE FROM kandidat_pengalaman_kerja WHERE kandidat_id = ?', [kandidatId]);
+      await conn.query(
+        'DELETE FROM kandidat_pengalaman_kerja WHERE kandidat_id = ?',
+        [kandidatId]
+      );
+
       for (const p of pengalaman) {
         if (p.nama_perusahaan) {
           await conn.query(
-            'INSERT INTO kandidat_pengalaman_kerja (kandidat_id, nama_perusahaan, alamat_perusahaan, posisi, bulan_masuk, tahun_masuk, bulan_keluar, tahun_keluar, masih_bekerja, deskripsi_pekerjaan) VALUES (?,?,?,?,?,?,?,?,?,?)',
-            [kandidatId, p.nama_perusahaan, p.alamat_perusahaan, p.posisi, p.bulan_masuk, p.tahun_masuk, p.bulan_keluar, p.tahun_keluar, p.masih_bekerja || false, p.deskripsi_pekerjaan]
+            `INSERT INTO kandidat_pengalaman_kerja 
+            (kandidat_id, nama_perusahaan, alamat_perusahaan, posisi, bulan_masuk, tahun_masuk, bulan_keluar, tahun_keluar, masih_bekerja, deskripsi_pekerjaan)
+            VALUES (?,?,?,?,?,?,?,?,?,?)`,
+            [
+              kandidatId,
+              p.nama_perusahaan || null,
+              p.alamat_perusahaan || null,
+              p.posisi || null,
+              p.bulan_masuk || null,
+              toNull(p.tahun_masuk),
+              p.bulan_keluar || null,
+              toNull(p.tahun_keluar),
+              p.masih_bekerja || false,
+              p.deskripsi_pekerjaan || null
+            ]
           );
         }
       }
     }
 
+    // ============================================================
+    // KELUARGA
+    // ============================================================
+
     if (keluarga && Array.isArray(keluarga)) {
-      await conn.query('DELETE FROM kandidat_keluarga WHERE kandidat_id = ?', [kandidatId]);
+      await conn.query(
+        'DELETE FROM kandidat_keluarga WHERE kandidat_id = ?',
+        [kandidatId]
+      );
+
       for (const k of keluarga) {
         if (k.nama || k.hubungan) {
           await conn.query(
-            'INSERT INTO kandidat_keluarga (kandidat_id, hubungan, nama, usia, pekerjaan, penghasilan, urutan) VALUES (?,?,?,?,?,?,?)',
-            [kandidatId, k.hubungan, k.nama, k.usia, k.pekerjaan, k.penghasilan || null, k.urutan || 1]
+            `INSERT INTO kandidat_keluarga 
+            (kandidat_id, hubungan, nama, usia, pekerjaan, penghasilan, urutan)
+            VALUES (?,?,?,?,?,?,?)`,
+            [
+              kandidatId,
+              k.hubungan || null,
+              k.nama || null,
+              toNull(k.usia),
+              k.pekerjaan || null,
+              toNull(k.penghasilan),
+              k.urutan || 1
+            ]
           );
         }
       }
     }
 
     await conn.commit();
-    res.json({ success: true, message: 'Profil berhasil diupdate' });
+
+    res.json({
+      success: true,
+      message: 'Profil berhasil diupdate'
+    });
+
   } catch (err) {
     await conn.rollback();
     console.error(err);
-    res.status(500).json({ success: false, message: 'Server error' });
+
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+
   } finally {
     conn.release();
   }

@@ -765,22 +765,38 @@ const fields = [
 ];
 
 
+// 🔥 DATE FIELDS (FIX FINAL)
 const dateFields = [
-  'jadwal_interview',
-  'tgl_setsumeikai',
-  'tgl_mensetsu_1',
-  'tgl_mensetsu_2',
-  'terbit_kontrak',
-  'terbit_paspor',
-  'masuk_imigrasi',
-  'coe_terbit',
-  'ektkln_pembuatan',
-  'jadwal_penerbangan',
+'jadwal_interview',
+'tgl_setsumeikai',
+'tgl_mensetsu_1',
+'tgl_mensetsu_2',
 
-  // 🔥 TAMBAHAN YANG KAMU LUPA
-  'dokumen_dikirim',
-  'dokumen_dikirim_2'
+// ✅ tambahan yang kamu minta
+'dokumen_dikirim',
+'terbit_kontrak',
+'kontrak_dikirim_tsk',
+'terbit_paspor',
+'masuk_imigrasi',
+'coe_terbit',
+'ektkln_pembuatan',
+'dokumen_dikirim_2',
+'visa',
+'jadwal_penerbangan',
 ];
+
+// 🔥 helper biar aman
+const normalizeDate = (value) => {
+if (!value || value === '') return null;
+
+// handle ISO (2026-04-25T00:00:00.000Z)
+if (typeof value === 'string' && value.includes('T')) {
+return value.split('T')[0];
+}
+
+return value;
+};
+
 
 const numberFields = [
   'biaya_pemberkasan','adm_tahap_1','adm_tahap_2'

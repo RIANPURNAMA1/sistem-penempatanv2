@@ -652,10 +652,11 @@ export default function KandidatListPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <img
-                        src={item.pas_foto || ""}
-                        alt="Foto"
-                        className="w-10 h-10 rounded-full object-cover"
-                        onError={(e) => {
+                          src={item.pas_foto || ""}
+                          alt="Foto"
+                          className="w-10 h-10 rounded-full object-cover"
+                          loading="lazy"
+                          onError={(e) => {
                           (e.target as HTMLImageElement).src =
                             `https://ui-avatars.com/api/?name=${encodeURIComponent(
                               item.nama || "?",
@@ -863,6 +864,7 @@ export default function KandidatListPage() {
                             }
                             alt="Foto"
                             className="w-8 h-8 rounded-full object-cover"
+                            loading="lazy"
                             onError={(e) => {
                               (e.target as HTMLImageElement).src =
                                 `https://ui-avatars.com/api/?name=${encodeURIComponent(

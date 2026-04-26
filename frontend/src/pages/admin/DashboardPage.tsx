@@ -171,12 +171,7 @@ export default function DashboardPage() {
           />
         )}
 
-        {activeTab === "interview" && (
-          <InterviewStats
-            interviewByCabang={stats?.interviewByCabang}
-            interviewByGender={stats?.interviewByGender}
-          />
-        )}
+        {activeTab === "interview" && <InterviewStats />}
       </div>
     </div>
   );

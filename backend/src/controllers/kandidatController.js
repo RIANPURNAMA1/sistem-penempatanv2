@@ -1064,7 +1064,7 @@ const getStats = async (req, res) => {
 
     const approvedProfilesWhere = whereClause ? whereClause + ' AND kp.status_formulir = ' + pool.escape('approved') : 'WHERE kp.status_formulir = ' + pool.escape('approved');
     const [allProfiles] = await pool.query(
-      `SELECT kp.sertifikat_ssw, kp.jenis_kelamin, kp.status_progres FROM kandidat_profil kp ${approvedProfilesWhere}`,
+      `SELECT kp.sertifikat_ssw, kp.jenis_kelamin, kp.status_progres, c.nama_cabang FROM kandidat_profil kp LEFT JOIN cabang c ON kp.cabang_id = c.id ${approvedProfilesWhere}`,
       params
     );
 
@@ -1168,8 +1168,10 @@ const getStats = async (req, res) => {
 
     const [interviewByCabang] = await pool.query(`
       SELECT c.nama_cabang,
-        COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value IN ('Interview', 'Jadwalkan Interview Ulang') AND kp.jenis_kelamin = 'Laki-laki' THEN kh.kandidat_id END) as interview_laki,
-        COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value IN ('Interview', 'Jadwalkan Interview Ulang') AND kp.jenis_kelamin = 'Perempuan' THEN kh.kandidat_id END) as interview_perempuan,
+        COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value = 'Interview' AND kp.jenis_kelamin = 'Laki-laki' THEN kh.kandidat_id END) as interview_laki,
+        COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value = 'Interview' AND kp.jenis_kelamin = 'Perempuan' THEN kh.kandidat_id END) as interview_perempuan,
+        COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value = 'Jadwalkan Interview Ulang' AND kp.jenis_kelamin = 'Laki-laki' THEN kh.kandidat_id END) as jadwalkan_laki,
+        COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value = 'Jadwalkan Interview Ulang' AND kp.jenis_kelamin = 'Perempuan' THEN kh.kandidat_id END) as jadwalkan_perempuan,
         COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value = 'Lulus interview' AND kp.jenis_kelamin = 'Laki-laki' THEN kh.kandidat_id END) as lulus_laki,
         COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value = 'Lulus interview' AND kp.jenis_kelamin = 'Perempuan' THEN kh.kandidat_id END) as lulus_perempuan
       FROM kandidat_history kh
@@ -1206,7 +1208,8 @@ const getStats = async (req, res) => {
         sswByGender, 
         sswByCabang,
         interviewByCabang,
-        interviewByGender
+        interviewByGender,
+        allProfiles
       },
     });
   } catch (err) {
@@ -1320,6 +1323,13 @@ const getInterviewStats = async (req, res) => {
       WHERE kh.field_name = 'status_progres' AND kh.new_value = 'Interview' ${dateFilter}
     `, params);
 
+    const [jadwalkanCount] = await pool.query(`
+      SELECT COUNT(DISTINCT kh.kandidat_id) as count
+      FROM kandidat_history kh
+      JOIN kandidat_profil kp ON kh.kandidat_id = kp.id
+      WHERE kh.field_name = 'status_progres' AND kh.new_value = 'Jadwalkan Interview Ulang' ${dateFilter}
+    `, params);
+
     const [lulusCount] = await pool.query(`
       SELECT COUNT(DISTINCT kh.kandidat_id) as count
       FROM kandidat_history kh
@@ -1328,10 +1338,12 @@ const getInterviewStats = async (req, res) => {
     `, params);
 
     const interviewNum = interviewCount[0]?.count || 0;
-    const lulusNum     = lulusCount[0]?.count || 0;
-    const percentage   = interviewNum > 0 ? Math.round((lulusNum / interviewNum) * 100) : 0;
+    const jadwalkanNum = jadwalkanCount[0]?.count || 0;
+    const lulusNum = lulusCount[0]?.count || 0;
+    const totalInterview = interviewNum + jadwalkanNum;
+    const percentage = totalInterview > 0 ? Math.round((lulusNum / totalInterview) * 100) : 0;
 
-    res.json({ success: true, data: { interview_count: interviewNum, lulus_count: lulusNum, percentage } });
+    res.json({ success: true, data: { interview_count: interviewNum, jadwalkan_count: jadwalkanNum, lulus_count: lulusNum, percentage } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });

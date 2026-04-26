@@ -1,289 +1,435 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/components'
-import { Button } from '@/components/ui/button'
 import api from '@/lib/api'
-import { Users, TrendingUp, Calendar, Loader2 } from 'lucide-react'
+import { Users, TrendingUp, Loader2, CheckCircle, Clock } from 'lucide-react'
 import ReactApexChart from 'react-apexcharts'
 
-interface InterviewStatsData {
-  interview_count: number
-  lulus_count: number
-  percentage: number
+interface StatusData {
+  status: string
+  count: number
+  laki: number
+  perempuan: number
 }
 
-interface InterviewByGroup {
-  nama_cabang?: string
-  interview_laki?: number
-  interview_perempuan?: number
-  lulus_laki?: number
-  lulus_perempuan?: number
+interface ByCabangData {
+  nama_cabang: string
+  interview: number
+  jadwalkan: number
+  lulus: number
+  gagal: number
 }
 
-interface InterviewStatsProps {
-  interviewByCabang?: InterviewByGroup[]
-  interviewByGender?: InterviewByGroup[]
-}
-
-export default function InterviewStats({ 
-  interviewByCabang: propInterviewByCabang, 
-}: InterviewStatsProps) {
-  const [filterType, setFilterType] = useState<string>('today')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [appliedStart, setAppliedStart] = useState('')
-  const [appliedEnd, setAppliedEnd] = useState('')
+export default function InterviewStats() {
   const [loading, setLoading] = useState(true)
-  // FIX: pakai null sebagai tanda "belum pernah fetch"
-  const [hasFetched, setHasFetched] = useState(false)
-  const [stats, setStats] = useState<InterviewStatsData | null>(null)
-  const [interviewByCabang, setInterviewByCabang] = useState<InterviewByGroup[]>([])
+  const [statusData, setStatusData] = useState<StatusData[]>([])
+  const [byCabangData, setByCabangData] = useState<ByCabangData[]>([])
+  const [totalKandidat, setTotalKandidat] = useState(0)
 
-  // FIX: setelah fetch pertama, HANYA pakai data dari state — tidak fallback ke props
-  // Ini mencegah chart tetap tampil dengan data lama saat filter return kosong
-  const byCabang = hasFetched
-    ? interviewByCabang
-    : (propInterviewByCabang || [])
-
-  const buildParams = useCallback(() => {
-    if (appliedStart && appliedEnd) {
-      return `start_date=${appliedStart}&end_date=${appliedEnd}`
-    }
-    return `filter_type=${filterType}`
-  }, [filterType, appliedStart, appliedEnd])
-
-  const fetchData = useCallback(() => {
+  const fetchData = async () => {
     setLoading(true)
-    const params = buildParams()
-    console.log('Fetching with params:', params)
-
-    Promise.all([
-      api.get(`/kandidat/stats?${params}`),
-      api.get(`/kandidat/interview-stats?${params}`)
-    ])
-      .then(([resStats, resInterview]) => {
-        console.log('Stats response:', resStats.data)
-        console.log('Interview response:', resInterview.data)
-        // FIX: selalu set state dari response — jika kosong tetap di-set kosong
-        setInterviewByCabang(resStats.data.data.interviewByCabang || [])
-        setStats(resInterview.data.data)
-        setHasFetched(true)
+    try {
+      const res = await api.get('/kandidat/stats')
+      const data = res.data.data
+      const allProfiles = data?.allProfiles || []
+      const byCabangProgres = data?.byCabangProgres || []
+      
+      setTotalKandidat(allProfiles.length)
+      
+      const statusList = [
+        'Job Matching', 'Pending', 'lamar ke perusahaan', 'Interview', 
+        'Jadwalkan Interview Ulang', 'Lulus interview', 'Gagal Interview', 
+        'Pemberkasan', 'Berangkat', 'Ditolak'
+      ]
+      
+      const counts = statusList.map(status => {
+        const filtered = allProfiles.filter((p: any) => p.status_progres === status)
+        return {
+          status,
+          count: filtered.length,
+          laki: filtered.filter((p: any) => p.jenis_kelamin === 'Laki-laki').length,
+          perempuan: filtered.filter((p: any) => p.jenis_kelamin === 'Perempuan').length
+        }
       })
-      .finally(() => setLoading(false))
-  }, [buildParams])
+      
+      setStatusData(counts)
+      
+      const cabangMap: Record<string, ByCabangData> = {}
+      byCabangProgres.forEach((item: any) => {
+        const namaCabang = item.nama_cabang || 'Tanpa Cabang'
+        if (!cabangMap[namaCabang]) {
+          cabangMap[namaCabang] = {
+            nama_cabang: namaCabang,
+            interview: 0,
+            jadwalkan: 0,
+            lulus: 0,
+            gagal: 0
+          }
+        }
+        if (item.status_progres === 'Interview') {
+          cabangMap[namaCabang].interview += item.count
+        } else if (item.status_progres === 'Jadwalkan Interview Ulang') {
+          cabangMap[namaCabang].jadwalkan += item.count
+        } else if (item.status_progres === 'Lulus interview') {
+          cabangMap[namaCabang].lulus += item.count
+        } else if (item.status_progres === 'Gagal Interview') {
+          cabangMap[namaCabang].gagal += item.count
+        }
+      })
+      
+      setByCabangData(Object.values(cabangMap))
+    } catch (err) {
+      console.error('Gagal mengambil data:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     fetchData()
-  }, [fetchData])
+  }, [])
 
-  const handleCustomDate = () => {
-    if (!startDate || !endDate) return
-    setFilterType('custom')
-    setAppliedStart(startDate)
-    setAppliedEnd(endDate)
-  }
+  const interviewCount = useMemo(() => {
+    const interview = statusData.find(s => s.status === 'Interview')?.count || 0
+    const jadwalkan = statusData.find(s => s.status === 'Jadwalkan Interview Ulang')?.count || 0
+    return interview + jadwalkan
+  }, [statusData])
 
-  const handlePresetFilter = (type: string) => {
-    setFilterType(type)
-    setStartDate('')
-    setEndDate('')
-    setAppliedStart('')
-    setAppliedEnd('')
-  }
+  const lulusCount = useMemo(() => {
+    return statusData.find(s => s.status === 'Lulus interview')?.count || 0
+  }, [statusData])
 
-  const chartOptions = useMemo<any>(() => ({
+  const percentage = useMemo(() => {
+    if (interviewCount === 0) return 0
+    return Math.round((lulusCount / interviewCount) * 100)
+  }, [interviewCount, lulusCount])
+
+  const chartOptionsBar = useMemo(() => ({
     chart: {
-      type: 'bar',
+      type: 'bar' as const,
       height: 350,
-      stacked: true,
       toolbar: { show: false },
       fontFamily: 'Inter, sans-serif',
-      animations: { enabled: true, speed: 400 },
     },
     plotOptions: {
       bar: {
         horizontal: false,
-        columnWidth: '50%',
-        borderRadius: 6,
+        borderRadius: 4,
+        columnWidth: '60%',
       },
     },
-    colors: ['#1E429F', '#3F83F8', '#76A9FA', '#A4CAFE'],
+    colors: ['#475569', '#64748B'],
     dataLabels: { enabled: false },
-    stroke: {
-      show: true,
-      width: 4,
-      colors: ['transparent'],
-    },
-    grid: {
-      show: false,
-      padding: { left: 2, right: 2, top: 0 },
-    },
+    grid: { show: false },
     xaxis: {
-      categories: byCabang.map((c) => c.nama_cabang ?? ''),
+      categories: statusData.map(s => s.status),
       labels: {
         style: {
           fontFamily: 'Inter, sans-serif',
-          colors: '#6B7280',
-          fontSize: '12px',
+          fontSize: '10px',
+          colors: '#64748B',
         },
+        rotate: -45,
+        rotateAlways: true,
       },
-      axisBorder: { show: false },
-      axisTicks: { show: false },
     },
-    yaxis: { show: false },
+    yaxis: { show: true },
     fill: { opacity: 1 },
     legend: {
       show: true,
-      position: 'bottom',
-      horizontalAlign: 'center',
-      fontFamily: 'Inter, sans-serif',
-      markers: { radius: 12 },
+      position: 'bottom' as const,
+      horizontalAlign: 'center' as const,
     },
     tooltip: { theme: 'light' },
-  }), [byCabang])
+  }), [statusData])
 
-  const series = useMemo(() => [
-    { name: 'Interview Laki-laki', data: byCabang.map((c) => c.interview_laki ?? 0) },
-    { name: 'Interview Perempuan', data: byCabang.map((c) => c.interview_perempuan ?? 0) },
-    { name: 'Lulus Laki-laki', data: byCabang.map((c) => c.lulus_laki ?? 0) },
-    { name: 'Lulus Perempuan', data: byCabang.map((c) => c.lulus_perempuan ?? 0) },
-  ], [byCabang])
+  const chartOptionsPie = useMemo(() => ({
+    chart: {
+      type: 'donut' as const,
+      fontFamily: 'Inter, sans-serif',
+    },
+    labels: statusData.filter(s => s.count > 0).map(s => s.status),
+    colors: ['#334155', '#475569', '#64748B', '#94A3B8', '#CBD5E1', '#1E293B', '#0F172A', '#1C1917', '#292524', '#44403C'],
+    dataLabels: {
+      enabled: true,
+      formatter: (val: number) => `${Math.round(val)}%`,
+    },
+    legend: {
+      show: true,
+      position: 'bottom' as const,
+      horizontalAlign: 'center' as const,
+    },
+    plotOptions: {
+      pie: {
+        donut: {
+          labels: {
+            show: true,
+            total: {
+              show: true,
+              label: 'Total',
+              formatter: (w: any) => w.globals.seriesTotals.reduce((a: number, b: number) => a + b, 0),
+            },
+          },
+        },
+      },
+    },
+    tooltip: { theme: 'light' },
+  }), [statusData])
 
-  const chartHeight = typeof window !== 'undefined' && window.innerWidth < 400 ? 280 : 350
+  const seriesBar = useMemo(() => [
+    { name: 'Laki-laki', data: statusData.map(s => s.laki) },
+    { name: 'Perempuan', data: statusData.map(s => s.perempuan) },
+  ], [statusData])
+
+  const seriesPie = useMemo(() => statusData.filter(s => s.count > 0).map(s => s.count), [statusData])
+
+  const interviewSeries = useMemo(() => {
+    const interview = statusData.find(s => s.status === 'Interview')?.count || 0
+    const jadwalkan = statusData.find(s => s.status === 'Jadwalkan Interview Ulang')?.count || 0
+    const lulus = statusData.find(s => s.status === 'Lulus interview')?.count || 0
+    return [interview, jadwalkan, lulus]
+  }, [statusData])
+
+  const interviewOptions = useMemo(() => ({
+    chart: {
+      type: 'pie' as const,
+      fontFamily: 'Inter, sans-serif',
+    },
+    labels: ['Interview', 'Jadwal Ulang', 'Lulus'],
+    colors: ['#64748B', '#475569', '#334155'],
+    dataLabels: {
+      enabled: true,
+      formatter: (val: number) => `${val}`,
+    },
+    legend: {
+      show: true,
+      position: 'bottom' as const,
+    },
+    tooltip: { theme: 'light' },
+  }), [])
+
+  const chartOptionsByCabang = useMemo(() => ({
+    chart: {
+      type: 'bar' as const,
+      height: 380,
+      toolbar: { show: false },
+      fontFamily: 'Inter, sans-serif',
+      stacked: false,
+    },
+    plotOptions: {
+      bar: {
+        horizontal: false,
+        borderRadius: 6,
+        columnWidth: '40%',
+        borderRadiusApplication: 'end' as const,
+      },
+    },
+    colors: ['#475569', '#1E293B'],
+    dataLabels: { enabled: true },
+    grid: { 
+      show: true,
+      strokeDashArray: 3,
+      xaxis: { lines: { show: false } },
+    },
+    xaxis: {
+      categories: byCabangData.map(c => c.nama_cabang),
+      labels: {
+        style: {
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '11px',
+          colors: '#64748B',
+        },
+      },
+    },
+    yaxis: { 
+      show: true,
+      labels: {
+        style: {
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '11px',
+        },
+      },
+    },
+    fill: { opacity: 1 },
+    legend: {
+      show: true,
+      position: 'top' as const,
+      horizontalAlign: 'center' as const,
+    },
+    tooltip: { theme: 'light' },
+  }), [byCabangData])
+
+  const seriesByCabang = useMemo(() => [
+    { 
+      name: 'Interview', 
+      data: byCabangData.map(c => c.interview + c.jadwalkan) 
+    },
+    { 
+      name: 'Lulus Interview', 
+      data: byCabangData.map(c => c.lulus) 
+    },
+  ], [byCabangData])
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-
-      {/* FILTER HEADER */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-white p-3 sm:p-4 rounded-xl border shadow-sm">
-
-        {/* PRESET BUTTONS */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-          {(['today', 'yesterday', 'week', 'month'] as const).map((type) => (
-            <Button
-              key={type}
-              variant={filterType === type ? 'default' : 'outline'}
-              size="sm"
-              className="rounded-lg px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap shrink-0"
-              onClick={() => handlePresetFilter(type)}
-            >
-              {type === 'today' ? 'Hari Ini'
-                : type === 'yesterday' ? 'Kemarin'
-                : type === 'week' ? 'Minggu'
-                : 'Bulan'}
-            </Button>
-          ))}
-        </div>
-
-        {/* DATE RANGE FILTER */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-          <div className="flex items-center gap-2 w-full">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full sm:w-auto border rounded-lg px-2 py-1 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="text-gray-400">-</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full sm:w-auto border rounded-lg px-2 py-1 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <Button
-            size="sm"
-            onClick={handleCustomDate}
-            disabled={!startDate || !endDate}
-            className="rounded-lg w-full sm:w-auto text-xs sm:text-sm"
-          >
-            Filter
-          </Button>
-        </div>
-      </div>
-
-      {/* STATS CARDS */}
+    <div className="space-y-4">
       {loading ? (
-        <div className="flex items-center justify-center py-10 sm:py-12">
-          <Loader2 className="animate-spin text-blue-600" size={28} />
+        <div className="flex items-center justify-center py-10">
+          <Loader2 className="animate-spin text-slate-600" size={28} />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-          <StatCard title="Total Interview" value={stats?.interview_count} icon={<Users size={18} />} color="blue" />
-          <StatCard title="Lulus Interview" value={stats?.lulus_count} icon={<TrendingUp size={18} />} color="green" />
-          <StatCard title="Ratio Kelulusan" value={`${stats?.percentage ?? 0}%`} icon={<Calendar size={18} />} color="purple" />
-        </div>
-      )}
-
-      {/* CHART */}
-      <div className="w-full bg-white rounded-xl border shadow-sm p-3 sm:p-6">
-
-        {/* CHART HEADER */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4 border-b pb-3">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-gray-100 rounded-lg text-gray-500">
-              <Users size={16} />
-            </div>
-            <p className="text-xs sm:text-sm text-gray-500">
-              Total interview periode ini
-            </p>
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <StatCard 
+              title="Total Kandidat" 
+              value={totalKandidat} 
+              icon={<Users size={18} />} 
+              color="slate" 
+            />
+            <StatCard 
+              title="Interview" 
+              value={interviewCount} 
+              icon={<Clock size={18} />} 
+              color="slate" 
+            />
+            <StatCard 
+              title="Lulus Interview" 
+              value={lulusCount} 
+              icon={<CheckCircle size={18} />} 
+              color="slate" 
+            />
+            <StatCard 
+              title="Persentase" 
+              value={`${percentage}%`} 
+              icon={<TrendingUp size={18} />} 
+              color="slate" 
+            />
           </div>
-          <div className="sm:ml-auto flex items-center px-2 py-1 text-xs sm:text-sm font-medium text-green-500 bg-green-50 rounded-lg w-fit">
-            {stats?.percentage ?? 0}%
-            <TrendingUp size={12} className="ml-1" />
-          </div>
-        </div>
 
-        {/* CHART BODY */}
-        <div className="w-full overflow-x-auto">
-          <div className="min-w-[320px]">
-            {loading ? (
-              <div className="h-[250px] sm:h-[350px] flex items-center justify-center">
-                <Loader2 className="animate-spin text-blue-600" size={24} />
-              </div>
-            ) : byCabang.length > 0 ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="w-full bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+              <h3 className="text-sm font-medium text-slate-700 mb-4">Status Progress Chart</h3>
               <ReactApexChart
-                key={buildParams()}
-                options={chartOptions}
-                series={series}
+                options={chartOptionsBar}
+                series={seriesBar}
                 type="bar"
-                height={chartHeight}
+                height={300}
               />
-            ) : (
-              // FIX: tampil placeholder ini saat data memang kosong
-              <div className="h-[250px] sm:h-[350px] flex items-center justify-center text-muted-foreground bg-gray-50 rounded-xl border-2 border-dashed">
-                <p className="text-xs sm:text-sm">Belum ada data</p>
-              </div>
-            )}
-          </div>
-        </div>
+            </div>
 
-      </div>
+            <div className="w-full bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+              <h3 className="text-sm font-medium text-slate-700 mb-4">Distribusi Status</h3>
+              <ReactApexChart
+                options={chartOptionsPie}
+                series={seriesPie}
+                type="donut"
+                height={300}
+              />
+            </div>
+          </div>
+
+          <div className="w-full bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+            <h3 className="text-sm font-medium text-slate-700 mb-4">Interview & Lulus Interview per Cabang</h3>
+            <ReactApexChart
+              options={chartOptionsByCabang}
+              series={seriesByCabang}
+              type="bar"
+              height={380}
+            />
+          </div>
+
+          <div className="w-full bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+            <h3 className="text-sm font-medium text-slate-700 mb-4">Interview vs Lulus</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <ReactApexChart
+                options={interviewOptions}
+                series={interviewSeries}
+                type="pie"
+                height={250}
+              />
+              <div className="flex flex-col justify-center space-y-3">
+                <div className="p-4 bg-slate-100 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-slate-500"></div>
+                    <span className="text-sm text-slate-700">Interview</span>
+                  </div>
+                  <span className="text-lg font-bold text-slate-700">
+                    {statusData.find(s => s.status === 'Interview')?.count || 0}
+                  </span>
+                </div>
+                <div className="p-4 bg-slate-200 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-slate-600"></div>
+                    <span className="text-sm text-slate-700">Jadwal Ulang</span>
+                  </div>
+                  <span className="text-lg font-bold text-slate-700">
+                    {statusData.find(s => s.status === 'Jadwalkan Interview Ulang')?.count || 0}
+                  </span>
+                </div>
+                <div className="p-4 bg-slate-300 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-slate-800"></div>
+                    <span className="text-sm text-slate-700">Lulus Interview</span>
+                  </div>
+                  <span className="text-lg font-bold text-slate-800">{lulusCount}</span>
+                </div>
+                <div className="p-4 bg-slate-100 rounded-lg flex items-center justify-between">
+                  <span className="text-sm text-slate-700">Total Interview</span>
+                  <span className="text-lg font-bold text-slate-600">{interviewCount}</span>
+                </div>
+                <div className="p-4 bg-slate-800 rounded-lg text-center">
+                  <p className="text-xs text-slate-300">Persentase Kelulusan</p>
+                  <p className="text-2xl font-bold text-white">{percentage}%</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+            <h3 className="text-sm font-semibold text-slate-800 mb-5">Detail Semua Status</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              {statusData.filter(s => s.count > 0).map((s, idx) => {
+                const percent = totalKandidat > 0 ? Math.round((s.count / totalKandidat) * 100) : 0
+                return (
+                  <div 
+                    key={s.status} 
+                    className="relative overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-4 hover:from-slate-100 hover:to-slate-150 transition-all duration-200 group"
+                  >
+                    <div className="absolute top-0 left-0 w-1 h-full bg-slate-500"></div>
+                    <div className="flex items-start justify-between mb-2">
+                      <span className="text-[11px] font-medium text-slate-600 uppercase tracking-wide">{s.status}</span>
+                      <span className="text-[10px] text-slate-400 bg-slate-200 px-2 py-0.5 rounded-full">{percent}%</span>
+                    </div>
+                    <p className="text-2xl font-bold text-slate-800 mb-1">{s.count}</p>
+                    <div className="flex gap-3 text-[11px] text-slate-500">
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                        L: {s.laki}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                        P: {s.perempuan}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
 
 function StatCard({ title, value, icon, color }: any) {
-  const colors: Record<string, string> = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    purple: 'bg-purple-50 text-purple-600',
-  }
-
   return (
     <Card className="border-none shadow-sm bg-white rounded-xl">
-      <CardContent className="p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
-        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center ${colors[color]}`}>
+      <CardContent className="p-3 sm:p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-slate-100 text-slate-600">
           {icon}
         </div>
-        <div className="min-w-0">
-          <p className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase truncate">
-            {title}
-          </p>
-          <h3 className="text-lg sm:text-2xl font-bold text-gray-900">
-            {value ?? 0}
-          </h3>
+        <div>
+          <p className="text-[10px] text-slate-500 uppercase">{title}</p>
+          <h3 className="text-xl font-bold text-slate-800">{value}</h3>
         </div>
       </CardContent>
     </Card>

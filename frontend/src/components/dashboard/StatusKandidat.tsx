@@ -439,14 +439,14 @@ export default function StatusKandidat({
       )}
 
       {filteredByCabangProgres && filteredByCabangProgres.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
+        <Card className="border-slate-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold text-slate-800">
               Progress Kandidat per Cabang
             </CardTitle>
           </CardHeader>
           <CardContent>
-<ReactApexChart
+            <ReactApexChart
               type="bar"
               series={progresList.map((progres) => ({
                 name: progres,
@@ -469,26 +469,27 @@ export default function StatusKandidat({
                 chart: {
                   height: 400,
                   toolbar: { show: false },
-                  stacked: true,
+                  fontFamily: 'Inter, sans-serif',
                 },
-                colors: progresList.map((p) => progresColors[p] || "#1e3a5f"),
+                colors: ['#475569', '#64748B', '#94A3B8', '#CBD5E1', '#1E293B', '#0F172A', '#334155', '#1C1917', '#292524', '#44403C'],
                 plotOptions: {
                   bar: {
                     horizontal: true,
-                    borderRadius: 4,
-                    barHeight: "70%",
+                    borderRadius: 6,
+                    barHeight: "80%",
+                    distributed: false,
                   },
                 },
                 dataLabels: {
                   enabled: true,
                   style: {
-                    fontSize: "9px",
-                    fontWeight: 500,
+                    fontSize: "11px",
+                    fontWeight: 600,
                     colors: ["#fff"],
                   },
                   formatter: (val: number) => (val > 0 ? val.toString() : ""),
                 },
-xaxis: {
+                xaxis: {
                   categories: [
                     ...new Set(
                       filteredByCabangProgres.map(
@@ -497,26 +498,31 @@ xaxis: {
                     ),
                   ],
                   labels: {
-                    style: { fontSize: "11px" },
-                    formatter: (val: number) => val.toFixed(0),
+                    style: { fontSize: "11px", colors: ['#64748B'] },
                   },
                 },
                 yaxis: {
-                  labels: { style: { fontSize: "11px" } },
+                  labels: { style: { fontSize: "11px", colors: ['#64748B'] } },
                 },
                 grid: {
-                  borderColor: "#f1f1f1",
-                  strokeDashArray: 4,
+                  borderColor: "#e2e8f0",
+                  strokeDashArray: 3,
                 },
                 tooltip: {
                   theme: "light",
+                  style: {
+                    fontSize: '12px',
+                  },
                   y: { formatter: (val: number) => `${val} Kandidat` },
                 },
                 legend: {
                   position: "bottom",
                   horizontalAlign: "center",
-                  fontSize: "10px",
-                  markers: { size: 8 },
+                  fontSize: "11px",
+                  markers: { size: 10 },
+                },
+                fill: {
+                  opacity: 1,
                 },
               }}
               height={400}

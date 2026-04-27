@@ -26,6 +26,8 @@ router.patch('/:id/status', authorize('admin_penempatan', 'admin_cabang'), ctrl.
 router.patch('/:id/progres', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateProgres);
 router.patch('/:id/keberangkatan', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateKeberangkatan);
 router.patch('/:id/progres-lengkap', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateProgresLengkap);
+router.patch('/:id/screening', authorize('admin_penempatan', 'admin_cabang'), ctrl.screeningKandidat);
+router.post('/batch-screening', authorize('admin_penempatan', 'admin_cabang'), ctrl.batchScreening);
 router.put('/:id/update-profile', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateProfileByAdmin);
 
 // Get file limits for frontend

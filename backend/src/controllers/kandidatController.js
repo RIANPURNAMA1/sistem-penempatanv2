@@ -928,9 +928,11 @@ const submitForm = async (req, res) => {
     if (!profil.length)
       return res.status(404).json({ success: false, message: 'Profil tidak ditemukan' });
 
+    const kandidatId = profil[0].id;
+
     await pool.query(
       'UPDATE kandidat_profil SET status_formulir = "submitted" WHERE id = ?',
-      [profil[0].id]
+      [kandidatId]
     );
 
     const candidateName =
@@ -943,7 +945,118 @@ const submitForm = async (req, res) => {
       console.error('[WHATSAPP] Gagal mengirim notifikasi:', err.message)
     );
 
-    res.json({ success: true, message: 'Formulir berhasil dikirim' });
+    res.json({ success: true, message: 'Formulir berhasil dikirim', status: 'submitted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// SCREENING KANDIDAT (APPROVE)
+// ============================================================
+const screeningKandidat = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const adminId = req.user.id;
+    const adminNama = req.user.nama || req.user.email;
+
+    const [profil] = await pool.query(
+      'SELECT id, nama_romaji, status_formulir FROM kandidat_profil WHERE id = ?',
+      [id]
+    );
+
+    if (!profil.length)
+      return res.status(404).json({ success: false, message: 'Kandidat tidak ditemukan' });
+
+    if (profil[0].status_formulir === 'approved')
+      return res.status(400).json({ success: false, message: 'Kandidat sudah disetujui' });
+
+    const [dokumen] = await pool.query(
+      'SELECT jenis_dokumen FROM kandidat_dokumen WHERE kandidat_id = ?',
+      [id]
+    );
+
+    const hasJft = dokumen.some(d => d.jenis_dokumen === 'sertifikat_jft');
+    const hasSsw = dokumen.some(d => d.jenis_dokumen && d.jenis_dokumen.startsWith('ssw_'));
+
+    let message = 'Kandidat berhasil disetujui melalui screening';
+    if (hasJft && hasSsw) {
+      message = 'Kandidat disetujui (Sertifikat JFT & SSW lengkap)';
+    } else if (hasJft) {
+      message = 'Kandidat disetujui (Sertifikat JFT lengkap)';
+    } else if (hasSsw) {
+      message = 'Kandidat disetujui (Sertifikat SSW lengkap)';
+    } else {
+      message = 'Kandidat disetujui (tanpa sertifikat)';
+    }
+
+    await pool.query(
+      'UPDATE kandidat_profil SET status_formulir = "approved" WHERE id = ?',
+      [id]
+    );
+
+    addHistory(id, adminId, adminNama, 'status_change', 'status_formulir', profil[0].status_formulir, 'approved', message);
+
+    res.json({ success: true, message, hasJft, hasSsw });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// BATCH SCREENING - AUTO APPROVE BERDASARKAN SERTIFIKAT
+// ============================================================
+const batchScreening = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const adminNama = req.user.nama || req.user.email;
+
+    const [kandidats] = await pool.query(
+      `SELECT kp.id, kp.nama_romaji, kp.status_formulir 
+       FROM kandidat_profil kp 
+       WHERE kp.status_formulir IN ('draft', 'submitted', 'reviewed')`
+    );
+
+    let approved = 0;
+    let skipped = 0;
+    const results = [];
+
+    for (const kandidat of kandidats) {
+      const [dokumen] = await pool.query(
+        'SELECT jenis_dokumen FROM kandidat_dokumen WHERE kandidat_id = ?',
+        [kandidat.id]
+      );
+
+      const hasJft = dokumen.some(d => d.jenis_dokumen === 'sertifikat_jft');
+      const hasSsw = dokumen.some(d => d.jenis_dokumen && d.jenis_dokumen.startsWith('ssw_'));
+
+      if (hasJft || hasSsw) {
+        let message = 'Auto-approved';
+        if (hasJft && hasSsw) message = 'Sertifikat JFT & SSW lengkap';
+        else if (hasJft) message = 'Sertifikat JFT lengkap';
+        else if (hasSsw) message = 'Sertifikat SSW lengkap';
+
+        await pool.query(
+          'UPDATE kandidat_profil SET status_formulir = "approved" WHERE id = ?',
+          [kandidat.id]
+        );
+
+        addHistory(kandidat.id, adminId, adminNama, 'status_change', 'status_formulir', kandidat.status_formulir, 'approved', message);
+        
+        approved++;
+        results.push({ id: kandidat.id, nama: kandidat.nama_romaji, status: 'approved', reason: message });
+      } else {
+        skipped++;
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: `${approved} kandidat disetujui, ${skipped} dilewati (tidak ada sertifikat)`,
+      approved,
+      skipped,
+      results
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -1409,5 +1522,5 @@ module.exports = {
   getAll, getById, getMyProfile, updateMyProfile,
   updateStatus, updateProgres, updateKeberangkatan, updateProgresLengkap,
   submitForm, uploadDokumen, getStats, addHistory, getHistory, getMyHistory, getInterviewStats,
-  updateProfileByAdmin,
+  updateProfileByAdmin, screeningKandidat, batchScreening,
 };

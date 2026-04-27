@@ -77,6 +77,8 @@ export default function VerifikasiPendaftaran({ stats, loading }: VerifikasiPend
                 name: 'Jumlah',
                 data: Object.keys(statusConfig).map(status => getCount(status))
               }]}
+
+              
               options={{
                 chart: {
                   height: 220,

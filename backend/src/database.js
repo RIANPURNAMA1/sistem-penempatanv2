@@ -15,6 +15,20 @@ if (require.main === module) {
 
 const migrations = [
   {
+    name: 'create_sys_settings',
+    check: async (conn) => {
+      const [t] = await conn.query("SHOW TABLES LIKE 'sys_settings'");
+      return t.length > 0;
+    },
+    sql: `CREATE TABLE IF NOT EXISTS sys_settings (
+      setting_key VARCHAR(100) PRIMARY KEY,
+      setting_value TEXT,
+      setting_type ENUM('string', 'number', 'boolean', 'json') DEFAULT 'string',
+      description VARCHAR(255),
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`
+  },
+  {
     name: 'create_cabang',
     check: async (conn) => {
       const [t] = await conn.query("SHOW TABLES LIKE 'cabang'");

@@ -1,7 +1,21 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, Badge } from '@/components/ui/components'
+import { useNavigate } from 'react-router-dom'
 import api from '@/lib/api'
-import { History, FileText, Calendar, Building, Star, Loader2, User } from 'lucide-react'
+import { History, FileText, Calendar, Building, Star, Loader2, User, AlertCircle } from 'lucide-react'
+
+const statusConfig: Record<string, string> = {
+  'Job Matching': 'Job Matching',
+  'Pending': 'Pending',
+  'lamar ke perusahaan': 'Melamar',
+  'Interview': 'Interview',
+  'Jadwalkan Interview Ulang': 'Interview Ulang',
+  'Lulus interview': 'Lulus',
+  'Gagal Interview': 'Gagal',
+  'Pemberkasan': 'Pemberkasan',
+  'Berangkat': 'Berangkat',
+  'Ditolak': 'Ditolak',
+}
 
 interface HistoryItem {
   id: number
@@ -23,23 +37,12 @@ interface KandidatProfile {
   bidang_ssw: string
 }
 
-const statusConfig: Record<string, string> = {
-  'Job Matching': 'Job Matching',
-  'Pending': 'Pending',
-  'lamar ke perusahaan': 'Melamar',
-  'Interview': 'Interview',
-  'Jadwalkan Interview Ulang': 'Interview Ulang',
-  'Lulus interview': 'Lulus',
-  'Gagal Interview': 'Gagal',
-  'Pemberkasan': 'Pemberkasan',
-  'Berangkat': 'Berangkat',
-  'Ditolak': 'Ditolak',
-}
-
 export default function KandidatHistoryPage() {
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [profil, setProfil] = useState<KandidatProfile | null>(null)
+  const [showPopup, setShowPopup] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -50,8 +53,13 @@ export default function KandidatHistoryPage() {
     .then(([historyRes, profilRes]) => {
       setHistory(historyRes.data.data || [])
       setProfil(profilRes.data.data)
+      if (profilRes.data.data?.status_formulir === 'draft') {
+        setShowPopup(true)
+      }
     })
-    .catch(err => console.error(err))
+    .catch(() => {
+      setShowPopup(true)
+    })
     .finally(() => setLoading(false))
   }, [])
 
@@ -148,6 +156,28 @@ export default function KandidatHistoryPage() {
       <div className="page-container">
         <div className="flex items-center justify-center h-64">
           <Loader2 size={32} className="animate-spin text-[#1e3a5f]" />
+        </div>
+      </div>
+    )
+  }
+
+  if (showPopup) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white rounded-xl shadow-2xl border p-6 sm:p-8 max-w-md w-full mx-4 text-center relative">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle size={32} className="text-amber-600" />
+          </div>
+          <h2 className="text-lg sm:text-xl font-semibold mb-2">Formulir Belum Disubmit</h2>
+          <p className="text-muted-foreground text-sm sm:text-base mb-6">
+            Formulir pendaftaran Anda masih berstatus draft. Silakan lengkapi dan submit formulir untuk melanjutkan.
+          </p>
+          <button
+            onClick={() => navigate('/formulir')}
+            className="w-full bg-[#1e3a5f] text-white py-2.5 px-4 rounded-lg font-medium hover:bg-[#2a4a73] transition-colors"
+          >
+            Lengkapi Formulir
+          </button>
         </div>
       </div>
     )

@@ -29,6 +29,8 @@ import {
   Loader2,
   History,
   Download,
+  CheckCircle,
+  ShieldCheck,
 } from "lucide-react";
 import HistoryModal from "@/components/HistoryModal";
 
@@ -125,6 +127,7 @@ export default function KandidatListPage() {
     id: number;
     nama: string;
   } | null>(null);
+  const [screeningLoading, setScreeningLoading] = useState(false);
 
   const statusParam = searchParams.get('status') || "";
   const progresParam = searchParams.get('progres') || "";
@@ -262,6 +265,22 @@ export default function KandidatListPage() {
     }
   };
 
+  const handleBatchScreening = async () => {
+    setScreeningLoading(true);
+    try {
+      const res = await api.post(`/kandidat/batch-screening`);
+      const message = res.data.message;
+      window.setTimeout(async () => {
+        toast({ title: message, variant: "success" });
+        load();
+        setScreeningLoading(false);
+      }, 10000);
+    } catch {
+      toast({ title: "Gagal batch screening", variant: "destructive" });
+      setScreeningLoading(false);
+    }
+  };
+
   const totalPages = Math.ceil(data.length / itemsPerPage);
   const paginatedData = data.slice(
     (currentPage - 1) * itemsPerPage,
@@ -290,6 +309,23 @@ export default function KandidatListPage() {
               <span className="ml-2 bg-muted text-foreground rounded-full w-5 h-5 text-xs flex items-center justify-center">
                 {activeFilterCount}
               </span>
+            )}
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            className="bg-green-600 hover:bg-green-700 min-w-[140px]"
+            onClick={handleBatchScreening}
+            disabled={screeningLoading}
+          >
+            {screeningLoading ? (
+              <>
+                <Loader2 size={14} className="mr-1 animate-spin" /> Processing...
+              </>
+            ) : (
+              <>
+                <ShieldCheck size={14} className="mr-1" /> Screening Semua
+              </>
             )}
           </Button>
         </div>
@@ -732,13 +768,13 @@ export default function KandidatListPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 pt-2 border-t">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 h-8 text-xs"
-                      onClick={() => {
-                        setHistoryKandidat({
+                    <div className="flex items-center gap-2 pt-2 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 h-8 text-xs"
+                        onClick={() => {
+                          setHistoryKandidat({
                           id: item.id,
                           nama: item.nama_romaji || item.nama || "-",
                         });

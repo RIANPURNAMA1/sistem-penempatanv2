@@ -358,14 +358,17 @@ export default function FormulirPage() {
         ...form,
         sertifikat_ssw: form.sertifikat_ssw?.join(", ") || "",
       });
-      await api.post("/kandidat/submit");
+      const res = await api.post("/kandidat/submit");
+      const newStatus = res.data?.status || 'submitted';
       toast({
-        title: "Formulir berhasil dikirim!",
-        description: "Admin akan segera memproses data Anda",
+        title: newStatus === 'approved' ? "Formulir langsung disetujui!" : "Formulir berhasil dikirim!",
+        description: res.data?.message || (newStatus === 'approved' 
+          ? "Sertifikat JFT & SSW sudah lengkap, formulir langsung disetujui." 
+          : "Admin akan segera memproses data Anda"),
         variant: "success" as any,
       });
-      setProfil((p: any) => ({ ...p, status_formulir: "submitted" }));
-      setForm((p: any) => ({ ...p, status_formulir: "submitted" }));
+      setProfil((p: any) => ({ ...p, status_formulir: newStatus }));
+      setForm((p: any) => ({ ...p, status_formulir: newStatus }));
     } catch {
       toast({ title: "Gagal mengirim formulir", variant: "destructive" });
     } finally {

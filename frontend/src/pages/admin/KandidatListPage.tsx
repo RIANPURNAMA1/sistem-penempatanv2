@@ -129,8 +129,8 @@ export default function KandidatListPage() {
   } | null>(null);
   const [screeningLoading, setScreeningLoading] = useState(false);
 
-  const statusParam = searchParams.get('status') || "";
-  const progresParam = searchParams.get('progres') || "";
+  const statusParam = searchParams.get("status") || "";
+  const progresParam = searchParams.get("progres") || "";
 
   const load = () => {
     setLoading(true);
@@ -289,52 +289,55 @@ export default function KandidatListPage() {
 
   return (
     <div className="page-container">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-  <div>
-    <h1 className="text-xl sm:text-2xl font-bold text-foreground">
-      Data Kandidat
-    </h1>
-    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-      {user?.role === "admin_cabang"
-        ? `Kandidat cabang ${user.nama_cabang}`
-        : "Kelola semua data kandidat"}
-    </p>
-  </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div>
+          <h1 className="text-lg min-[400px]:text-xl sm:text-2xl font-bold text-foreground leading-tight">
+            Data Kandidat
+          </h1>
+          <p className="text-[11px] min-[400px]:text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 leading-snug">
+            {user?.role === "admin_cabang"
+              ? `Kandidat cabang ${user.nama_cabang}`
+              : "Kelola semua data kandidat"}
+          </p>
+        </div>
 
-  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => setShowFilters(!showFilters)}
-      className="w-full sm:w-auto"
-    >
-      <Filter size={14} className="mr-1" /> Filter
-      {activeFilterCount > 0 && (
-        <span className="ml-2 bg-muted text-foreground rounded-full w-5 h-5 text-xs flex items-center justify-center">
-          {activeFilterCount}
-        </span>
-      )}
-    </Button>
+        <div className="flex flex-row items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex-1 sm:flex-none sm:w-auto text-xs min-[400px]:text-sm h-8 min-[400px]:h-9 px-2 min-[400px]:px-3"
+          >
+            <Filter size={13} className="mr-1 shrink-0" />
+            <span>Filter</span>
+            {activeFilterCount > 0 && (
+              <span className="ml-1.5 bg-muted text-foreground rounded-full w-4 h-4 min-[400px]:w-5 min-[400px]:h-5 text-[10px] min-[400px]:text-xs flex items-center justify-center shrink-0">
+                {activeFilterCount}
+              </span>
+            )}
+          </Button>
 
-    <Button
-      variant="default"
-      size="sm"
-      className="bg-green-600 hover:bg-green-700 min-w-[140px] w-full sm:w-auto"
-      onClick={handleBatchScreening}
-      disabled={screeningLoading}
-    >
-      {screeningLoading ? (
-        <>
-          <Loader2 size={14} className="mr-1 animate-spin" /> Processing...
-        </>
-      ) : (
-        <>
-          <ShieldCheck size={14} className="mr-1" /> Screening Semua
-        </>
-      )}
-    </Button>
-  </div>
-</div>
+          <Button
+            variant="default"
+            size="sm"
+            className="flex-1 sm:flex-none sm:w-auto bg-green-600 hover:bg-green-700 text-xs min-[400px]:text-sm h-8 min-[400px]:h-9 px-2 min-[400px]:px-3"
+            onClick={handleBatchScreening}
+            disabled={screeningLoading}
+          >
+            {screeningLoading ? (
+              <>
+                <Loader2 size={13} className="mr-1 animate-spin shrink-0" />
+                <span className="truncate">Proses...</span>
+              </>
+            ) : (
+              <>
+                <ShieldCheck size={13} className="mr-1 shrink-0" />
+                <span className="truncate">Screening Semua</span>
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
 
       <div className="flex flex-col lg:flex-row gap-4 mb-4">
         <div className="relative flex-1 max-w-md">
@@ -692,9 +695,14 @@ export default function KandidatListPage() {
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-<div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-200 text-slate-600 font-semibold text-sm">
-                            {(item.nama_romaji || item.nama || "?").split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                          </div>
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-200 text-slate-600 font-semibold text-sm">
+                        {(item.nama_romaji || item.nama || "?")
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .substring(0, 2)
+                          .toUpperCase()}
+                      </div>
                       <div>
                         <p className="font-medium text-gray-900 text-sm">
                           {item.nama_romaji || item.nama || "-"}
@@ -773,13 +781,13 @@ export default function KandidatListPage() {
                     </div>
                   </div>
 
-                    <div className="flex items-center gap-2 pt-2 border-t">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 h-8 text-xs"
-                        onClick={() => {
-                          setHistoryKandidat({
+                  <div className="flex items-center gap-2 pt-2 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-8 text-xs"
+                      onClick={() => {
+                        setHistoryKandidat({
                           id: item.id,
                           nama: item.nama_romaji || item.nama || "-",
                         });
@@ -895,7 +903,12 @@ export default function KandidatListPage() {
                             />
                           ) : (
                             <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-200 text-slate-600 font-semibold text-xs">
-                              {(item.nama_romaji || item.nama || "?").split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                              {(item.nama_romaji || item.nama || "?")
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .substring(0, 2)
+                                .toUpperCase()}
                             </div>
                           )}
                           <div>

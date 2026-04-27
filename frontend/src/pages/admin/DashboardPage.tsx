@@ -39,7 +39,9 @@ export default function DashboardPage() {
   const [filterTanggalAwal, setFilterTanggalAwal] = useState("");
   const [filterTanggalAkhir, setFilterTanggalAkhir] = useState("");
   const [showChat, setShowChat] = useState(false);
-  const [chatMessages, setChatMessages] = useState<{ role: string; content: string }[]>([]);
+  const [chatMessages, setChatMessages] = useState<
+    { role: string; content: string }[]
+  >([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -57,16 +59,11 @@ export default function DashboardPage() {
 
   const fetchJobOrderData = (tanggalAwal = "", tanggalAkhir = "") => {
     setLoadingJobOrder(true);
-
     let url = "/joborder";
     const params: string[] = [];
-
     if (tanggalAwal) params.push(`tanggal_awal=${tanggalAwal}`);
     if (tanggalAkhir) params.push(`tanggal_akhir=${tanggalAkhir}`);
-
-    if (params.length > 0) {
-      url += "?" + params.join("&");
-    }
+    if (params.length > 0) url += "?" + params.join("&");
 
     api
       .get(url)
@@ -82,7 +79,6 @@ export default function DashboardPage() {
             count: item.kandidat_ids?.length || 0,
           }))
           .sort((a: any, b: any) => b.count - a.count);
-
         setJobOrderStats(result);
       })
       .finally(() => setLoadingJobOrder(false));
@@ -125,17 +121,26 @@ export default function DashboardPage() {
     }
   };
 
+  const TABS = [
+    { key: "verifikasi", label: "Verifikasi" },
+    { key: "kandidat", label: "Kandidat" },
+    { key: "sertifikasi", label: "Sertifikasi" },
+    ...(user?.role === "admin_penempatan"
+      ? [{ key: "job order", label: "Job Order" }]
+      : []),
+    { key: "interview", label: "Interview" },
+  ];
+
   return (
     <div className="w-full max-w-full overflow-x-hidden px-3 sm:px-6 py-4 sm:py-6">
 
-      {/* HEADER */}
-      <div className="mb-5 sm:mb-8">
-        <h1 className="text-lg sm:text-2xl font-semibold truncate">
+      {/* ── HEADER ─────────────────────────────────────── */}
+      <div className="mb-4 sm:mb-8">
+        <h1 className="text-base min-[400px]:text-lg sm:text-2xl font-semibold truncate leading-tight">
           Dashboard
         </h1>
-
-        <p className="text-[11px] sm:text-sm text-muted-foreground mt-1 leading-relaxed">
-          Selamat datang, {user?.nama} —{" "}
+        <p className="text-[10px] min-[400px]:text-[11px] sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 leading-relaxed">
+          Selamat datang, <span className="font-medium">{user?.nama}</span> —{" "}
           {new Date().toLocaleDateString("id-ID", {
             weekday: "long",
             day: "numeric",
@@ -145,22 +150,15 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* TAB MENU (SUPER RESPONSIVE) */}
-      <div className="flex gap-2 mb-5 overflow-x-auto no-scrollbar">
-
-        {[
-          { key: "verifikasi", label: "Verifikasi" },
-          { key: "kandidat", label: "Kandidat" },
-          { key: "sertifikasi", label: "Sertifikasi" },
-          ...(user?.role === "admin_penempatan"
-            ? [{ key: "job order", label: "Job Order" }]
-            : []),
-          { key: "interview", label: "Interview & Status" },
-        ].map((tab) => (
+      {/* ── TAB MENU ───────────────────────────────────── */}
+      <div className="flex gap-1.5 sm:gap-2 mb-4 sm:mb-6 overflow-x-auto pb-1"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+        {TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key as any)}
-            className={`flex-shrink-0 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-sm font-medium transition-all ${
+            className={`flex-shrink-0 px-2.5 min-[400px]:px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg
+              text-[9px] min-[400px]:text-[10px] sm:text-sm font-medium transition-all ${
               activeTab === tab.key
                 ? "bg-[#1e3a5f] text-white shadow-sm"
                 : "bg-white text-muted-foreground border hover:bg-muted"
@@ -171,13 +169,11 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* CONTENT */}
+      {/* ── CONTENT ────────────────────────────────────── */}
       <div className="space-y-4 sm:space-y-6">
-
         {activeTab === "verifikasi" && (
           <VerifikasiPendaftaran stats={stats} loading={loading} />
         )}
-
         {activeTab === "kandidat" && (
           <StatusKandidat
             stats={stats?.bySSWGender}
@@ -186,7 +182,6 @@ export default function DashboardPage() {
             loading={loading}
           />
         )}
-
         {activeTab === "sertifikasi" && (
           <SertifikasiKandidat
             jftByGender={stats?.jftByGender}
@@ -196,7 +191,6 @@ export default function DashboardPage() {
             loading={loading}
           />
         )}
-
         {activeTab === "job order" && (
           <DataPerusahaan
             stats={jobOrderStats}
@@ -206,100 +200,114 @@ export default function DashboardPage() {
             onFilterChange={handleFilterChange}
           />
         )}
-
         {activeTab === "interview" && <InterviewStats />}
+      </div>
 
-        {/* AI CHAT PANEL */}
-        <div className="fixed bottom-6 right-6 z-50 flex items-end gap-3">
-          {/* Chat Container */}
-          <div
-            className={`transition-all duration-300 ease-in-out ${
-              showChat
-                ? "opacity-100 translate-x-0 w-80 sm:w-96"
-                : "opacity-0 translate-x-4 pointer-events-none w-0"
-            }`}
-          >
-            <div className="bg-white rounded-2xl shadow-2xl border overflow-hidden flex flex-col h-[500px]">
-              {/* Chat Header */}
-              <div className="bg-[#1e3a5f] px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="white"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
+      {/* ── AI CHAT PANEL ──────────────────────────────── */}
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex items-end gap-2 sm:gap-3">
+
+        {/* Chat Container */}
+        <div
+          className={`transition-all duration-300 ease-in-out ${
+            showChat
+              ? "opacity-100 translate-x-0 translate-y-0"
+              : "opacity-0 translate-x-4 pointer-events-none"
+          }`}
+        >
+          {showChat && (
+            <div className="
+              bg-white rounded-2xl shadow-2xl border overflow-hidden flex flex-col
+              w-[calc(100vw-5rem)] max-w-[320px]
+              min-[400px]:max-w-[340px]
+              sm:w-96 sm:max-w-none
+              h-[65vh] max-h-[460px]
+              min-[400px]:max-h-[480px]
+              sm:h-[500px] sm:max-h-none
+            ">
+              {/* Header */}
+              <div className="bg-[#1e3a5f] px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-6 h-6 min-[400px]:w-7 min-[400px]:h-7 sm:w-8 sm:h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                      viewBox="0 0 24 24" fill="none" stroke="white"
+                      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
                   </div>
-                  <div>
-                    <h3 className="text-white font-semibold text-sm">AI Assistant</h3>
-                    <p className="text-white/70 text-xs">Tanya apapun tentang data</p>
+                  <div className="min-w-0">
+                    <h3 className="text-white font-semibold text-[11px] min-[400px]:text-xs sm:text-sm leading-tight truncate">
+                      AI Assistant
+                    </h3>
+                    <p className="text-white/70 text-[9px] min-[400px]:text-[10px] sm:text-xs leading-tight truncate">
+                      Tanya apapun tentang data
+                    </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowChat(false)}
-                  className="text-white/70 hover:text-white"
+                  className="text-white/70 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors shrink-0 ml-2"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" />
                     <line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
                 </button>
               </div>
 
-              {/* Chat Messages */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-2 sm:space-y-3 bg-gray-50 min-h-0">
                 {chatMessages.length === 0 && (
-                  <div className="text-center text-gray-400 text-sm mt-10">
-                    <p>Halo! Saya bisa membantu:</p>
-                    <ul className="mt-2 text-left text-xs space-y-1">
-                      <li>• Info jumlah kandidat</li>
-                      <li>• Status formulir</li>
-                      <li>• Data sertifikasi</li>
-                      <li>• Statistik cabang</li>
+                  <div className="text-center text-gray-400 mt-4 sm:mt-8 px-1">
+                    <p className="font-medium text-[11px] min-[400px]:text-xs sm:text-sm">
+                      Halo! Saya bisa membantu:
+                    </p>
+                    <ul className="mt-2 text-left text-[10px] min-[400px]:text-[11px] sm:text-xs
+                      space-y-1.5 bg-white rounded-xl p-2.5 sm:p-3 shadow-sm border">
+                      {[
+                        "Info jumlah kandidat",
+                        "Status formulir",
+                        "Data sertifikasi",
+                        "Statistik cabang",
+                      ].map((item) => (
+                        <li key={item} className="flex items-center gap-1.5">
+                          <span className="text-blue-400 shrink-0">•</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 )}
+
                 {chatMessages.map((msg, idx) => (
                   <div
                     key={idx}
                     className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap ${
-                        msg.role === "user"
+                      className={`
+                        max-w-[90%] sm:max-w-[85%] px-2.5 sm:px-3 py-1.5 sm:py-2
+                        rounded-2xl text-[10px] min-[400px]:text-[11px] sm:text-sm
+                        whitespace-pre-wrap leading-relaxed
+                        ${msg.role === "user"
                           ? "bg-[#1e3a5f] text-white rounded-br-md"
-                          : "bg-gray-100 text-gray-800 rounded-bl-md"
-                      }`}
+                          : "bg-white text-gray-800 rounded-bl-md shadow-sm border"
+                        }
+                      `}
                     >
                       {msg.content}
                     </div>
                   </div>
                 ))}
+
                 {chatLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-gray-100 px-4 py-2 rounded-2xl rounded-bl-md">
+                    <div className="bg-white border px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl rounded-bl-md shadow-sm">
                       <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.1s]" />
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
+                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.1s]" />
+                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]" />
                       </div>
                     </div>
                   </div>
@@ -307,35 +315,24 @@ export default function DashboardPage() {
                 <div ref={chatEndRef} />
               </div>
 
-              {/* Chat Input */}
-              <div className="p-3 border-t bg-white">
-                <form
-                  onSubmit={handleSendChat}
-                  className="flex gap-2"
-                >
+              {/* Input */}
+              <div className="p-2 sm:p-3 border-t bg-white shrink-0">
+                <form onSubmit={handleSendChat} className="flex gap-1.5 sm:gap-2">
                   <Input
                     placeholder="Ketik pertanyaan..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    className="border rounded-full px-4"
+                    className="border rounded-full px-3 sm:px-4 text-[11px] min-[400px]:text-xs sm:text-sm h-7 min-[400px]:h-8 sm:h-10"
                   />
                   <Button
                     type="submit"
                     size="icon"
-                    className="rounded-full bg-[#1e3a5f] hover:bg-[#2d4a6f]"
+                    className="rounded-full bg-[#1e3a5f] hover:bg-[#2d4a6f] h-7 w-7 min-[400px]:h-8 min-[400px]:w-8 sm:h-10 sm:w-10 shrink-0"
                     disabled={chatLoading || !chatInput.trim()}
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="22" y1="2" x2="11" y2="13" />
                       <polygon points="22 2 15 22 11 13 2 9 22 2" />
                     </svg>
@@ -343,50 +340,35 @@ export default function DashboardPage() {
                 </form>
               </div>
             </div>
-          </div>
-
-          {/* Toggle Button */}
-          <Button
-            className={`rounded-full h-14 w-14 shadow-lg transition-all ${
-              showChat
-                ? "bg-gray-600 hover:bg-gray-700"
-                : "bg-[#1e3a5f] hover:bg-[#2d4a6f]"
-            }`}
-            size="icon"
-            onClick={() => setShowChat(!showChat)}
-          >
-            {showChat ? (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            ) : (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-            )}
-          </Button>
+          )}
         </div>
+
+        {/* Toggle Button */}
+        <Button
+          className={`rounded-full h-11 w-11 min-[400px]:h-12 min-[400px]:w-12 sm:h-14 sm:w-14
+            shadow-lg transition-all shrink-0 ${
+            showChat
+              ? "bg-gray-600 hover:bg-gray-700"
+              : "bg-[#1e3a5f] hover:bg-[#2d4a6f]"
+          }`}
+          size="icon"
+          onClick={() => setShowChat(!showChat)}
+        >
+          {showChat ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          )}
+        </Button>
       </div>
     </div>
   );

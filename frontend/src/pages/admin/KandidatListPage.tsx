@@ -289,47 +289,52 @@ export default function KandidatListPage() {
 
   return (
     <div className="page-container">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Data Kandidat</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {user?.role === "admin_cabang"
-              ? `Kandidat cabang ${user.nama_cabang}`
-              : "Kelola semua data kandidat"}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter size={14} className="mr-1" /> Filter
-            {activeFilterCount > 0 && (
-              <span className="ml-2 bg-muted text-foreground rounded-full w-5 h-5 text-xs flex items-center justify-center">
-                {activeFilterCount}
-              </span>
-            )}
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            className="bg-green-600 hover:bg-green-700 min-w-[140px]"
-            onClick={handleBatchScreening}
-            disabled={screeningLoading}
-          >
-            {screeningLoading ? (
-              <>
-                <Loader2 size={14} className="mr-1 animate-spin" /> Processing...
-              </>
-            ) : (
-              <>
-                <ShieldCheck size={14} className="mr-1" /> Screening Semua
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+  <div>
+    <h1 className="text-xl sm:text-2xl font-bold text-foreground">
+      Data Kandidat
+    </h1>
+    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+      {user?.role === "admin_cabang"
+        ? `Kandidat cabang ${user.nama_cabang}`
+        : "Kelola semua data kandidat"}
+    </p>
+  </div>
+
+  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => setShowFilters(!showFilters)}
+      className="w-full sm:w-auto"
+    >
+      <Filter size={14} className="mr-1" /> Filter
+      {activeFilterCount > 0 && (
+        <span className="ml-2 bg-muted text-foreground rounded-full w-5 h-5 text-xs flex items-center justify-center">
+          {activeFilterCount}
+        </span>
+      )}
+    </Button>
+
+    <Button
+      variant="default"
+      size="sm"
+      className="bg-green-600 hover:bg-green-700 min-w-[140px] w-full sm:w-auto"
+      onClick={handleBatchScreening}
+      disabled={screeningLoading}
+    >
+      {screeningLoading ? (
+        <>
+          <Loader2 size={14} className="mr-1 animate-spin" /> Processing...
+        </>
+      ) : (
+        <>
+          <ShieldCheck size={14} className="mr-1" /> Screening Semua
+        </>
+      )}
+    </Button>
+  </div>
+</div>
 
       <div className="flex flex-col lg:flex-row gap-4 mb-4">
         <div className="relative flex-1 max-w-md">

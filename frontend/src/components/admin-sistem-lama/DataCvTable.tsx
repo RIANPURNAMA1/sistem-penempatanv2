@@ -234,9 +234,10 @@ export default function DataCvTable({ onSelect }: DataCvTableProps) {
                   <td className="px-3 py-2">
                     {item.pas_foto_cv ? (
                       <img 
-                        src={`https://matchingjob.mendunia.id/${item.pas_foto_cv}`} 
+                        src={`${API_URL}/${item.pas_foto_cv}`} 
                         alt="Foto" 
                         className="w-10 h-10 rounded-full object-cover border"
+                        loading="lazy"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = ''
                           ;(e.target as HTMLImageElement).style.display = 'none'
@@ -326,9 +327,10 @@ export default function DataCvTable({ onSelect }: DataCvTableProps) {
                 <h4 className="font-bold text-blue-600 text-sm mb-2 border-b pb-1">FOTO</h4>
                 {selectedCv.pas_foto_cv && (
                   <img 
-                    src={`${UPLOADS_URL}/${selectedCv.pas_foto_cv}`} 
+                    src={`${API_URL}/${selectedCv.pas_foto_cv}`} 
                     alt="Foto CV" 
                     className="w-full max-w-[180px] rounded-lg border mb-3"
+                    loading="lazy"
                   />
                 )}
 
@@ -452,7 +454,7 @@ export default function DataCvTable({ onSelect }: DataCvTableProps) {
                       return (
                         <a 
                           key={i} 
-                          href={`${UPLOADS_URL}/${file}`} 
+                          href={`${API_URL}/${file}`} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"

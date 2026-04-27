@@ -339,15 +339,15 @@ export default function KandidatListPage() {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4 mb-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col lg:flex-row gap-3 mb-4">
+        <div className="relative w-full lg:flex-1 lg:max-w-md">
           <Search
             size={16}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
           <Input
-            placeholder="Cari nama, romaji, atau email..."
-            className="pl-9 pr-10 bg-white"
+            placeholder="Cari..."
+            className="pl-9 pr-10 bg-white w-full"
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
           />

@@ -338,7 +338,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </form>
 
             {/* Avatar */}
-            <div className="w-8 h-8 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-xs font-semibold">
+            <div className="w-8 h-8 mx-4 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-xs font-semibold">
               {user?.nama?.charAt(0)?.toUpperCase() || "U"}
             </div>
           </div>

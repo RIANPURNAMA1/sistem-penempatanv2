@@ -651,18 +651,9 @@ export default function KandidatListPage() {
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <img
-                          src={item.pas_foto || ""}
-                          alt="Foto"
-                          className="w-10 h-10 rounded-full object-cover"
-                          loading="lazy"
-                          onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                              item.nama || "?",
-                            )}`;
-                        }}
-                      />
+<div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-200 text-slate-600 font-semibold text-sm">
+                            {(item.nama_romaji || item.nama || "?").split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                          </div>
                       <div>
                         <p className="font-medium text-gray-900 text-sm">
                           {item.nama_romaji || item.nama || "-"}
@@ -854,24 +845,18 @@ export default function KandidatListPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <img
-                            src={
-                              item.pas_foto
-                                ? item.pas_foto
-                                : `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                    item.nama || "User",
-                                  )}&background=random`
-                            }
-                            alt="Foto"
-                            className="w-8 h-8 rounded-full object-cover"
-                            loading="lazy"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src =
-                                `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                  item.nama || "User",
-                                )}&background=random`;
-                            }}
-                          />
+                          {item.pas_foto ? (
+                            <img
+                              src={item.pas_foto}
+                              alt="Foto"
+                              className="w-8 h-8 rounded-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-200 text-slate-600 font-semibold text-xs">
+                              {(item.nama_romaji || item.nama || "?").split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                            </div>
+                          )}
                           <div>
                             <p className="font-medium text-gray-900">
                               {item.nama_romaji || item.nama || "-"}

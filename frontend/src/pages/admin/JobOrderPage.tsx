@@ -44,6 +44,7 @@ export default function JobOrderPage() {
   const [form, setForm] = useState({
     kandidat_ids: [] as number[],
     perusahaan_id: '',
+    institusi: '',
     nomor: '',
     tanggal_terbit: '',
     detail_job_order: '',
@@ -174,6 +175,7 @@ export default function JobOrderPage() {
       const payload = {
         kandidat_ids: form.kandidat_ids,
         perusahaan_id: form.perusahaan_id ? parseInt(form.perusahaan_id) : null,
+        institusi: form.institusi,
         nomor: form.nomor,
         tanggal_terbit: form.tanggal_terbit,
         detail_job_order: form.detail_job_order,
@@ -214,6 +216,7 @@ export default function JobOrderPage() {
     setForm({
       kandidat_ids: item.kandidat_ids || [],
       perusahaan_id: item.perusahaan_id ? String(item.perusahaan_id) : '',
+      institusi: item.institusi || '',
       nomor: item.nomor || '',
       tanggal_terbit: item.tanggal_terbit || '',
       detail_job_order: item.detail_job_order || '',
@@ -246,7 +249,7 @@ export default function JobOrderPage() {
   const resetForm = () => {
     setEditingId(null)
     setForm({
-      kandidat_ids: [], perusahaan_id: '', nomor: '', tanggal_terbit: '',
+      kandidat_ids: [], perusahaan_id: '', institusi: '', nomor: '', tanggal_terbit: '',
       detail_job_order: '', bidang_ssw: '', nama_grup: '', link_grup: '',
       biaya_awal: '', biaya_akhir: '', tanggal_cv: '', pic_cv: '',
       tanggal_mensetsu_1: '', tanggal_mensetsu_2: '', tanggal_mensetsu_3: '',
@@ -533,7 +536,7 @@ export default function JobOrderPage() {
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">NO</th>
                 <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">NO. JOB ORDER</th>
-                <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">PERUSAHAAN</th>
+                <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">PERUSAHAAN PENEMPATAN</th>
                 <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">KANDIDAT</th>
                 <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">BIDANG SSW</th>
                 <th className="text-right px-4 py-3 font-medium text-xs text-gray-500">BIAYA</th>
@@ -695,6 +698,15 @@ export default function JobOrderPage() {
                   </Select>
                 </div>
 
+<div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Institusi</label>
+                  <Input 
+                    value={form.institusi} 
+                    onChange={e => setForm(p => ({ ...p, institusi: e.target.value }))} 
+                    placeholder="Ketik nama institusi..." 
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700">Bidang SSW</label>
                   <Input value={form.bidang_ssw} onChange={e => setForm(p => ({ ...p, bidang_ssw: e.target.value }))} placeholder="Misal: Food Service" />
@@ -854,10 +866,15 @@ export default function JobOrderPage() {
               </tr>
               {/* Baris 2 */}
               <tr>
-                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Perusahaan</td>
+                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Perusahaan Penempatan</td>
                 <td className="border border-slate-300 px-4 py-3 font-semibold text-slate-800">{detailItem.nama_perusahaan || '-'}</td>
                 <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Bidang SSW</td>
                 <td className="border border-slate-300 px-4 py-3">{detailItem.bidang_ssw || '-'}</td>
+              </tr>
+              {/* Baris 2b - Institusi */}
+              <tr>
+                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Perusahaan/Institusi</td>
+                <td className="border border-slate-300 px-4 py-3 font-semibold text-slate-800" colSpan={3}>{detailItem.institusi || '-'}</td>
               </tr>
               {/* Baris 3 */}
               <tr>

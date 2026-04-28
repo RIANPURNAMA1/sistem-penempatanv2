@@ -27,6 +27,7 @@ app.use('/api/history', require('./routes/history'));
 app.use('/api/cv', require('./routes/cv'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/settings', require('./routes/settings'));
+app.use('/api/institusi', require('./routes/institusi'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));

@@ -756,7 +756,7 @@ const updateKeberangkatan = async (req, res) => {
 const updateProgresLengkap = async (req, res) => {
 try {
 const fields = [
-'status_progres','nama_perusahaan','bidang_ssw','detail_pekerjaan',
+'status_progres','nama_perusahaan','institusi','bidang_ssw','detail_pekerjaan',
 'jadwal_interview','catatan_interview','tgl_setsumeikai','tgl_mensetsu_1',
 'tgl_mensetsu_2','catatan_mensetsu','biaya_pemberkasan','adm_tahap_1',
 'adm_tahap_2','dokumen_dikirim','terbit_kontrak','kontrak_dikirim_tsk',

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, Badge } from '@/components/ui/components'
 import { useNavigate } from 'react-router-dom'
 import api from '@/lib/api'
-import { History, FileText, Calendar, Building, Star, Loader2, User, AlertCircle } from 'lucide-react'
+import { History, FileText, Calendar, Building, Star, Loader2, User, AlertCircle, GraduationCap } from 'lucide-react'
 
 const statusConfig: Record<string, string> = {
   'Job Matching': 'Job Matching',
@@ -34,6 +34,7 @@ interface KandidatProfile {
   id: number
   status_progres: string
   nama_perusahaan: string
+  institusi: string
   bidang_ssw: string
 }
 
@@ -82,23 +83,15 @@ export default function KandidatHistoryPage() {
   // Get current company from kandidat profile
   const currentCompany = profil?.nama_perusahaan || ''
 
+  // Get current Institusi from kandidat profile
+  const currentInstitusi = profil?.institusi || ''
+
   // Get current SSW field from kandidat profile
   const currentSSW = profil?.bidang_ssw || ''
 
   // Get current status from kandidat profile
   const latestStatus = profil?.status_progres || 'Job Matching'
   const latestStatusLabel = statusConfig[latestStatus] || latestStatus
-
-  // Get company at specific date
-  const getCompanyAtDate = (targetDate: string) => {
-    const targetTime = new Date(targetDate).getTime()
-    const companyHistory = history
-      .filter(h => h.field_name === 'nama_perusahaan' && h.new_value)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    
-    const relevant = companyHistory.find(h => new Date(h.created_at).getTime() <= targetTime)
-    return relevant?.new_value || currentCompany || companies[0] || '-'
-  }
 
   // Get SSW at specific date
   const getSSWAtDate = (targetDate: string) => {
@@ -111,24 +104,35 @@ export default function KandidatHistoryPage() {
     return relevant?.new_value || currentSSW || sswFields[0] || '-'
   }
 
+  // Get Institusi at specific date
+  const getInstitusiAtDate = (targetDate: string) => {
+    const targetTime = new Date(targetDate).getTime()
+    const institusiHistory = history
+      .filter(h => h.field_name === 'institusi' && h.new_value)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    
+    const relevant = institusiHistory.find(h => new Date(h.created_at).getTime() <= targetTime)
+    return relevant?.new_value || currentInstitusi || institusis[0] || '-'
+  }
+
   const statusChanges = history.filter(h => h.field_name === 'status_progres')
     .map(h => ({
       date: h.created_at,
-      oldStatus: h.old_value,
-      newStatus: h.new_value,
+      oldStatus: h.old_value || '',
+      newStatus: h.new_value || 'Job Matching',
       admin: h.admin_nama || 'System',
-      company: getCompanyAtDate(h.created_at),
+      institusi: getInstitusiAtDate(h.created_at),
       ssw: getSSWAtDate(h.created_at)
     }))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-  // Get unique companies applied from history
-  const companies = [...new Set(
-    history.filter(h => h.field_name === 'nama_perusahaan' && h.new_value)
+  // Get unique institusis from history
+  const institusis = [...new Set(
+    history.filter(h => h.field_name === 'institusi' && h.new_value)
       .map(h => h.new_value)
   )]
-  if (currentCompany && !companies.includes(currentCompany)) {
-    companies.unshift(currentCompany)
+  if (currentInstitusi && !institusis.includes(currentInstitusi)) {
+    institusis.unshift(currentInstitusi)
   }
 
   // Get SSW fields from history
@@ -146,7 +150,7 @@ export default function KandidatHistoryPage() {
     .map(h => ({
       date: h.created_at,
       type: 'Interview',
-      company: getCompanyAtDate(h.created_at),
+      institusi: getInstitusiAtDate(h.created_at),
       ssw: getSSWAtDate(h.created_at)
     }))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -202,7 +206,7 @@ export default function KandidatHistoryPage() {
       ) : (
         <div className="space-y-4 sm:space-y-6">
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
             {/* Status Saat Ini */}
             <Card className="border shadow-sm">
               <CardContent className="p-3 sm:p-4">
@@ -228,15 +232,15 @@ export default function KandidatHistoryPage() {
               </CardContent>
             </Card>
 
-            {/* Perusahaan */}
+            {/* Institusi */}
             <Card className="border shadow-sm">
               <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Building size={14} className="text-gray-600" />
+                  <GraduationCap size={14} className="text-gray-600" />
                   <span className="text-xs font-medium text-gray-600">Perusahaan</span>
                 </div>
-                <p className="text-sm font-medium text-gray-800 truncate">{companies[0] || '-'}</p>
-                {companies.length > 1 && <p className="text-xs text-gray-500">+{companies.length - 1} lainnya</p>}
+                <p className="text-sm font-medium text-gray-800 truncate">{institusis[0] || '-'}</p>
+                {institusis.length > 1 && <p className="text-xs text-gray-500">+{institusis.length - 1} lainnya</p>}
               </CardContent>
             </Card>
 
@@ -273,8 +277,8 @@ export default function KandidatHistoryPage() {
                           <span className="text-xs sm:text-sm font-medium text-gray-800">{formatDateTime(int.date)}</span>
                         </div>
                         <p className="text-xs text-gray-500 mt-0.5">
-                          <Building size={12} className="inline mr-1" />
-                          {int.company}
+                          <GraduationCap size={12} className="inline mr-1" />
+                          {int.institusi}
                           {int.ssw && int.ssw !== '-' && (
                             <> • <Star size={12} className="inline mr-1" />{int.ssw}</>
                           )}
@@ -297,7 +301,7 @@ export default function KandidatHistoryPage() {
                 </h3>
                 <div className="space-y-2">
                   {statusChanges.map((status, idx) => {
-                    const newLabel = statusConfig[status.newStatus] || status.newStatus
+                    const newLabel = statusConfig[status.newStatus] || status.newStatus || 'Unknown'
 
                     return (
                       <div key={idx} className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
@@ -313,16 +317,16 @@ export default function KandidatHistoryPage() {
                               {formatDateTime(status.date)}
                             </span>
                           </div>
-                          {status.company && status.company !== '-' && (
+                          {status.institusi && status.institusi !== '-' && (
                             <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                              <Building size={12} />
-                              {status.company}
+                              <GraduationCap size={12} />
+                              {status.institusi}
                               {status.ssw && status.ssw !== '-' && (
                                 <> • <Star size={12} className="inline mr-1" />{status.ssw}</>
                               )}
                             </p>
                           )}
-                          {!status.company || status.company === '-' && status.ssw && status.ssw !== '-' && (
+                          {(!status.institusi || status.institusi === '-') && status.ssw && status.ssw !== '-' && (
                             <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                               <Star size={12} />
                               {status.ssw}

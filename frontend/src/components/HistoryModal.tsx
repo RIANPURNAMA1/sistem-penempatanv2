@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Card, CardContent, Badge } from '@/components/ui/components'
-import { Loader2, History, FileText, Calendar, Building, Star } from 'lucide-react'
+import { Loader2, History, FileText, Calendar, Building, Star, GraduationCap } from 'lucide-react'
 import api from '@/lib/api'
 
 interface HistoryItem {
@@ -22,6 +22,7 @@ interface KandidatProfile {
   id: number
   status_progres: string
   nama_perusahaan: string
+  institusi: string
   bidang_ssw: string
 }
 
@@ -73,6 +74,9 @@ export default function HistoryModal({ open, onOpenChange, kandidatId, kandidatN
 
   // Get current company from kandidat profile
   const currentCompany = kandidat?.nama_perusahaan || ''
+
+  // Get current Institusi from kandidat profile
+  const currentInstitusi = kandidat?.institusi || ''
 
   // Get current SSW field from kandidat profile
   const currentSSW = kandidat?.bidang_ssw || ''
@@ -169,7 +173,7 @@ export default function HistoryModal({ open, onOpenChange, kandidatId, kandidatN
           ) : (
             <div className="space-y-6">
               {/* Summary Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {/* Status Saat Ini */}
                 <Card className="border">
                   <CardContent className="p-4">
@@ -195,12 +199,23 @@ export default function HistoryModal({ open, onOpenChange, kandidatId, kandidatN
                   </CardContent>
                 </Card>
 
+                {/* Institusi */}
+                <Card className="border">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <GraduationCap size={16} className="text-gray-600" />
+                      <span className="text-xs font-medium text-gray-600">Perusahaan</span>
+                    </div>
+                    <p className="text-sm font-medium text-gray-800 truncate">{currentInstitusi || '-'}</p>
+                  </CardContent>
+                </Card>
+
                 {/* Perusahaan */}
                 <Card className="border">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Building size={16} className="text-gray-600" />
-                      <span className="text-xs font-medium text-gray-600">Perusahaan</span>
+                      <span className="text-xs font-medium text-gray-600">P.Penempatan</span>
                     </div>
                     <p className="text-sm font-medium text-gray-800 truncate">{companies[0] || '-'}</p>
                     {companies.length > 1 && <p className="text-xs text-gray-500">+{companies.length - 1} lainnya</p>}
@@ -241,6 +256,9 @@ export default function HistoryModal({ open, onOpenChange, kandidatId, kandidatN
                           <p className="text-xs text-gray-500 mt-0.5">
                             <Building size={12} className="inline mr-1" />
                             {int.company}
+                            {currentInstitusi && (
+                              <> • <GraduationCap size={12} className="inline mr-1" />{currentInstitusi}</>
+                            )}
                             {int.ssw && int.ssw !== '-' && (
                               <> • <Star size={12} className="inline mr-1" />{int.ssw}</>
                             )}

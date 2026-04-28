@@ -618,6 +618,36 @@ const migrations = [
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )`
   },
+  {
+    name: 'create_institusi',
+    check: async (conn) => {
+      const [t] = await conn.query("SHOW TABLES LIKE 'institusi'");
+      return t.length > 0;
+    },
+    sql: `CREATE TABLE IF NOT EXISTS institusi (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      nama VARCHAR(255) NOT NULL,
+      deskripsi TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`
+  },
+  {
+    name: 'add_institusi_to_job_order',
+    check: async (conn) => {
+      const [cols] = await conn.query('SHOW COLUMNS FROM job_order LIKE "institusi"');
+      return cols.length > 0;
+    },
+    sql: `ALTER TABLE job_order ADD COLUMN institusi VARCHAR(255) NULL AFTER perusahaan_id`
+  },
+  {
+    name: 'add_institusi_to_kandidat_profil',
+    check: async (conn) => {
+      const [cols] = await conn.query('SHOW COLUMNS FROM kandidat_profil LIKE "institusi"');
+      return cols.length > 0;
+    },
+    sql: `ALTER TABLE kandidat_profil ADD COLUMN institusi VARCHAR(255) NULL`
+  },
 ];
 
 async function runMigrations() {

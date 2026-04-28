@@ -24,6 +24,7 @@ router.get('/', async (req, res) => {
         jo.*,
         p.nama_perusahaan,
         p.bidang_usaha,
+        jo.institusi as nama_institusi,
         jo.status_kelulusan,
         GROUP_CONCAT(k.nama_romaji ORDER BY k.nama_romaji SEPARATOR ', ') as nama_kandidat,
         GROUP_CONCAT(k.id ORDER BY k.id SEPARATOR ', ') as kandidat_ids
@@ -81,6 +82,7 @@ router.post('/', async (req, res) => {
   const {
     kandidat_ids,
     perusahaan_id,
+    institusi,
     nomor,
     tanggal_terbit,
     detail_job_order,
@@ -103,15 +105,15 @@ router.post('/', async (req, res) => {
 
     const sql = `
       INSERT INTO job_order (
-        nomor, perusahaan_id, tanggal_terbit, detail_job_order,
+        nomor, perusahaan_id, institusi, tanggal_terbit, detail_job_order,
         bidang_ssw, nama_grup, link_grup, biaya_awal, biaya_akhir,
         tanggal_cv, pic_cv, tanggal_mensetsu_1, tanggal_mensetsu_2, tanggal_mensetsu_3,
         status_kelulusan
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const values = [
-      nomor, perusahaan_id || null, tanggal_terbit, detail_job_order,
+      nomor, perusahaan_id || null, institusi || null, tanggal_terbit, detail_job_order,
       bidang_ssw, nama_grup, link_grup, biaya_awal || 0, biaya_akhir || 0,
       tanggal_cv, pic_cv, tanggal_mensetsu_1, tanggal_mensetsu_2, tanggal_mensetsu_3,
       status_kelulusan || 'Menunggu'
@@ -143,6 +145,7 @@ router.put('/:id', async (req, res) => {
   const {
     kandidat_ids,
     perusahaan_id,
+    institusi,
     nomor,
     tanggal_terbit,
     detail_job_order,
@@ -167,6 +170,7 @@ router.put('/:id', async (req, res) => {
       UPDATE job_order SET
         nomor = ?,
         perusahaan_id = ?,
+        institusi = ?,
         tanggal_terbit = ?,
         detail_job_order = ?,
         bidang_ssw = ?,
@@ -186,6 +190,7 @@ router.put('/:id', async (req, res) => {
     const values = [
       nomor,
       perusahaan_id || null,
+      institusi || null,
       tanggal_terbit,
       detail_job_order,
       bidang_ssw,

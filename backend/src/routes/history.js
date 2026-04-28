@@ -16,11 +16,11 @@ router.get('/', async (req, res) => {
         kp.jadwal_interview,
         kp.bidang_ssw,
         kp.nama_perusahaan,
+        kp.institusi,
         kp.detail_pekerjaan,
         kp.created_at,
         kp.updated_at,
-        JSON_OBJECT('id', kp.id, 'no_kandidat', null) as kandidat,
-        JSON_OBJECT('id', kp.institusi_id, 'nama', null) as institusi
+        JSON_OBJECT('id', kp.id, 'no_kandidat', null) as kandidat
       FROM kandidat_profil kp
     `;
     const params = [];

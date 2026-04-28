@@ -289,26 +289,28 @@ export default function KandidatListPage() {
 
   return (
     <div className="page-container">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 items-center gap-4 mb-6">
+        {/* Bagian Judul dan Deskripsi */}
+        <div className="space-y-1">
           <h1 className="text-lg min-[400px]:text-xl sm:text-2xl font-bold text-foreground leading-tight">
             Data Kandidat
           </h1>
-          <p className="text-[11px] min-[400px]:text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 leading-snug">
+          <p className="text-[11px] min-[400px]:text-xs sm:text-sm text-muted-foreground leading-snug">
             {user?.role === "admin_cabang"
               ? `Kandidat cabang ${user.nama_cabang}`
               : "Kelola semua data kandidat"}
           </p>
         </div>
 
-        <div className="flex flex-row items-center gap-2 sm:gap-3 w-full sm:w-auto">
+        {/* Bagian Tombol Aksi */}
+        <div className="grid grid-cols-2 sm:flex sm:justify-end gap-2 sm:gap-3 w-full">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowFilters(!showFilters)}
-            className="flex-1 sm:flex-none sm:w-auto text-xs min-[400px]:text-sm h-8 min-[400px]:h-9 px-2 min-[400px]:px-3"
+            className="w-full sm:w-auto text-xs min-[400px]:text-sm h-9 px-2 min-[400px]:px-3"
           >
-            <Filter size={13} className="mr-1 shrink-0" />
+            <Filter size={14} className="mr-1.5 shrink-0" />
             <span>Filter</span>
             {activeFilterCount > 0 && (
               <span className="ml-1.5 bg-muted text-foreground rounded-full w-4 h-4 min-[400px]:w-5 min-[400px]:h-5 text-[10px] min-[400px]:text-xs flex items-center justify-center shrink-0">
@@ -320,19 +322,21 @@ export default function KandidatListPage() {
           <Button
             variant="default"
             size="sm"
-            className="flex-1 sm:flex-none sm:w-auto bg-green-600 hover:bg-green-700 text-xs min-[400px]:text-sm h-8 min-[400px]:h-9 px-2 min-[400px]:px-3"
+            className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-xs min-[400px]:text-sm h-9 px-2 min-[400px]:px-3"
             onClick={handleBatchScreening}
             disabled={screeningLoading}
           >
             {screeningLoading ? (
               <>
-                <Loader2 size={13} className="mr-1 animate-spin shrink-0" />
+                <Loader2 size={14} className="mr-1.5 animate-spin shrink-0" />
                 <span className="truncate">Proses...</span>
               </>
             ) : (
               <>
-                <ShieldCheck size={13} className="mr-1 shrink-0" />
-                <span className="truncate">Screening Semua</span>
+                <ShieldCheck size={14} className="mr-1.5 shrink-0" />
+                <span className="truncate text-[10px] min-[400px]:text-xs sm:text-sm">
+                  Screening Semua
+                </span>
               </>
             )}
           </Button>

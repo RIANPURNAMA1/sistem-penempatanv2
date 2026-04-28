@@ -21,6 +21,7 @@ import {
   MainContent,
   Sidebar,
 } from "./kandidat-detail";
+import ProgresDetailCard from "@/components/kandidat/ProgresDetailCard";
 
 const getFileUrl = (pathFile: string | null | undefined): string => {
   if (!pathFile) return "";
@@ -59,6 +60,7 @@ const progresConfig: Record<string, { label: string; variant: string }> = {
 interface FormProgres {
   status_progres: string;
   nama_perusahaan: string;
+  institusi: string;
   bidang_ssw: string;
   detail_pekerjaan: string;
   jadwal_interview: string;
@@ -85,6 +87,7 @@ interface FormProgres {
 const initialFormProgres: FormProgres = {
   status_progres: "",
   nama_perusahaan: "",
+  institusi: "",
   bidang_ssw: "",
   detail_pekerjaan: "",
   jadwal_interview: "",
@@ -154,6 +157,7 @@ export default function KandidatDetailPage() {
         setFormProgres({
           status_progres: d.status_progres || "",
           nama_perusahaan: d.nama_perusahaan || "",
+          institusi: d.institusi || "",
           bidang_ssw: d.bidang_ssw || "",
           detail_pekerjaan: d.detail_pekerjaan || "",
           jadwal_interview: d.jadwal_interview || "",
@@ -269,6 +273,10 @@ export default function KandidatDetailPage() {
         />
 
         <Sidebar data={data} stCfg={stCfg} progresCfgItem={progresCfgItem} />
+      </div>
+
+      <div className="mt-6">
+        <ProgresDetailCard data={data} />
       </div>
 
       <VerifikasiModal

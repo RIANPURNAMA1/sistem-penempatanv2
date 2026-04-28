@@ -21,6 +21,7 @@ import { Loader2, Save } from "lucide-react";
 interface FormProgres {
   status_progres: string;
   nama_perusahaan: string;
+  institusi: string;
   bidang_ssw: string;
   detail_pekerjaan: string;
   jadwal_interview: string;
@@ -96,13 +97,21 @@ export default function ProgresModal({
 
           <div className="border-t pt-4">
             <p className="text-xs font-medium text-muted-foreground mb-3">JOB / PERUSAHAAN</p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs">Nama Perusahaan</Label>
                 <Input
                   value={formProgres.nama_perusahaan}
                   onChange={(e) => updateFormProgres("nama_perusahaan", e.target.value)}
                   placeholder="Nama perusahaan..."
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Institusi</Label>
+                <Input
+                  value={formProgres.institusi}
+                  onChange={(e) => updateFormProgres("institusi", e.target.value)}
+                  placeholder="Ketik nama institusi..."
                 />
               </div>
               <div className="space-y-1.5">

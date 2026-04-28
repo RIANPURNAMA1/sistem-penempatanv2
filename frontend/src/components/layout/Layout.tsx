@@ -21,6 +21,14 @@ import {
   Search,
   History,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface NavItem {
   label: string;
@@ -99,6 +107,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [headerSearch, setHeaderSearch] = useState("");
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   const { user, logout } = useAuthStore();
   const location = useLocation();
@@ -125,7 +134,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const filtered = navItems.filter((i) => user && i.roles.includes(user.role));
 
+  const confirmLogout = () => {
+    setLogoutOpen(true);
+  };
+
   const handleLogout = () => {
+    setLogoutOpen(false);
     logout();
     navigate("/login");
   };
@@ -260,7 +274,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {/* LOGOUT */}
         <div className={cn("border-t p-3", sidebarCollapsed && "px-1.5")}>
           <button
-            onClick={handleLogout}
+            onClick={confirmLogout}
             className={cn(
               "flex items-center gap-3 w-full py-2.5 rounded-lg text-sm hover:bg-red-50 hover:text-red-500",
               sidebarCollapsed ? "justify-center px-2" : "px-3",
@@ -350,6 +364,30 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </main>
       </div>
+
+      {/* LOGOUT CONFIRMATION */}
+      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Logout</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Apakah Anda yakin ingin logout dari aplikasi?
+          </p>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setLogoutOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleLogout}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Logout
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

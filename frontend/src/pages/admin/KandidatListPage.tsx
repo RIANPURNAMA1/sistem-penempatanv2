@@ -289,75 +289,86 @@ export default function KandidatListPage() {
 
   return (
     <div className="page-container">
-      <div className="grid grid-cols-1 sm:grid-cols-2 items-center gap-4 mb-6">
-        {/* Bagian Judul dan Deskripsi */}
-        <div className="space-y-1">
-          <h1 className="text-lg min-[400px]:text-xl sm:text-2xl font-bold text-foreground leading-tight">
+      {/* ── HEADER ── */}
+      <div className="mb-6 space-y-3">
+        {/* Judul + deskripsi */}
+        <div className="space-y-0.5">
+          <h1 className="text-lg xs:text-xl sm:text-2xl font-bold text-foreground leading-tight">
             Data Kandidat
           </h1>
-          <p className="text-[11px] min-[400px]:text-xs sm:text-sm text-muted-foreground leading-snug">
+          <p className="text-[11px] xs:text-xs sm:text-sm text-muted-foreground leading-snug">
             {user?.role === "admin_cabang"
               ? `Kandidat cabang ${user.nama_cabang}`
               : "Kelola semua data kandidat"}
           </p>
         </div>
 
-        {/* Bagian Tombol Aksi - Mobile: stacked below, Desktop: inline */}
-        <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3 w-full">
-          <Button
-            variant="outline"
-            size="sm"
+        {/* Tombol aksi — selalu row, wrap kalau perlu, tapi tidak pernah stacked full-width */}
+        <div className="flex flex-row flex-wrap gap-2">
+          {/* Tombol Filter */}
+          <button
             onClick={() => setShowFilters(!showFilters)}
-            className="w-full sm:w-auto text-xs min-[400px]:text-sm h-9 px-2 min-[400px]:px-3"
+            className={`
+              inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5
+              text-xs font-medium transition-colors
+              bg-white hover:bg-gray-50 border-gray-200 text-gray-700
+              focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300
+              whitespace-nowrap
+            `}
           >
-            <Filter size={14} className="mr-1.5 shrink-0" />
+            <Filter size={13} className="shrink-0" />
             <span>Filter</span>
             {activeFilterCount > 0 && (
-              <span className="ml-1.5 bg-muted text-foreground rounded-full w-4 h-4 min-[400px]:w-5 min-[400px]:h-5 text-[10px] min-[400px]:text-xs flex items-center justify-center shrink-0">
+              <span className="ml-0.5 flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 text-gray-700 text-[10px] font-semibold shrink-0">
                 {activeFilterCount}
               </span>
             )}
-          </Button>
+          </button>
 
-          <Button
-            variant="default"
-            size="sm"
-            className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-xs min-[400px]:text-sm h-9 px-2 min-[400px]:px-3"
+          {/* Tombol Screening */}
+          <button
             onClick={handleBatchScreening}
             disabled={screeningLoading}
+            className={`
+              inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5
+              text-xs font-medium transition-colors
+              bg-green-600 hover:bg-green-700 text-white
+              disabled:opacity-60 disabled:cursor-not-allowed
+              focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-400
+              whitespace-nowrap
+            `}
           >
             {screeningLoading ? (
               <>
-                <Loader2 size={14} className="mr-1.5 animate-spin shrink-0" />
-                <span className="truncate">Proses...</span>
+                <Loader2 size={13} className="animate-spin shrink-0" />
+                <span>Proses...</span>
               </>
             ) : (
               <>
-                <ShieldCheck size={14} className="mr-1.5 shrink-0" />
-                <span className="truncate text-[10px] min-[400px]:text-xs sm:text-sm">
-                  Screening Semua
-                </span>
+                <ShieldCheck size={13} className="shrink-0" />
+                <span>Screening Semua</span>
               </>
             )}
-          </Button>
+          </button>
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-3 mb-4">
-        <div className="relative w-full lg:flex-1 lg:max-w-md">
+      {/* ── SEARCH + STATUS FILTER ── */}
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+        <div className="relative w-full sm:flex-1 sm:max-w-md">
           <Search
-            size={16}
+            size={15}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
           <Input
             placeholder="Cari..."
-            className="pl-9 pr-10 bg-white w-full"
+            className="pl-9 pr-10 bg-white w-full h-9 text-sm"
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
           />
           {isSearching && (
             <Loader2
-              size={16}
+              size={15}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground animate-spin"
             />
           )}
@@ -366,7 +377,7 @@ export default function KandidatListPage() {
               onClick={clearSearch}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
-              <X size={16} />
+              <X size={15} />
             </button>
           )}
         </div>
@@ -376,7 +387,7 @@ export default function KandidatListPage() {
             value={status || "all"}
             onValueChange={(v) => setStatus(v === "all" ? "" : v)}
           >
-            <SelectTrigger className="w-40 bg-white">
+            <SelectTrigger className="w-36 xs:w-40 bg-white h-9 text-sm">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -388,12 +399,13 @@ export default function KandidatListPage() {
               ))}
             </SelectContent>
           </Select>
+
           {user?.role === "admin_penempatan" && (
             <Select
               value={cabangFilter || "all"}
               onValueChange={(v) => setCabangFilter(v === "all" ? "" : v)}
             >
-              <SelectTrigger className="w-40 bg-white">
+              <SelectTrigger className="w-36 xs:w-40 bg-white h-9 text-sm">
                 <SelectValue placeholder="Cabang" />
               </SelectTrigger>
               <SelectContent>
@@ -409,32 +421,29 @@ export default function KandidatListPage() {
         </div>
       </div>
 
+      {/* ── FILTER LANJUTAN ── */}
       {showFilters && (
         <div className="mb-4 bg-white rounded-xl border shadow-sm p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Filter size={16} className="text-muted-foreground" />
+              <Filter size={15} className="text-muted-foreground" />
               <span className="text-sm font-semibold text-foreground">
                 Filter Lanjutan
               </span>
             </div>
-            <div className="flex items-center gap-3">
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="text-slate-500 hover:text-slate-700 h-8 px-3"
-                >
-                  <X size={14} className="mr-1" /> Reset
-                </Button>
-              )}
-            </div>
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-100"
+              >
+                <X size={13} /> Reset
+              </button>
+            )}
           </div>
 
           <div className="space-y-4">
             <div className="flex flex-wrap items-end gap-3">
-              <div className="flex-1 min-w-[140px]">
+              <div className="flex-1 min-w-[130px]">
                 <label className="text-xs text-slate-500 mb-1.5 block font-medium">
                   Jenis Kelamin
                 </label>
@@ -442,7 +451,7 @@ export default function KandidatListPage() {
                   value={jenisKelamin || "all"}
                   onValueChange={(v) => setJenisKelamin(v === "all" ? "" : v)}
                 >
-                  <SelectTrigger className="h-10 bg-white border-border">
+                  <SelectTrigger className="h-9 bg-white border-border text-sm">
                     <SelectValue placeholder="Pilih..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -453,7 +462,7 @@ export default function KandidatListPage() {
                 </Select>
               </div>
 
-              <div className="flex-1 min-w-[140px]">
+              <div className="flex-1 min-w-[130px]">
                 <label className="text-xs text-slate-500 mb-1.5 block font-medium">
                   Pendidikan
                 </label>
@@ -461,7 +470,7 @@ export default function KandidatListPage() {
                   value={jenjang || "all"}
                   onValueChange={(v) => setJenjang(v === "all" ? "" : v)}
                 >
-                  <SelectTrigger className="h-10 bg-white border-border">
+                  <SelectTrigger className="h-9 bg-white border-border text-sm">
                     <SelectValue placeholder="Pilih..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -475,7 +484,7 @@ export default function KandidatListPage() {
                 </Select>
               </div>
 
-              <div className="flex-1 min-w-[160px]">
+              <div className="flex-1 min-w-[150px]">
                 <label className="text-xs text-slate-500 mb-1.5 block font-medium">
                   Bidang SSW
                 </label>
@@ -483,7 +492,7 @@ export default function KandidatListPage() {
                   value={bidangSSW || "all"}
                   onValueChange={(v) => setBidangSSW(v === "all" ? "" : v)}
                 >
-                  <SelectTrigger className="h-10 bg-slate-50 border-slate-200">
+                  <SelectTrigger className="h-9 bg-slate-50 border-slate-200 text-sm">
                     <SelectValue placeholder="Pilih..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -497,7 +506,7 @@ export default function KandidatListPage() {
                 </Select>
               </div>
 
-              <div className="flex-1 min-w-[160px]">
+              <div className="flex-1 min-w-[150px]">
                 <label className="text-xs text-slate-500 mb-1.5 block font-medium">
                   Progress
                 </label>
@@ -505,7 +514,7 @@ export default function KandidatListPage() {
                   value={progres || "all"}
                   onValueChange={(v) => setProgres(v === "all" ? "" : v)}
                 >
-                  <SelectTrigger className="h-10 bg-slate-50 border-slate-200">
+                  <SelectTrigger className="h-9 bg-slate-50 border-slate-200 text-sm">
                     <SelectValue placeholder="Pilih..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -519,7 +528,7 @@ export default function KandidatListPage() {
                 </Select>
               </div>
 
-              <div className="flex-1 min-w-[140px]">
+              <div className="flex-1 min-w-[130px]">
                 <label className="text-xs text-slate-500 mb-1.5 block font-medium">
                   Keberangkatan
                 </label>
@@ -529,7 +538,7 @@ export default function KandidatListPage() {
                     setStatusKeberangkatan(v === "all" ? "" : v)
                   }
                 >
-                  <SelectTrigger className="h-10 bg-white border-border">
+                  <SelectTrigger className="h-9 bg-white border-border text-sm">
                     <SelectValue placeholder="Pilih..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -543,7 +552,7 @@ export default function KandidatListPage() {
             </div>
 
             <div className="flex flex-wrap items-end gap-3">
-              <div className="flex-1 min-w-[120px]">
+              <div className="flex-1 min-w-[110px]">
                 <label className="text-xs text-slate-500 mb-1.5 block font-medium">
                   Umur Min
                 </label>
@@ -552,15 +561,13 @@ export default function KandidatListPage() {
                   placeholder="18"
                   value={umurMin}
                   onChange={(e) => setUmurMin(e.target.value)}
-                  className="h-10 bg-slate-50 border-slate-200"
+                  className="h-9 bg-slate-50 border-slate-200 text-sm"
                 />
               </div>
-
-              <div className="flex-shrink-0 flex items-center text-slate-400 h-10 self-end pb-2">
+              <div className="flex-shrink-0 flex items-center h-9 self-end pb-0.5 text-slate-400">
                 <span>—</span>
               </div>
-
-              <div className="flex-1 min-w-[120px]">
+              <div className="flex-1 min-w-[110px]">
                 <label className="text-xs text-slate-500 mb-1.5 block font-medium">
                   Umur Max
                 </label>
@@ -569,7 +576,7 @@ export default function KandidatListPage() {
                   placeholder="35"
                   value={umurMax}
                   onChange={(e) => setUmurMax(e.target.value)}
-                  className="h-10 bg-slate-50 border-slate-200"
+                  className="h-9 bg-slate-50 border-slate-200 text-sm"
                 />
               </div>
             </div>
@@ -579,72 +586,50 @@ export default function KandidatListPage() {
             <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-100">
               <span className="text-xs text-slate-500">Filter aktif:</span>
               {jenisKelamin && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full">
                   {jenisKelamin}
-                  <button
-                    onClick={() => setJenisKelamin("")}
-                    className="hover:text-blue-900"
-                  >
-                    <X size={12} />
+                  <button onClick={() => setJenisKelamin("")} className="hover:text-blue-900">
+                    <X size={11} />
                   </button>
                 </span>
               )}
               {jenjang && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs rounded-full">
                   {jenjang}
-                  <button
-                    onClick={() => setJenjang("")}
-                    className="hover:text-green-900"
-                  >
-                    <X size={12} />
+                  <button onClick={() => setJenjang("")} className="hover:text-green-900">
+                    <X size={11} />
                   </button>
                 </span>
               )}
               {bidangSSW && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-full">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-700 text-xs rounded-full">
                   {bidangSSW}
-                  <button
-                    onClick={() => setBidangSSW("")}
-                    className="hover:text-purple-900"
-                  >
-                    <X size={12} />
+                  <button onClick={() => setBidangSSW("")} className="hover:text-purple-900">
+                    <X size={11} />
                   </button>
                 </span>
               )}
               {progres && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-700 text-xs rounded-full">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 text-xs rounded-full">
                   {progresConfig[progres]?.label || progres}
-                  <button
-                    onClick={() => setProgres("")}
-                    className="hover:text-amber-900"
-                  >
-                    <X size={12} />
+                  <button onClick={() => setProgres("")} className="hover:text-amber-900">
+                    <X size={11} />
                   </button>
                 </span>
               )}
               {(umurMin || umurMax) && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-full">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-700 text-xs rounded-full">
                   Umur: {umurMin || "0"} - {umurMax || "∞"}
-                  <button
-                    onClick={() => {
-                      setUmurMin("");
-                      setUmurMax("");
-                    }}
-                    className="hover:text-slate-900"
-                  >
-                    <X size={12} />
+                  <button onClick={() => { setUmurMin(""); setUmurMax(""); }} className="hover:text-slate-900">
+                    <X size={11} />
                   </button>
                 </span>
               )}
               {statusKeberangkatan && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full">
-                  {keberangkatanConfig[statusKeberangkatan]?.label ||
-                    statusKeberangkatan}
-                  <button
-                    onClick={() => setStatusKeberangkatan("")}
-                    className="hover:text-green-900"
-                  >
-                    <X size={12} />
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-xs rounded-full">
+                  {keberangkatanConfig[statusKeberangkatan]?.label || statusKeberangkatan}
+                  <button onClick={() => setStatusKeberangkatan("")} className="hover:text-green-900">
+                    <X size={11} />
                   </button>
                 </span>
               )}
@@ -653,32 +638,30 @@ export default function KandidatListPage() {
         </div>
       )}
 
-      <div className=" border-0 ">
+      {/* ── TABLE WRAPPER ── */}
+      <div className="border-0">
         <div className="px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Users size={18} className="text-gray-500" />
-            <span className="font-medium text-gray-700">Kandidat</span>
+          <div className="flex items-center gap-2">
+            <Users size={16} className="text-gray-500 shrink-0" />
+            <span className="font-medium text-gray-700 text-sm">Kandidat</span>
             {!loading && (
-              <span className="text-sm text-gray-500">{data.length} item</span>
+              <span className="text-xs text-gray-500">{data.length} item</span>
             )}
           </div>
-          {loading && <span className="text-sm text-gray-500">Memuat...</span>}
+          {loading && <span className="text-xs text-gray-500">Memuat...</span>}
         </div>
 
-        {/* Mobile: Card Layout */}
-        <div className="lg:hidden space-y-3 px-4 pb-4">
+        {/* ── MOBILE CARD LAYOUT ── */}
+        <div className="lg:hidden space-y-3 px-3 xs:px-4 pb-4">
           {loading ? (
             <div className="text-center py-12">
-              <Loader2
-                size={24}
-                className="animate-spin text-gray-400 mx-auto"
-              />
+              <Loader2 size={24} className="animate-spin text-gray-400 mx-auto" />
               <p className="text-gray-400 text-sm mt-2">Memuat data...</p>
             </div>
           ) : paginatedData.length === 0 ? (
             <div className="text-center py-12">
               <Users size={40} className="text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500">Tidak ada data</p>
+              <p className="text-gray-500 text-sm">Tidak ada data</p>
               <p className="text-gray-400 text-xs mt-1">
                 {hasActiveFilters ? "Coba ubah filter" : "Data belum tersedia"}
               </p>
@@ -695,47 +678,57 @@ export default function KandidatListPage() {
               return (
                 <div
                   key={item.id}
-                  className="bg-white rounded-lg border shadow-sm p-4 space-y-3"
+                  className="bg-white rounded-lg border shadow-sm p-3 xs:p-4 space-y-3"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-200 text-slate-600 font-semibold text-sm">
-                        {(item.nama_romaji || item.nama || "?")
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")
-                          .substring(0, 2)
-                          .toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900 text-sm">
+                  {/* Header kartu */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 xs:gap-3 min-w-0">
+                      {item.pas_foto ? (
+                        <img
+                          src={item.pas_foto}
+                          alt="Foto"
+                          className="w-9 h-9 xs:w-10 xs:h-10 rounded-full object-cover shrink-0"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center w-9 h-9 xs:w-10 xs:h-10 rounded-full bg-slate-200 text-slate-600 font-semibold text-xs shrink-0">
+                          {(item.nama_romaji || item.nama || "?")
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .join("")
+                            .substring(0, 2)
+                            .toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 text-sm leading-tight truncate">
                           {item.nama_romaji || item.nama || "-"}
                         </p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-gray-400 truncate">
                           {item.pendidikan_terakhir || "-"}
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-[10px] xs:text-xs text-gray-400 shrink-0">
                       #{globalIndex}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  {/* Grid info */}
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
                     <div>
-                      <span className="text-gray-400">Cabang</span>
-                      <p className="text-gray-600">{item.nama_cabang || "-"}</p>
+                      <span className="text-gray-400 block">Cabang</span>
+                      <p className="text-gray-600 truncate">{item.nama_cabang || "-"}</p>
                     </div>
                     <div>
-                      <span className="text-gray-400">JK / Umur</span>
+                      <span className="text-gray-400 block">JK / Umur</span>
                       <p className="text-gray-600">
-                        {item.jenis_kelamin}
-                        {item.umur || "-"}
+                        {item.jenis_kelamin || "-"} / {item.umur || "-"}
                       </p>
                     </div>
                     <div className="col-span-2">
-                      <span className="text-gray-400">Bidang SSW</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
+                      <span className="text-gray-400 block mb-1">Bidang SSW</span>
+                      <div className="flex flex-wrap gap-1">
                         {item.sertifikat_ssw ? (
                           item.sertifikat_ssw
                             .split(",")
@@ -743,7 +736,7 @@ export default function KandidatListPage() {
                             .map((s: string, idx: number) => (
                               <span
                                 key={idx}
-                                className="inline-flex px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded"
+                                className="inline-flex px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[10px] xs:text-xs rounded"
                               >
                                 {s.trim()}
                               </span>
@@ -754,25 +747,25 @@ export default function KandidatListPage() {
                       </div>
                     </div>
                     <div>
-                      <span className="text-gray-400">Status Formulir</span>
-                      <div className="mt-1">
-                        <span
-                          className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${stCfg.bg} ${stCfg.text}`}
-                        >
-                          {stCfg.label}
-                        </span>
-                      </div>
+                      <span className="text-gray-400 block mb-1">Status</span>
+                      <span
+                        className={`inline-flex px-1.5 py-0.5 rounded text-[10px] xs:text-xs font-medium ${stCfg.bg} ${stCfg.text}`}
+                      >
+                        {stCfg.label}
+                      </span>
                     </div>
                     <div>
-                      <span className="text-gray-400">Status di Mendunia</span>
+                      <span className="text-gray-400 block mb-1">Keberangkatan</span>
                       <Select
                         value={item.status_keberangkatan || ""}
-                        onValueChange={(v) =>
-                          handleUpdateKeberangkatan(item.id, v)
-                        }
+                        onValueChange={(v) => handleUpdateKeberangkatan(item.id, v)}
                       >
                         <SelectTrigger
-                          className={`h-7 mt-1 text-xs ${item.status_keberangkatan ? keberangkatanConfig[item.status_keberangkatan]?.bg : "bg-gray-100"} border-0`}
+                          className={`h-7 text-[10px] xs:text-xs ${
+                            item.status_keberangkatan
+                              ? keberangkatanConfig[item.status_keberangkatan]?.bg
+                              : "bg-gray-100"
+                          } border-0 px-2`}
                         >
                           <SelectValue placeholder="Pilih" />
                         </SelectTrigger>
@@ -785,11 +778,9 @@ export default function KandidatListPage() {
                     </div>
                   </div>
 
+                  {/* Aksi */}
                   <div className="flex items-center gap-2 pt-2 border-t">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 h-8 text-xs"
+                    <button
                       onClick={() => {
                         setHistoryKandidat({
                           id: item.id,
@@ -797,17 +788,14 @@ export default function KandidatListPage() {
                         });
                         setShowHistory(true);
                       }}
+                      className="flex-1 inline-flex items-center justify-center gap-1 h-8 rounded-md border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                     >
-                      <History size={14} className="mr-1" /> History
-                    </Button>
+                      <History size={13} /> History
+                    </button>
                     <Link to={`/kandidat/${item.id}`} className="flex-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full h-8 text-xs"
-                      >
-                        <Eye size={14} className="mr-1" /> Detail
-                      </Button>
+                      <button className="w-full inline-flex items-center justify-center gap-1 h-8 rounded-md border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                        <Eye size={13} /> Detail
+                      </button>
                     </Link>
                   </div>
                 </div>
@@ -816,38 +804,20 @@ export default function KandidatListPage() {
           )}
         </div>
 
-        {/* Desktop: Table Layout */}
+        {/* ── DESKTOP TABLE ── */}
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
-              <tr className="">
-                <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">
-                  NO
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">
-                  KANDIDAT
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">
-                  CABANG
-                </th>
-                <th className="text-center px-4 py-3 font-medium text-xs text-gray-500">
-                  JK
-                </th>
-                <th className="text-center px-4 py-3 font-medium text-xs text-gray-500">
-                  UMUR
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">
-                  BIDANG SSW
-                </th>
-                <th className="text-center px-4 py-3 font-medium text-xs text-gray-500">
-                  STATUS
-                </th>
-                <th className="text-center px-4 py-3 font-medium text-xs text-gray-500">
-                  STATUS DI MENDUNIA
-                </th>
-                <th className="text-center px-4 py-3 font-medium text-xs text-gray-500">
-                  AKSI
-                </th>
+              <tr>
+                <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">NO</th>
+                <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">KANDIDAT</th>
+                <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">CABANG</th>
+                <th className="text-center px-4 py-3 font-medium text-xs text-gray-500">JK</th>
+                <th className="text-center px-4 py-3 font-medium text-xs text-gray-500">UMUR</th>
+                <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">BIDANG SSW</th>
+                <th className="text-center px-4 py-3 font-medium text-xs text-gray-500">STATUS</th>
+                <th className="text-center px-4 py-3 font-medium text-xs text-gray-500">STATUS DI MENDUNIA</th>
+                <th className="text-center px-4 py-3 font-medium text-xs text-gray-500">AKSI</th>
               </tr>
             </thead>
             <tbody className="divide-y-0">
@@ -867,9 +837,7 @@ export default function KandidatListPage() {
                       <Users size={40} className="text-gray-300 mb-2" />
                       <p className="text-gray-500">Tidak ada data</p>
                       <p className="text-gray-400 text-xs mt-1">
-                        {hasActiveFilters
-                          ? "Coba ubah filter"
-                          : "Data belum tersedia"}
+                        {hasActiveFilters ? "Coba ubah filter" : "Data belum tersedia"}
                       </p>
                     </div>
                   </td>
@@ -881,21 +849,14 @@ export default function KandidatListPage() {
                     bg: "bg-gray-100",
                     text: "text-gray-700",
                   };
-                  const progCfg = progresConfig[item.status_progres] || {
-                    label: item.status_progres || "-",
-                    color: "#d5d7dbff",
-                  };
-                  const globalIndex =
-                    (currentPage - 1) * itemsPerPage + index + 1;
+                  const globalIndex = (currentPage - 1) * itemsPerPage + index + 1;
 
                   return (
                     <tr
                       key={item.id}
-                      className="hover:bg-gray-50 transition-colors border-b-0"
+                      className="hover:bg-gray-50 transition-colors border-b border-gray-50"
                     >
-                      <td className="px-4 py-3 text-gray-400 text-xs border-b-0">
-                        {globalIndex}
-                      </td>
+                      <td className="px-4 py-3 text-gray-400 text-xs">{globalIndex}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           {item.pas_foto ? (
@@ -906,10 +867,10 @@ export default function KandidatListPage() {
                               loading="lazy"
                             />
                           ) : (
-                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-200 text-slate-600 font-semibold text-xs">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-200 text-slate-600 font-semibold text-xs shrink-0">
                               {(item.nama_romaji || item.nama || "?")
                                 .split(" ")
-                                .map((n) => n[0])
+                                .map((n: string) => n[0])
                                 .join("")
                                 .substring(0, 2)
                                 .toUpperCase()}
@@ -925,9 +886,7 @@ export default function KandidatListPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-gray-600 text-sm">
-                        {item.nama_cabang || "-"}
-                      </td>
+                      <td className="px-4 py-3 text-gray-600 text-sm">{item.nama_cabang || "-"}</td>
                       <td className="px-4 py-3 text-center">
                         <span className="text-xs font-medium text-gray-500">
                           {item.jenis_kelamin || "-"}
@@ -971,12 +930,14 @@ export default function KandidatListPage() {
                       <td className="px-4 py-3 text-center">
                         <Select
                           value={item.status_keberangkatan || ""}
-                          onValueChange={(v) =>
-                            handleUpdateKeberangkatan(item.id, v)
-                          }
+                          onValueChange={(v) => handleUpdateKeberangkatan(item.id, v)}
                         >
                           <SelectTrigger
-                            className={`h-7 w-[100px] text-xs ${item.status_keberangkatan ? keberangkatanConfig[item.status_keberangkatan]?.bg : "bg-gray-100"} border-0`}
+                            className={`h-7 w-[100px] text-xs ${
+                              item.status_keberangkatan
+                                ? keberangkatanConfig[item.status_keberangkatan]?.bg
+                                : "bg-gray-100"
+                            } border-0`}
                           >
                             <SelectValue placeholder="-" />
                           </SelectTrigger>
@@ -1023,23 +984,23 @@ export default function KandidatListPage() {
           </table>
         </div>
 
+        {/* ── PAGINATION ── */}
         {!loading && data.length > 0 && (
-          <div className="px-4 py-3 flex items-center justify-between bg-gray-50">
-            <div className="flex items-center gap-3">
-              <p className="text-xs text-gray-500">
-                {(currentPage - 1) * itemsPerPage + 1}-
-                {Math.min(currentPage * itemsPerPage, data.length)} dari{" "}
-                {data.length}
+          <div className="px-3 xs:px-4 py-3 flex flex-col xs:flex-row items-start xs:items-center justify-between gap-2 bg-gray-50">
+            <div className="flex items-center gap-2 xs:gap-3">
+              <p className="text-[10px] xs:text-xs text-gray-500">
+                {(currentPage - 1) * itemsPerPage + 1}–
+                {Math.min(currentPage * itemsPerPage, data.length)} dari {data.length}
               </p>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">Baris:</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] xs:text-xs text-gray-400">Baris:</span>
                 <select
                   value={itemsPerPage}
                   onChange={(e) => {
                     setItemsPerPage(Number(e.target.value));
                     setCurrentPage(1);
                   }}
-                  className="h-7 px-2 text-xs border border-gray-200 rounded bg-white text-gray-600 cursor-pointer"
+                  className="h-6 xs:h-7 px-1.5 text-[10px] xs:text-xs border border-gray-200 rounded bg-white text-gray-600 cursor-pointer"
                 >
                   <option value={10}>10</option>
                   <option value={20}>20</option>
@@ -1048,19 +1009,18 @@ export default function KandidatListPage() {
                 </select>
               </div>
             </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2 text-gray-600"
+
+            <div className="flex items-center gap-0.5 xs:gap-1">
+              <button
+                className="h-7 w-7 flex items-center justify-center rounded text-gray-600 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage((p) => p - 1)}
               >
-                <ChevronLeft size={16} />
-              </Button>
+                <ChevronLeft size={15} />
+              </button>
 
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum;
+                let pageNum: number;
                 if (totalPages <= 5) {
                   pageNum = i + 1;
                 } else if (currentPage <= 3) {
@@ -1071,32 +1031,33 @@ export default function KandidatListPage() {
                   pageNum = currentPage - 2 + i;
                 }
                 return (
-                  <Button
+                  <button
                     key={pageNum}
-                    variant={currentPage === pageNum ? "default" : "ghost"}
-                    size="sm"
-                    className={`h-8 w-8 p-0 ${currentPage === pageNum ? "bg-gray-900 text-white" : "text-gray-600"}`}
                     onClick={() => setCurrentPage(pageNum)}
+                    className={`h-7 w-7 flex items-center justify-center rounded text-[11px] xs:text-xs font-medium transition-colors ${
+                      currentPage === pageNum
+                        ? "bg-gray-900 text-white"
+                        : "text-gray-600 hover:bg-gray-200"
+                    }`}
                   >
                     {pageNum}
-                  </Button>
+                  </button>
                 );
               })}
 
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2 text-gray-600"
+              <button
+                className="h-7 w-7 flex items-center justify-center rounded text-gray-600 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage((p) => p + 1)}
               >
-                <ChevronRight size={16} />
-              </Button>
+                <ChevronRight size={15} />
+              </button>
             </div>
           </div>
         )}
       </div>
 
+      {/* ── HISTORY MODAL ── */}
       {historyKandidat && (
         <HistoryModal
           open={showHistory}

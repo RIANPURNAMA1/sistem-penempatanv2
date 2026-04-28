@@ -302,8 +302,8 @@ export default function KandidatListPage() {
           </p>
         </div>
 
-        {/* Bagian Tombol Aksi */}
-        <div className="grid grid-cols-2 sm:flex sm:justify-end gap-2 sm:gap-3 w-full">
+        {/* Bagian Tombol Aksi - Mobile: stacked below, Desktop: inline */}
+        <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3 w-full">
           <Button
             variant="outline"
             size="sm"

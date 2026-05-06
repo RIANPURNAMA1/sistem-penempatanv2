@@ -1464,6 +1464,130 @@ const getInterviewStats = async (req, res) => {
 };
 
 // ============================================================
+// IMPORT KANDIDAT DARI DATA
+// ============================================================
+const importKandidat = async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const {
+      nama_romaji,
+      nama_katakana,
+      email,
+      jenis_kelamin,
+      umur,
+      nama_cabang,
+      pendidikan_terakhir,
+      status_formulir,
+      status_progres,
+      status_keberangkatan,
+      sertifikat_ssw,
+      level_bahasa_jepang,
+    } = req.body;
+
+    if (!nama_romaji && !nama_katakana) {
+      return res.status(400).json({ success: false, message: 'Nama romaji atau katakana harus diisi' });
+    }
+
+    let cabangId = null;
+    if (nama_cabang) {
+      const [cabangRows] = await conn.query('SELECT id FROM cabang WHERE nama_cabang = ? LIMIT 1', [nama_cabang.trim()]);
+      if (cabangRows.length > 0) {
+        cabangId = cabangRows[0].id;
+      } else {
+        const [newCabang] = await conn.query('INSERT INTO cabang (nama_cabang) VALUES (?)', [nama_cabang.trim()]);
+        cabangId = newCabang.insertId;
+      }
+    }
+
+    let userId = null;
+    if (email) {
+      const [userRows] = await conn.query('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
+      if (userRows.length > 0) {
+        userId = userRows[0].id;
+      } else {
+        const defaultPassword = email.split('@')[0] + '123';
+        const [newUser] = await conn.query(
+          'INSERT INTO users (email, nama, password, role) VALUES (?, ?, ?, ?)',
+          [email, nama_romaji || nama_katakana, defaultPassword, 'kandidat']
+        );
+        userId = newUser.insertId;
+      }
+    }
+
+    if (!userId) {
+      const defaultEmail = `${nama_romaji || nama_katakana}_${Date.now()}@temp.com`;
+      const defaultPassword = (nama_romaji || nama_katakana) + '123';
+      const [newUser] = await conn.query(
+        'INSERT INTO users (email, nama, password, role) VALUES (?, ?, ?, ?)',
+        [defaultEmail, nama_romaji || nama_katakana, defaultPassword, 'kandidat']
+      );
+      userId = newUser.insertId;
+    }
+
+    const [existingProfil] = await conn.query('SELECT id FROM kandidat_profil WHERE user_id = ?', [userId]);
+    
+    if (existingProfil.length > 0) {
+      await conn.query(
+        `UPDATE kandidat_profil SET 
+          nama_romaji = ?, nama_katakana = ?, jenis_kelamin = ?, umur = ?,
+          cabang_id = ?, pendidikan_terakhir = ?, status_formulir = ?,
+          status_progres = ?, status_keberangkatan = ?, sertifikat_ssw = ?,
+          level_bahasa_jepang = ?
+        WHERE user_id = ?`,
+        [
+          nama_romaji || null,
+          nama_katakana || null,
+          jenis_kelamin || null,
+          umur || null,
+          cabangId,
+          pendidikan_terakhir || null,
+          status_formulir || 'draft',
+          status_progres || 'Pending',
+          status_keberangkatan || null,
+          sertifikat_ssw || null,
+          level_bahasa_jepang || null,
+          userId,
+        ]
+      );
+    } else {
+      await conn.query(
+        `INSERT INTO kandidat_profil (
+          user_id, nama_romaji, nama_katakana, jenis_kelamin, umur,
+          cabang_id, pendidikan_terakhir, status_formulir, status_progres,
+          status_keberangkatan, sertifikat_ssw, level_bahasa_jepang
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          userId,
+          nama_romaji || null,
+          nama_katakana || null,
+          jenis_kelamin || null,
+          umur || null,
+          cabangId,
+          pendidikan_terakhir || null,
+          status_formulir || 'draft',
+          status_progres || 'Pending',
+          status_keberangkatan || null,
+          sertifikat_ssw || null,
+          level_bahasa_jepang || null,
+        ]
+      );
+    }
+
+    await conn.commit();
+    res.json({ success: true, message: 'Kandidat berhasil diimport' });
+
+  } catch (err) {
+    await conn.rollback();
+    console.error('Import error:', err);
+    res.status(500).json({ success: false, message: 'Gagal mengimport kandidat', error: err.message });
+  } finally {
+    conn.release();
+  }
+};
+
+// ============================================================
 // UPDATE PROFILE BY ADMIN
 // ============================================================
 const updateProfileByAdmin = async (req, res) => {
@@ -1519,8 +1643,23 @@ const updateProfileByAdmin = async (req, res) => {
 // EXPORTS
 // ============================================================
 module.exports = {
-  getAll, getById, getMyProfile, updateMyProfile,
-  updateStatus, updateProgres, updateKeberangkatan, updateProgresLengkap,
-  submitForm, uploadDokumen, getStats, addHistory, getHistory, getMyHistory, getInterviewStats,
-  updateProfileByAdmin, screeningKandidat, batchScreening,
+  getAll,
+  getById,
+  getMyProfile,
+  updateMyProfile,
+  updateStatus,
+  updateProgres,
+  updateKeberangkatan,
+  updateProgresLengkap,
+  screeningKandidat,
+  batchScreening,
+  uploadDokumen,
+  getStats,
+  getInterviewStats,
+  getHistory,
+  getMyHistory,
+  submitForm,
+  addHistory,
+  updateProfileByAdmin,
+  importKandidat,
 };

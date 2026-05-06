@@ -187,6 +187,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <img
                 src={LogoMenduniaJepang}
                 alt="Logo"
+                loading="lazy"
                 className={cn(
                   "object-contain transition-all duration-300",
                   sidebarCollapsed ? "w-6 h-6" : "w-7 h-7",
@@ -308,6 +309,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <img
                 src={LogoMenduniaJepang}
                 alt="Logo"
+                loading="lazy"
                 className="h-6 w-6 object-contain shrink-0"
               />
 

@@ -27,8 +27,6 @@ errors,
 }: FormStep2Props) {
 return ( <div className="space-y-5">
 {/* TITLE */} <p className="form-section-title flex items-center gap-2 text-sm sm:text-base"> <Heart size={18} /> KONDISI FISIK & KESEHATAN </p>
-
-```
   {/* GRID RESPONSIVE */}
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 

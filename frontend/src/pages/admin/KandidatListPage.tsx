@@ -29,10 +29,13 @@ import {
   Loader2,
   History,
   Download,
+  Upload,
   CheckCircle,
   ShieldCheck,
+  FileSpreadsheet,
 } from "lucide-react";
 import HistoryModal from "@/components/HistoryModal";
+import * as XLSX from "xlsx";
 
 interface Kandidat {
   id: number;
@@ -128,6 +131,134 @@ export default function KandidatListPage() {
     nama: string;
   } | null>(null);
   const [screeningLoading, setScreeningLoading] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExportExcel = () => {
+    if (data.length === 0) {
+      toast({ title: "Tidak ada data untuk diekspor", variant: "destructive" });
+      return;
+    }
+
+    const exportData = data.map((item, index) => ({
+      "No": index + 1,
+      "Nama Romaji": item.nama_romaji || "",
+      "Nama Katakana": item.nama_katakana || "",
+      "Email": item.email || "",
+      "Jenis Kelamin": item.jenis_kelamin || "",
+      "Umur": item.umur || "",
+      "Cabang": item.nama_cabang || "",
+      "Pendidikan Terakhir": item.pendidikan_terakhir || "",
+      "Status Formulir": item.status_formulir || "",
+      "Status Progres": item.status_progres || "",
+      "Status Keberangkatan": item.status_keberangkatan || "",
+      "Bidang SSW": item.sertifikat_ssw || "",
+      "Level Bahasa Jepang": item.level_bahasa_jepang || "",
+      "Tanggal Update": item.updated_at ? new Date(item.updated_at).toLocaleDateString("id-ID") : "",
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Data Kandidat");
+
+    const colWidths = [
+      { wch: 5 }, { wch: 25 }, { wch: 25 }, { wch: 30 },
+      { wch: 12 }, { wch: 6 }, { wch: 20 }, { wch: 20 },
+      { wch: 15 }, { wch: 25 }, { wch: 18 }, { wch: 40 },
+      { wch: 18 }, { wch: 15 },
+    ];
+    ws["!cols"] = colWidths;
+
+    const fileName = `Data_Kandidat_${new Date().toISOString().split("T")[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+
+    toast({ title: "Export berhasil", description: `File ${fileName} telah diunduh` });
+  };
+
+  const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = [
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+    ];
+    if (!validTypes.includes(file.type) && !file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
+      toast({ title: "Format file tidak valid", description: "Gunakan file .xlsx atau .xls", variant: "destructive" });
+      return;
+    }
+
+    setImportLoading(true);
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+      if (jsonData.length === 0) {
+        toast({ title: "File kosong", description: "Tidak ada data untuk diimport", variant: "destructive" });
+        setImportLoading(false);
+        return;
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const row of jsonData) {
+        try {
+          if (!row["Nama Romaji"] && !row["Nama Katakana"]) {
+            errorCount++;
+            continue;
+          }
+
+          await api.post("/kandidat/import", {
+            nama_romaji: row["Nama Romaji"] || "",
+            nama_katakana: row["Nama Katakana"] || "",
+            email: row["Email"] || "",
+            jenis_kelamin: row["Jenis Kelamin"] || "",
+            umur: row["Umur"] ? parseInt(row["Umur"]) : null,
+            nama_cabang: row["Cabang"] || "",
+            pendidikan_terakhir: row["Pendidikan Terakhir"] || "",
+            status_formulir: row["Status Formulir"] || "draft",
+            status_progres: row["Status Progres"] || "Pending",
+            status_keberangkatan: row["Status Keberangkatan"] || "",
+            sertifikat_ssw: row["Bidang SSW"] || "",
+            level_bahasa_jepang: row["Level Bahasa Jepang"] || "",
+          });
+
+          successCount++;
+        } catch (err) {
+          console.error(`Error importing row:`, row, err);
+          errorCount++;
+        }
+      }
+
+      toast({
+        title: "Import selesai",
+        description: `Berhasil: ${successCount}, Gagal: ${errorCount}`,
+        variant: successCount > 0 ? "success" : "destructive",
+      });
+
+      if (successCount > 0) {
+        load();
+      }
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (err) {
+      console.error("Import error:", err);
+      toast({ title: "Gagal mengimport file", variant: "destructive" });
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const triggerImport = () => {
+    fileInputRef.current?.click();
+  };
 
   const statusParam = searchParams.get("status") || "";
   const progresParam = searchParams.get("progres") || "";
@@ -305,6 +436,53 @@ export default function KandidatListPage() {
 
         {/* Tombol aksi — selalu row, wrap kalau perlu, tapi tidak pernah stacked full-width */}
         <div className="flex flex-row flex-wrap gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={handleImportExcel}
+            className="hidden"
+          />
+
+          <button
+            onClick={triggerImport}
+            disabled={importLoading}
+            className={`
+              inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5
+              text-xs font-medium transition-colors
+              bg-white hover:bg-gray-50 border-gray-200 text-gray-700
+              disabled:opacity-60 disabled:cursor-not-allowed
+              focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300
+              whitespace-nowrap
+            `}
+          >
+            {importLoading ? (
+              <>
+                <Loader2 size={13} className="animate-spin shrink-0" />
+                <span>Import...</span>
+              </>
+            ) : (
+              <>
+                <Upload size={13} className="shrink-0" />
+                <span>Import</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleExportExcel}
+            className={`
+              inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5
+              text-xs font-medium transition-colors
+              bg-white hover:bg-gray-50 border-gray-200 text-gray-700
+              focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300
+              whitespace-nowrap
+            `}
+          >
+            <FileSpreadsheet size={13} className="shrink-0" />
+            <span>Export</span>
+          </button>
+
           {/* Tombol Filter */}
           <button
             onClick={() => setShowFilters(!showFilters)}

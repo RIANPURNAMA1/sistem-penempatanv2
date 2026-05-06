@@ -29,6 +29,7 @@ router.patch('/:id/progres-lengkap', authorize('admin_penempatan', 'admin_cabang
 router.patch('/:id/screening', authorize('admin_penempatan', 'admin_cabang'), ctrl.screeningKandidat);
 router.post('/batch-screening', authorize('admin_penempatan', 'admin_cabang'), ctrl.batchScreening);
 router.put('/:id/update-profile', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateProfileByAdmin);
+router.post('/import', authorize('admin_penempatan', 'admin_cabang'), ctrl.importKandidat);
 
 // Get file limits for frontend
 router.get('/file-limits', (req, res) => {

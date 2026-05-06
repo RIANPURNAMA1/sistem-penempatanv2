@@ -6,9 +6,9 @@ const axios = require('axios');
 // ============================================================
 const STARSENDER_CONFIG = {
   API_URL: 'https://api.starsender.online/api/send',
-  DEVICE_API_KEY: '6a6bdbc7-2883-4ddd-bb9a-e2857fe468bf',
+  DEVICE_API_KEY: '1d58b1c1-4b15-4089-a9be-8f3fd2174651',
   ACCOUNT_API_KEY: 'f272bd85-1ea1-4bcc-9d88-b585b2bda634',
-  ADMIN_PHONE: '082118364415',
+  ADMIN_PHONE: '089662695289',
 };
 
 // ============================================================

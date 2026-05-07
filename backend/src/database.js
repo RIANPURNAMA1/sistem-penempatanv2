@@ -648,6 +648,14 @@ const migrations = [
     },
     sql: `ALTER TABLE kandidat_profil ADD COLUMN institusi VARCHAR(255) NULL`
   },
+  {
+    name: 'add_deleted_at_to_kandidat_profil',
+    check: async (conn) => {
+      const [cols] = await conn.query('SHOW COLUMNS FROM kandidat_profil LIKE "deleted_at"');
+      return cols.length > 0;
+    },
+    sql: `ALTER TABLE kandidat_profil ADD COLUMN deleted_at TIMESTAMP NULL DEFAULT NULL`
+  },
 ];
 
 async function runMigrations() {

@@ -128,6 +128,7 @@ const getAll = async (req, res) => {
       JOIN users u ON kp.user_id = u.id
       LEFT JOIN cabang c ON kp.cabang_id = c.id
       WHERE 1=1
+      AND kp.deleted_at IS NULL
     `;
 
     const params = [];
@@ -1640,6 +1641,181 @@ const updateProfileByAdmin = async (req, res) => {
 };
 
 // ============================================================
+// SOFT DELETE
+// ============================================================
+const softDelete = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [existing] = await pool.query(
+      'SELECT id, nama_romaji FROM kandidat_profil WHERE id = ? AND deleted_at IS NULL',
+      [id]
+    );
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'Kandidat tidak ditemukan' });
+    }
+
+    await pool.query(
+      'UPDATE kandidat_profil SET deleted_at = NOW() WHERE id = ?',
+      [id]
+    );
+
+    await addHistory(id, req.user?.id || null, req.user?.nama || 'System', 'soft_delete', null, null, null, 'Kandidat dihapus (soft delete)');
+
+    res.json({ success: true, message: 'Kandidat berhasil dihapus' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// ============================================================
+// RESTORE
+// ============================================================
+const restore = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [existing] = await pool.query(
+      'SELECT id, nama_romaji FROM kandidat_profil WHERE id = ? AND deleted_at IS NOT NULL',
+      [id]
+    );
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'Kandidat dihapus tidak ditemukan' });
+    }
+
+    await pool.query(
+      'UPDATE kandidat_profil SET deleted_at = NULL WHERE id = ?',
+      [id]
+    );
+
+    await addHistory(id, req.user?.id || null, req.user?.nama || 'System', 'restore', null, null, null, 'Kandidat dipulihkan dari hapus');
+
+    res.json({ success: true, message: 'Kandidat berhasil dipulihkan' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// ============================================================
+// PERMANENT DELETE
+// ============================================================
+const permanentDelete = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [existing] = await pool.query(
+      'SELECT id, nama_romaji FROM kandidat_profil WHERE id = ? AND deleted_at IS NOT NULL',
+      [id]
+    );
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'Kandidat dihapus tidak ditemukan' });
+    }
+
+    await pool.query('DELETE FROM kandidat_profil WHERE id = ?', [id]);
+
+    res.json({ success: true, message: 'Kandidat berhasil dihapus permanen' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// ============================================================
+// LIST DELETED
+// ============================================================
+const getDeleted = async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT kp.id, kp.user_id, kp.nama_romaji, kp.nama_katakana, kp.jenis_kelamin, kp.umur,
+              TRIM(c.nama_cabang) as nama_cabang, kp.status_formulir, kp.status_progres, kp.updated_at,
+              kp.level_bahasa_jepang, kp.sertifikat_ssw, kp.pendidikan_terakhir,
+              kp.status_keberangkatan, kp.deleted_at,
+              u.email,
+              (
+                SELECT kd.path_file
+                FROM kandidat_dokumen kd 
+                WHERE kd.kandidat_id = kp.id 
+                AND kd.jenis_dokumen = 'pas_foto' 
+                LIMIT 1
+              ) as pas_foto
+       FROM kandidat_profil kp
+       LEFT JOIN users u ON kp.user_id = u.id
+       LEFT JOIN cabang c ON kp.cabang_id = c.id
+       WHERE kp.deleted_at IS NOT NULL
+       ORDER BY kp.deleted_at DESC`,
+      []
+    );
+
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// ============================================================
+// RESTORE ALL DELETED
+// ============================================================
+const restoreAllDeleted = async (req, res) => {
+  try {
+    const user = req.user;
+    let whereClause = 'deleted_at IS NOT NULL';
+    const params = [];
+
+    if (user.role === 'admin_cabang') {
+      whereClause += ' AND cabang_id = ?';
+      params.push(user.cabang_id);
+    }
+
+    const [rows] = await pool.query(`SELECT id FROM kandidat_profil WHERE ${whereClause}`, params);
+
+    if (rows.length === 0) {
+      return res.json({ success: true, message: 'Tidak ada data yang perlu dipulihkan', count: 0 });
+    }
+
+    await pool.query(`UPDATE kandidat_profil SET deleted_at = NULL WHERE ${whereClause}`, params);
+
+    for (const row of rows) {
+      await addHistory(row.id, user.id || null, user.nama || 'System', 'restore_all', null, null, null, 'Kandidat dipulihkan dari hapus massal');
+    }
+
+    res.json({ success: true, message: `${rows.length} kandidat berhasil dipulihkan`, count: rows.length });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// ============================================================
+// PERMANENT DELETE ALL DELETED
+// ============================================================
+const permanentAllDeleted = async (req, res) => {
+  try {
+    const user = req.user;
+    let whereClause = 'deleted_at IS NOT NULL';
+    const params = [];
+
+    if (user.role === 'admin_cabang') {
+      whereClause += ' AND cabang_id = ?';
+      params.push(user.cabang_id);
+    }
+
+    const [rows] = await pool.query(`SELECT id FROM kandidat_profil WHERE ${whereClause}`, params);
+
+    if (rows.length === 0) {
+      return res.json({ success: true, message: 'Tidak ada data yang perlu dihapus', count: 0 });
+    }
+
+    const ids = rows.map(r => r.id);
+    await pool.query(`DELETE FROM kandidat_profil WHERE id IN (${ids.map(() => '?').join(',')})`, ids);
+
+    res.json({ success: true, message: `${rows.length} kandidat berhasil dihapus permanen`, count: rows.length });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// ============================================================
 // EXPORTS
 // ============================================================
 module.exports = {
@@ -1662,4 +1838,10 @@ module.exports = {
   addHistory,
   updateProfileByAdmin,
   importKandidat,
+  softDelete,
+  restore,
+  permanentDelete,
+  getDeleted,
+  restoreAllDeleted,
+  permanentAllDeleted,
 };

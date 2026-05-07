@@ -20,6 +20,7 @@ router.get('/history', authorize('kandidat'), ctrl.getMyHistory);
 
 // Admin access
 router.get('/', authorize('admin_penempatan', 'admin_cabang'), ctrl.getAll);
+router.get('/deleted', authorize('admin_penempatan', 'admin_cabang'), ctrl.getDeleted);
 router.get('/:id', authorize('admin_penempatan', 'admin_cabang'), ctrl.getById);
 router.get('/:id/history', authorize('admin_penempatan', 'admin_cabang'), ctrl.getHistory);
 router.patch('/:id/status', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateStatus);
@@ -30,6 +31,13 @@ router.patch('/:id/screening', authorize('admin_penempatan', 'admin_cabang'), ct
 router.post('/batch-screening', authorize('admin_penempatan', 'admin_cabang'), ctrl.batchScreening);
 router.put('/:id/update-profile', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateProfileByAdmin);
 router.post('/import', authorize('admin_penempatan', 'admin_cabang'), ctrl.importKandidat);
+
+// Soft delete & restore
+router.delete('/:id', authorize('admin_penempatan', 'admin_cabang'), ctrl.softDelete);
+router.patch('/:id/restore', authorize('admin_penempatan', 'admin_cabang'), ctrl.restore);
+router.delete('/:id/permanent', authorize('admin_penempatan'), ctrl.permanentDelete);
+router.post('/restore-all-deleted', authorize('admin_penempatan', 'admin_cabang'), ctrl.restoreAllDeleted);
+router.delete('/permanent-all-deleted', authorize('admin_penempatan'), ctrl.permanentAllDeleted);
 
 // Get file limits for frontend
 router.get('/file-limits', (req, res) => {

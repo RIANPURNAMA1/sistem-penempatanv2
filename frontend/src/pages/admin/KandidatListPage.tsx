@@ -33,8 +33,11 @@ import {
   CheckCircle,
   ShieldCheck,
   FileSpreadsheet,
+  Trash2,
+  RefreshCw,
 } from "lucide-react";
 import HistoryModal from "@/components/HistoryModal";
+import DeletedKandidatModal from "@/components/DeletedKandidatModal";
 import * as XLSX from "xlsx";
 
 interface Kandidat {
@@ -55,6 +58,7 @@ interface Kandidat {
   pendidikan_terakhir: string;
   pas_foto: string;
   status_keberangkatan: string;
+  deleted_at?: string | null;
 }
 
 const statusFormulirConfig: Record<
@@ -133,6 +137,9 @@ export default function KandidatListPage() {
   const [screeningLoading, setScreeningLoading] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: number; nama: string } | null>(null);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
 
   const handleExportExcel = () => {
     if (data.length === 0) {
@@ -258,6 +265,17 @@ export default function KandidatListPage() {
 
   const triggerImport = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await api.delete(`/kandidat/${id}`);
+      toast({ title: "Kandidat berhasil dihapus", variant: "success" });
+      setDeleteConfirm(null);
+      load();
+    } catch {
+      toast({ title: "Gagal menghapus kandidat", variant: "destructive" });
+    }
   };
 
   const statusParam = searchParams.get("status") || "";
@@ -527,6 +545,23 @@ export default function KandidatListPage() {
                 <span>Screening Semua</span>
               </>
             )}
+          </button>
+
+          {/* Tombol Data Dihapus */}
+          <button
+            onClick={() => {
+              setShowRestoreModal(true);
+            }}
+            className={`
+              inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5
+              text-xs font-medium transition-colors
+              bg-white hover:bg-gray-50 border-gray-200 text-gray-700
+              focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300
+              whitespace-nowrap
+            `}
+          >
+            <RefreshCw size={13} className="shrink-0" />
+            <span>Data Dihapus</span>
           </button>
         </div>
       </div>
@@ -975,6 +1010,12 @@ export default function KandidatListPage() {
                         <Eye size={13} /> Detail
                       </button>
                     </Link>
+                    <button
+                      onClick={() => setDeleteConfirm({ id: item.id, nama: item.nama_romaji || item.nama || "-" })}
+                      className="flex-1 inline-flex items-center justify-center gap-1 h-8 rounded-md border border-red-200 bg-white text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 size={13} /> Hapus
+                    </button>
                   </div>
                 </div>
               );
@@ -1152,6 +1193,15 @@ export default function KandidatListPage() {
                               <Eye size={16} />
                             </Button>
                           </Link>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 px-2"
+                            onClick={() => setDeleteConfirm({ id: item.id, nama: item.nama_romaji || item.nama || "-" })}
+                            title="Hapus"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -1244,6 +1294,47 @@ export default function KandidatListPage() {
           kandidatName={historyKandidat.nama}
         />
       )}
+
+      {/* ── DELETE CONFIRMATION MODAL ── */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm mx-4 p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <Trash2 size={20} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Hapus Kandidat</h3>
+                <p className="text-sm text-gray-500">Konfirmasi penghapusan</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600">
+              Apakah Anda yakin ingin menghapus kandidat <strong>{deleteConfirm.nama}</strong>? Data akan dipindahkan ke daftar dihapus dan dapat dipulihkan.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 h-10 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirm.id)}
+                className="flex-1 h-10 rounded-lg bg-red-600 text-sm font-medium text-white hover:bg-red-700"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DELETED KANDIDAT MODAL ── */}
+      <DeletedKandidatModal
+        open={showRestoreModal}
+        onOpenChange={setShowRestoreModal}
+        onRefresh={load}
+      />
     </div>
   );
 }

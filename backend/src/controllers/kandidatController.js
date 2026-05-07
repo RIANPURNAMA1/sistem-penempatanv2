@@ -1617,6 +1617,10 @@ const updateProfileByAdmin = async (req, res) => {
     });
 
     if (Object.keys(updates).length > 0) {
+      if (updates.tanggal_lahir && typeof updates.tanggal_lahir === 'string') {
+        updates.tanggal_lahir = updates.tanggal_lahir.split('T')[0];
+      }
+
       console.log('Updating fields:', Object.keys(updates));
       console.log('Values:', Object.values(updates));
       const setClause = Object.keys(updates).map(k => `${k} = ?`).join(', ');
@@ -1659,7 +1663,7 @@ const softDelete = async (req, res) => {
       [id]
     );
 
-    await addHistory(id, req.user?.id || null, req.user?.nama || 'System', 'soft_delete', null, null, null, 'Kandidat dihapus (soft delete)');
+    await addHistory(id, req.user?.id || null, req.user?.nama || 'System', 'delete', null, null, null, 'Kandidat dihapus (soft delete)');
 
     res.json({ success: true, message: 'Kandidat berhasil dihapus' });
   } catch (err) {
@@ -1687,7 +1691,7 @@ const restore = async (req, res) => {
       [id]
     );
 
-    await addHistory(id, req.user?.id || null, req.user?.nama || 'System', 'restore', null, null, null, 'Kandidat dipulihkan dari hapus');
+    await addHistory(id, req.user?.id || null, req.user?.nama || 'System', 'update', null, null, null, 'Kandidat dipulihkan dari hapus');
 
     res.json({ success: true, message: 'Kandidat berhasil dipulihkan' });
   } catch (err) {
@@ -1775,7 +1779,7 @@ const restoreAllDeleted = async (req, res) => {
     await pool.query(`UPDATE kandidat_profil SET deleted_at = NULL WHERE ${whereClause}`, params);
 
     for (const row of rows) {
-      await addHistory(row.id, user.id || null, user.nama || 'System', 'restore_all', null, null, null, 'Kandidat dipulihkan dari hapus massal');
+      await addHistory(row.id, user.id || null, user.nama || 'System', 'update', null, null, null, 'Kandidat dipulihkan dari hapus massal');
     }
 
     res.json({ success: true, message: `${rows.length} kandidat berhasil dipulihkan`, count: rows.length });

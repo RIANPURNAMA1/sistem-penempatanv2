@@ -93,7 +93,7 @@ export default function HistoryModal({ open, onOpenChange, kandidatId, kandidatN
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     
     const relevant = companyHistory.find(h => new Date(h.created_at).getTime() <= targetTime)
-    return relevant?.new_value || currentCompany || companies[0] || '-'
+    return relevant?.new_value || currentCompany || '-'
   }
 
   // Get SSW at specific date
@@ -104,7 +104,18 @@ export default function HistoryModal({ open, onOpenChange, kandidatId, kandidatN
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     
     const relevant = sswHistory.find(h => new Date(h.created_at).getTime() <= targetTime)
-    return relevant?.new_value || currentSSW || sswFields[0] || '-'
+    return relevant?.new_value || currentSSW || '-'
+  }
+
+  // Get Institusi at specific date
+  const getInstitusiAtDate = (targetDate: string) => {
+    const targetTime = new Date(targetDate).getTime()
+    const institusiHistory = history
+      .filter(h => h.field_name === 'institusi' && h.new_value)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    
+    const relevant = institusiHistory.find(h => new Date(h.created_at).getTime() <= targetTime)
+    return relevant?.new_value || currentInstitusi || '-'
   }
 
   const statusChanges = history.filter(h => h.field_name === 'status_progres')
@@ -317,6 +328,51 @@ export default function HistoryModal({ open, onOpenChange, kandidatId, kandidatN
                   </div>
                 </div>
               )}
+
+              {/* Detail History List */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <FileText size={16} className="text-gray-500" />
+                  Detail Riwayat Aktivitas
+                </h3>
+                <div className="space-y-2">
+                  {history.map((item, idx) => (
+                    <div key={idx} className="flex gap-3 p-3 border rounded-lg">
+                      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs shrink-0">
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 flex-wrap">
+                          <div>
+                            <p className="text-xs sm:text-sm font-medium text-gray-800">
+                              {item.description || `${item.action_type} - ${item.field_name}`}
+                            </p>
+                            {item.field_name === 'status_progres' && item.new_value && (
+                              <Badge variant="outline" className="text-xs mt-1">
+                                {statusConfig[item.new_value] || item.new_value}
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-gray-400 whitespace-nowrap">
+                            {formatDate(item.created_at)}
+                          </span>
+                        </div>
+                        {getInstitusiAtDate(item.created_at) !== '-' && (
+                          <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                            <GraduationCap size={12} />
+                            {getInstitusiAtDate(item.created_at)}
+                          </p>
+                        )}
+                        {item.admin_nama && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            oleh: {item.admin_nama}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>

@@ -862,7 +862,7 @@ if (updates.length === 0) {
 }
 
 const [kandidat] = await pool.query(
-  'SELECT nama_romaji, nomor_hp FROM kandidat_profil WHERE id = ?',
+  'SELECT nama_romaji, nomor_hp, status_progres FROM kandidat_profil WHERE id = ?',
   [req.params.id]
 );
 
@@ -873,7 +873,12 @@ if (!kandidat.length) {
   });
 }
 
-const { nama_romaji, nomor_hp } = kandidat[0];
+const { nama_romaji, nomor_hp, oldStatus } = kandidat[0];
+const newStatus = req.body.status_progres || null;
+
+if (newStatus && oldStatus !== newStatus) {
+  await addHistory(req.params.id, req.user?.id || null, req.user?.nama || 'System', 'status_change', 'status_progres', oldStatus, newStatus, `Progres diubah ke ${newStatus}`);
+}
 
 values.push(req.params.id);
 

@@ -96,10 +96,15 @@ const keberangkatanConfig: Record<
 const sswOptions = [
   "Pengolahan Makanan",
   "Pertanian",
+  "Gaishoku",
   "Kaigo (perawat)",
   "Building Cleaning",
   "Restoran",
   "Driver",
+  "Perhotelah",
+  "Perikanan",
+  "Perbaikan dan Perawatan Mobil",
+  "Konstruksi",
 ];
 const jenjangOptions = ["SD", "SMP", "SMA/SMK", "Perguruan Tinggi"];
 

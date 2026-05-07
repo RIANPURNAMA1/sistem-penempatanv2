@@ -656,6 +656,14 @@ const migrations = [
     },
     sql: `ALTER TABLE kandidat_profil ADD COLUMN deleted_at TIMESTAMP NULL DEFAULT NULL`
   },
+  {
+    name: 'change_rencana_pengiriman_uang_to_bigint',
+    check: async (conn) => {
+      const [cols] = await conn.query("SELECT COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_NAME = 'kandidat_profil' AND COLUMN_NAME = 'rencana_pengiriman_uang'");
+      return cols.length > 0 && cols[0].COLUMN_TYPE === 'bigint';
+    },
+    sql: `ALTER TABLE kandidat_profil MODIFY COLUMN rencana_pengiriman_uang BIGINT DEFAULT NULL`
+  },
 ];
 
 async function runMigrations() {

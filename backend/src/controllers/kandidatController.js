@@ -647,7 +647,7 @@ const updateStatus = async (req, res) => {
 
     await addHistory(
       req.params.id, req.user?.id || null, req.user?.nama || 'System',
-      'status_formulir', 'status_formulir', oldValue, status_formulir,
+      'status_change', 'status_formulir', oldValue, status_formulir,
       `Mengubah status formulir dari "${oldValue}" menjadi "${status_formulir}"`
     );
 
@@ -704,7 +704,7 @@ const updateProgres = async (req, res) => {
 
     await addHistory(
       req.params.id, req.user?.id || null, req.user?.nama || 'System',
-      'status_progres', 'status_progres', oldValue, status_progres,
+      'status_change', 'status_progres', oldValue, status_progres,
       `Mengubah progres dari "${oldValue || 'null'}" menjadi "${status_progres}"`
     );
 
@@ -738,7 +738,7 @@ const updateKeberangkatan = async (req, res) => {
 
     await addHistory(
       req.params.id, req.user?.id || null, req.user?.nama || 'System',
-      'status_keberangkatan', 'status_keberangkatan', oldValue, status_keberangkatan,
+      'status_change', 'status_keberangkatan', oldValue, status_keberangkatan,
       `Mengubah status keberangkatan dari "${oldValue || 'null'}" menjadi "${status_keberangkatan}"`
     );
 

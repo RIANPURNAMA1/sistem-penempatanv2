@@ -360,8 +360,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto bg-[#fafafa] overflow-visible">
-          <div className="p-4 sm:p-6 animate-fade-in overflow-visible">
+        <main className="flex-1 overflow-y-auto bg-[#fafafa]">
+          <div className="p-4 sm:p-6 animate-fade-in">
             {children}
           </div>
         </main>

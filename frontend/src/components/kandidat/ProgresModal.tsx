@@ -53,6 +53,7 @@ interface ProgresModalProps {
   onSave: () => void;
   loading: boolean;
   sertifikatSsw?: string;
+  perusahaanList?: { id: number; nama_perusahaan: string }[];
 }
 
 export default function ProgresModal({
@@ -63,6 +64,7 @@ export default function ProgresModal({
   onSave,
   loading,
   sertifikatSsw,
+  perusahaanList = [],
 }: ProgresModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -99,15 +101,33 @@ export default function ProgresModal({
             <p className="text-xs font-medium text-muted-foreground mb-3">JOB / PERUSAHAAN</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs">Nama Perusahaan</Label>
-                <Input
-                  value={formProgres.nama_perusahaan}
-                  onChange={(e) => updateFormProgres("nama_perusahaan", e.target.value)}
-                  placeholder="Nama perusahaan..."
-                />
+                <Label className="text-xs">P.Penempatan</Label>
+                {perusahaanList.length > 0 ? (
+                  <Select
+                    value={formProgres.nama_perusahaan}
+                    onValueChange={(v) => updateFormProgres("nama_perusahaan", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih perusahaan..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {perusahaanList.map((p: { id: number; nama_perusahaan: string }) => (
+                        <SelectItem key={p.id} value={p.nama_perusahaan}>
+                          {p.nama_perusahaan}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={formProgres.nama_perusahaan}
+                    onChange={(e) => updateFormProgres("nama_perusahaan", e.target.value)}
+                    placeholder="Nama perusahaan..."
+                  />
+                )}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Institusi</Label>
+                <Label className="text-xs">Institusi/Perusahaan</Label>
                 <Input
                   value={formProgres.institusi}
                   onChange={(e) => updateFormProgres("institusi", e.target.value)}

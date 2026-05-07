@@ -123,12 +123,12 @@ export default function DashboardPage() {
 
   const TABS = [
     { key: "verifikasi", label: "Verifikasi" },
-    { key: "kandidat", label: "Kandidat" },
+    { key: "kandidat", label: "statistik" },
     { key: "sertifikasi", label: "Sertifikasi" },
     ...(user?.role === "admin_penempatan"
       ? [{ key: "job order", label: "Job Order" }]
       : []),
-    { key: "interview", label: "Interview" },
+    { key: "interview", label: "Status kandidat" },
   ];
 
   return (

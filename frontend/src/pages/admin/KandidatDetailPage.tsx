@@ -129,6 +129,8 @@ export default function KandidatDetailPage() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
+  const [perusahaanList, setPerusahaanList] = useState<{ id: number; nama_perusahaan: string }[]>([]);
+
   const [formProgres, setFormProgres] =
     useState<FormProgres>(initialFormProgres);
 
@@ -182,6 +184,11 @@ export default function KandidatDetailPage() {
         });
       })
       .finally(() => setLoading(false));
+
+    api
+      .get("/perusahaan")
+      .then((r) => setPerusahaanList(r.data.data || []))
+      .catch(() => setPerusahaanList([]));
   }, [id]);
 
   const handleUpdateStatus = async () => {
@@ -298,6 +305,7 @@ export default function KandidatDetailPage() {
         onSave={handleUpdateProgres}
         loading={updatingProgres}
         sertifikatSsw={data.sertifikat_ssw}
+        perusahaanList={perusahaanList}
       />
 
       {showCVPreview && (

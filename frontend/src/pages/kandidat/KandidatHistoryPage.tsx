@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, Badge } from '@/components/ui/components'
 import { useNavigate } from 'react-router-dom'
 import api from '@/lib/api'
-import { History, FileText, Calendar, Building, Star, Loader2, User, AlertCircle, GraduationCap } from 'lucide-react'
+import { History, FileText, Calendar, Star, Loader2, AlertCircle, GraduationCap } from 'lucide-react'
 
 const statusConfig: Record<string, string> = {
   'Job Matching': 'Job Matching',
@@ -33,7 +33,6 @@ interface HistoryItem {
 interface KandidatProfile {
   id: number
   status_progres: string
-  nama_perusahaan: string
   institusi: string
   bidang_ssw: string
 }
@@ -79,9 +78,6 @@ export default function KandidatHistoryPage() {
       minute: '2-digit'
     })
   }
-
-  // Get current company from kandidat profile
-  const currentCompany = profil?.nama_perusahaan || ''
 
   // Get current Institusi from kandidat profile
   const currentInstitusi = profil?.institusi || ''
@@ -237,7 +233,7 @@ export default function KandidatHistoryPage() {
               <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <GraduationCap size={14} className="text-gray-600" />
-                  <span className="text-xs font-medium text-gray-600">Perusahaan</span>
+                  <span className="text-xs font-medium text-gray-600">Institusi</span>
                 </div>
                 <p className="text-sm font-medium text-gray-800 truncate">{institusis[0] || '-'}</p>
                 {institusis.length > 1 && <p className="text-xs text-gray-500">+{institusis.length - 1} lainnya</p>}

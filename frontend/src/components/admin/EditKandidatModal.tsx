@@ -220,8 +220,8 @@ export default function EditKandidatModal({
     if (normalized.startsWith('/')) return normalized
     if (normalized.startsWith('uploads/')) return `/${normalized}`
 
-    const firstSegment = normalized.split('/')[0]
-    if (firstSegment && firstSegment.includes('.')) return `/${normalized}`
+    const segments = normalized.split('/')
+    if (segments[0] && segments[0].includes('.')) return `https://${normalized}`
 
     return `/uploads/${normalized}`
   }

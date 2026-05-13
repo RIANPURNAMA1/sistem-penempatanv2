@@ -807,7 +807,12 @@ const cleanPath = (p: string): string => {
 
   cleaned = cleaned.replace(/[\[\]"]+/g, "");
   cleaned = cleaned.replace(/^["']+|["']+$/g, "");
-  cleaned = cleaned.replace(/\/+/g, "/");
+  const proto = cleaned.match(/^(https?:)\/\//i);
+  if (proto) {
+    cleaned = proto[0] + cleaned.substring(proto[0].length).replace(/\/+/g, "/");
+  } else {
+    cleaned = cleaned.replace(/\/+/g, "/");
+  }
   cleaned = cleaned.replace(/dokumen\//gi, "");
   cleaned = cleaned.replace(/\/$/, "");
 
@@ -840,7 +845,12 @@ const parseDokumenPath = (path: any): string[] => {
 
     s = s.replace(/[\[\]"]+/g, "");
     s = s.replace(/^["']+|["']+$/g, "");
-    s = s.replace(/\/+/g, "/");
+    const proto = s.match(/^(https?:)\/\//i);
+    if (proto) {
+      s = proto[0] + s.substring(proto[0].length).replace(/\/+/g, "/");
+    } else {
+      s = s.replace(/\/+/g, "/");
+    }
 
     s = s.replace(/\/$/, "");
     s = s.trim();
@@ -875,6 +885,14 @@ function LinkFile({
 }) {
   const pathArray = parseDokumenPath(path);
 
+  const buildUrl = (p: string): string => {
+    if (!p) return "#";
+    if (p.match(/^https?:\/\//)) return p;
+    const segs = p.split("/");
+    if (segs[0] && segs[0].includes(".")) return `https://${p}`;
+    return `https://matchingjob.mendunia.id/dokumen/${p}`;
+  };
+
   if (pathArray.length === 0)
     return (
       <div className="p-2 border border-dashed rounded text-gray-400 text-xs text-center">
@@ -885,15 +903,7 @@ function LinkFile({
   return (
     <div className="flex flex-col gap-1">
       {pathArray.map((p, i) => {
-        let fullUrl = p;
-
-        if (p.startsWith("http")) {
-          fullUrl = p;
-        } else if (p.includes("matchingjob.mendunia.id")) {
-          fullUrl = `https://${p}`;
-        } else {
-          fullUrl = `https://matchingjob.mendunia.id/dokumen/${p}`;
-        }
+        const fullUrl = buildUrl(p);
 
         return (
           <a
@@ -922,23 +932,20 @@ function LinkFileWithDownload({
   const pathArray = parseDokumenPath(path);
   const [downloading, setDownloading] = useState<string | null>(null);
 
+  const buildUrl = (p: string): string => {
+    if (!p) return "#";
+    if (p.match(/^https?:\/\//)) return p;
+    const segs = p.split("/");
+    if (segs[0] && segs[0].includes(".")) return `https://${p}`;
+    return `https://matchingjob.mendunia.id/dokumen/${p}`;
+  };
+
   const handleDownload = async (p: string, idx: number) => {
     const key = `${idx}`;
     setDownloading(key);
 
     try {
-      let fullUrl = p;
-
-      if (p.startsWith("http")) {
-        fullUrl = p;
-      } else if (p.includes("matchingjob.mendunia.id")) {
-        fullUrl = `https://${p}`;
-      } else {
-        fullUrl = `https://matchingjob.mendunia.id/dokumen/${p}`;
-      }
-
-      fullUrl = encodeURI(fullUrl);
-
+      const fullUrl = encodeURI(buildUrl(p));
       window.open(fullUrl, "_blank");
     } catch {
       toast({
@@ -961,16 +968,12 @@ function LinkFileWithDownload({
   return (
     <div className="flex flex-col gap-1">
       {pathArray.map((p, i) => {
-        let fullUrl = p;
-
-        if (!p.startsWith("http")) {
-          fullUrl = `https://matchingjob.mendunia.id/dokumen/${p}`;
-        }
+        const fullUrl = encodeURI(buildUrl(p));
 
         return (
           <div key={i} className="flex gap-1">
             <a
-              href={encodeURI(fullUrl)}
+              href={fullUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 block p-2 border border-blue-200 rounded text-blue-600 text-xs text-center hover:bg-blue-50"

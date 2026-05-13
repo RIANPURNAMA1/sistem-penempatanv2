@@ -37,10 +37,13 @@ const getFileUrl = (pathFile: string | null | undefined): string => {
   // Explicit uploads/ prefix
   if (normalized.startsWith("uploads/")) return `/${normalized}`;
 
-  // Old data: first segment contains a dot (domain-like folder name)
+  // Old data: first segment is a hostname (contains dot)
   // e.g. "matchingjob.mendunia.id/dokumen/foto/file.jpg"
-  const firstSegment = normalized.split("/")[0];
-  if (firstSegment && firstSegment.includes(".")) return `/${normalized}`;
+  // → https://matchingjob.mendunia.id/dokumen/foto/file.jpg
+  const segments = normalized.split("/");
+  if (segments[0] && segments[0].includes(".")) {
+    return `https://${normalized}`;
+  }
 
   // New data: stored in uploads/ directory
   return `/uploads/${normalized}`;

@@ -30,6 +30,8 @@ router.patch('/:id/progres-lengkap', authorize('admin_penempatan', 'admin_cabang
 router.patch('/:id/screening', authorize('admin_penempatan', 'admin_cabang'), ctrl.screeningKandidat);
 router.post('/batch-screening', authorize('admin_penempatan', 'admin_cabang'), ctrl.batchScreening);
 router.put('/:id/update-profile', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateProfileByAdmin);
+router.post('/:id/upload-dokumen', authorize('admin_penempatan', 'admin_cabang'), uploadDokumenMiddleware, ctrl.adminUploadDokumen);
+router.delete('/:id/dokumen', authorize('admin_penempatan', 'admin_cabang'), ctrl.adminDeleteDokumen);
 router.post('/import', authorize('admin_penempatan', 'admin_cabang'), ctrl.importKandidat);
 
 // Soft delete & restore

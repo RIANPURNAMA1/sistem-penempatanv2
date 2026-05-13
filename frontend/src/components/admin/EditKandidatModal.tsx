@@ -8,7 +8,7 @@ import { toast } from '@/hooks/useToast'
 import api from '@/lib/api'
 import {
   Loader2, Save, User, Heart, GraduationCap, Briefcase,
-  Star, Users, Globe, Target, Paperclip, Plus, Trash2, FileText, CheckCircle
+  Star, Users, Globe, Target, Paperclip, Plus, Trash2, FileText, CheckCircle, Upload
 } from 'lucide-react'
 
 interface EditKandidatModalProps {
@@ -206,6 +206,62 @@ export default function EditKandidatModal({
         ? p.sertifikat_ssw.filter((s: string) => s !== val)
         : [...p.sertifikat_ssw, val],
     }))
+
+  // ── dokumen upload ──
+  const [uploading, setUploading] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
+
+  const getFileUrl = (path_file: string) => {
+    if (!path_file) return '#'
+    const cleaned = path_file.replace(/^(\.\/|\.\.\/|uploads\/)+/, '')
+    return `/uploads/${cleaned}`
+  }
+
+  const handleUploadDokumen = async (jenis_dokumen: string, file: File) => {
+    setUploading(jenis_dokumen)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('jenis_dokumen', jenis_dokumen)
+
+      const res = await api.post(`/kandidat/${kandidatId}/upload-dokumen?jenis_dokumen=${jenis_dokumen}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+
+      if (res.data.success) {
+        toast({ title: 'Dokumen berhasil diupload', variant: 'success' as any })
+        const updated = await api.get(`/kandidat/${kandidatId}`)
+        setForm((p: any) => ({ ...p, dokumen: updated.data.data.dokumen }))
+      }
+    } catch (err: any) {
+      toast({
+        title: err.response?.data?.message || 'Gagal upload dokumen',
+        variant: 'destructive'
+      })
+    } finally {
+      setUploading(null)
+    }
+  }
+
+  const handleDeleteDokumen = async (jenis_dokumen: string) => {
+    setDeleting(jenis_dokumen)
+    try {
+      const res = await api.delete(`/kandidat/${kandidatId}/dokumen?jenis_dokumen=${jenis_dokumen}`)
+
+      if (res.data.success) {
+        toast({ title: 'Dokumen berhasil dihapus', variant: 'success' as any })
+        const updated = await api.get(`/kandidat/${kandidatId}`)
+        setForm((p: any) => ({ ...p, dokumen: updated.data.data.dokumen }))
+      }
+    } catch (err: any) {
+      toast({
+        title: err.response?.data?.message || 'Gagal hapus dokumen',
+        variant: 'destructive'
+      })
+    } finally {
+      setDeleting(null)
+    }
+  }
 
   // ── save ──
   const handleSave = async () => {
@@ -908,45 +964,115 @@ export default function EditKandidatModal({
               )}
 
               {/* ══════════════════════════════════════════════
-                  SECTION 9 – DOKUMEN (view-only)
+                  SECTION 9 – DOKUMEN (with upload)
               ══════════════════════════════════════════════ */}
               {section === 9 && (
                 <div className="space-y-4 py-2">
                   <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">📎 Dokumen Kandidat</p>
-                  <p className="text-sm text-gray-500">
-                    Dokumen ditampilkan sebagai referensi. Untuk upload/hapus, gunakan dashboard kandidat.
-                  </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {DOKUMEN_TYPES.map(dt => {
                       const doc = form.dokumen?.find((d: any) => d.jenis_dokumen === dt.key)
+                      const isUploading = uploading === dt.key
+                      const isDeleting = deleting === dt.key
                       return (
                         <div
                           key={dt.key}
                           className={`border rounded-lg p-4 ${doc ? 'border-emerald-200 bg-emerald-50/50' : 'border-gray-200'}`}
                         >
-                          <div className="flex items-center gap-2 mb-1">
-                            {doc
-                              ? <CheckCircle size={14} className="text-emerald-500 shrink-0" />
-                              : <FileText    size={14} className="text-gray-400 shrink-0" />
-                            }
-                            <p className="font-medium text-sm">{dt.label}{!dt.optional && ' *'}</p>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              {doc
+                                ? <CheckCircle size={14} className="text-emerald-500 shrink-0" />
+                                : <FileText size={14} className="text-gray-400 shrink-0" />
+                              }
+                              <p className="font-medium text-sm">{dt.label}{!dt.optional && ' *'}</p>
+                            </div>
                           </div>
                           {doc ? (
-                            <div>
-                              <p className="text-xs text-gray-500 truncate">{doc.nama_file}</p>
-                              {doc.path_file && (
-                                <a
-                                  href={doc.path_file.startsWith('http') ? doc.path_file : `/${doc.path_file}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-blue-600 underline mt-1 inline-block"
+                            <div className="flex items-center justify-between">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs text-gray-500 truncate">{doc.nama_file}</p>
+                                {doc.path_file && (
+                                  <a
+                                    href={getFileUrl(doc.path_file)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 underline mt-1 inline-block"
+                                  >
+                                    Lihat File
+                                  </a>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 ml-2 shrink-0">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 hover:text-destructive"
+                                  onClick={() => handleDeleteDokumen(dt.key)}
+                                  disabled={isDeleting || isUploading}
+                                  title="Hapus dokumen"
                                 >
-                                  Lihat File
-                                </a>
-                              )}
+                                  {isDeleting
+                                    ? <Loader2 size={13} className="animate-spin" />
+                                    : <Trash2 size={13} />
+                                  }
+                                </Button>
+                                <input
+                                  type="file"
+                                  id={`file-${dt.key}`}
+                                  className="hidden"
+                                  accept="image/jpeg,image/png,application/pdf,video/mp4"
+                                  onChange={e => {
+                                    const file = e.target.files?.[0]
+                                    if (file) handleUploadDokumen(dt.key, file)
+                                    e.target.value = ''
+                                  }}
+                                  disabled={isUploading}
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => document.getElementById(`file-${dt.key}`)?.click()}
+                                  disabled={isUploading || isDeleting}
+                                >
+                                  {isUploading
+                                    ? <Loader2 size={12} className="animate-spin mr-1" />
+                                    : <Upload size={12} className="mr-1" />
+                                  }
+                                  {isUploading ? 'Uploading...' : 'Ganti'}
+                                </Button>
+                              </div>
                             </div>
                           ) : (
-                            <p className="text-xs text-gray-400">Belum diupload</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-gray-400">Belum diupload</p>
+                              <input
+                                type="file"
+                                id={`file-${dt.key}`}
+                                className="hidden"
+                                accept="image/jpeg,image/png,application/pdf,video/mp4"
+                                onChange={e => {
+                                  const file = e.target.files?.[0]
+                                  if (file) handleUploadDokumen(dt.key, file)
+                                  e.target.value = ''
+                                }}
+                                disabled={isUploading}
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => document.getElementById(`file-${dt.key}`)?.click()}
+                                disabled={isUploading}
+                              >
+                                {isUploading
+                                  ? <Loader2 size={12} className="animate-spin mr-1" />
+                                  : <Upload size={12} className="mr-1" />
+                                }
+                                {isUploading ? 'Uploading...' : 'Upload'}
+                              </Button>
+                            </div>
                           )}
                         </div>
                       )

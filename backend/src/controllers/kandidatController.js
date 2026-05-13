@@ -1072,8 +1072,12 @@ const batchScreening = async (req, res) => {
 // ============================================================
 // ✅ UPLOAD DOKUMEN — FIXED PATH & SIZE LIMIT (500KB)
 // ============================================================
-const fs = require('fs'); // Pastikan import fs di bagian atas file
+const fs = require('fs');
+const path = require('path');
 
+// ============================================================
+// UPLOAD DOKUMEN (KANDIDAT)
+// ============================================================
 const uploadDokumen = async (req, res) => {
   try {
     if (!req.file)
@@ -1132,6 +1136,81 @@ const uploadDokumen = async (req, res) => {
   } catch (err) {
     // Jika terjadi error, coba hapus file yang gagal diproses
     if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// ============================================================
+// UPLOAD DOKUMEN (ADMIN)
+// ============================================================
+const adminUploadDokumen = async (req, res) => {
+  try {
+    if (!req.file)
+      return res.status(400).json({ success: false, message: 'File tidak ditemukan' });
+
+    const kandidatId = req.params.id;
+    const { jenis_dokumen } = req.body;
+
+    const [kandidat] = await pool.query('SELECT id FROM kandidat_profil WHERE id = ?', [kandidatId]);
+    if (!kandidat.length) {
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(404).json({ success: false, message: 'Kandidat tidak ditemukan' });
+    }
+
+    const normalizedPath = req.file.path
+      .replace(/\\/g, '/')
+      .replace(/^.*?uploads\//, '');
+
+    await pool.query(
+      'DELETE FROM kandidat_dokumen WHERE kandidat_id = ? AND jenis_dokumen = ?',
+      [kandidatId, jenis_dokumen]
+    );
+
+    await pool.query(
+      'INSERT INTO kandidat_dokumen (kandidat_id, jenis_dokumen, nama_file, path_file, ukuran_file, mime_type) VALUES (?,?,?,?,?,?)',
+      [kandidatId, jenis_dokumen, req.file.originalname, normalizedPath, req.file.size, req.file.mimetype]
+    );
+
+    res.json({
+      success: true,
+      message: 'Dokumen berhasil diupload',
+      path: normalizedPath,
+      size: `${(req.file.size / 1024).toFixed(2)} KB`
+    });
+  } catch (err) {
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// ============================================================
+// DELETE DOKUMEN (ADMIN)
+// ============================================================
+const adminDeleteDokumen = async (req, res) => {
+  try {
+    const kandidatId = req.params.id;
+    const { jenis_dokumen } = req.query;
+
+    if (!jenis_dokumen)
+      return res.status(400).json({ success: false, message: 'jenis_dokumen required' });
+
+    const [docs] = await pool.query(
+      'SELECT id, path_file FROM kandidat_dokumen WHERE kandidat_id = ? AND jenis_dokumen = ?',
+      [kandidatId, jenis_dokumen]
+    );
+
+    if (!docs.length)
+      return res.status(404).json({ success: false, message: 'Dokumen tidak ditemukan' });
+
+    const filePath = path.join(__dirname, '../../uploads', docs[0].path_file);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+    await pool.query('DELETE FROM kandidat_dokumen WHERE id = ?', [docs[0].id]);
+
+    res.json({ success: true, message: 'Dokumen berhasil dihapus' });
+  } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
@@ -1839,6 +1918,8 @@ module.exports = {
   screeningKandidat,
   batchScreening,
   uploadDokumen,
+  adminUploadDokumen,
+  adminDeleteDokumen,
   getStats,
   getInterviewStats,
   getHistory,

@@ -53,6 +53,8 @@ export default function JepangCard({ data, bool }: JepangCardProps) {
             value={data.kenalan_jepang_detail || "-"}
           />
           <InfoRow label="Bidang SSW" value={data.sertifikat_ssw || "-"} />
+          <InfoRow label="ID Prometric" value={data.id_prometric || "-"} />
+          <InfoRow label="Password Prometric" value={data.password_prometric || "-"} />
         </div>
       </CardContent>
     </Card>

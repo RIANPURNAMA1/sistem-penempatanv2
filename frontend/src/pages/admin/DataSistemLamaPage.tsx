@@ -517,42 +517,70 @@ function LinkFile({ label, path }: { label: string, path?: string | string[] | n
 function LinkFileWithDownload({ label, path }: { label: string, path?: string | string[] | null }) {
   const pathArray = parseDokumenPath(path)
   const [downloading, setDownloading] = useState<string | null>(null)
-  
+
   const handleDownload = async (p: string, idx: number) => {
     const key = `${idx}`
     setDownloading(key)
+
     try {
-      await downloadDokumen(p, `${label}_${idx + 1}`)
+      let fullUrl = p
+
+      if (!p.startsWith('http')) {
+        fullUrl = `https://matchingjob.mendunia.id/dokumen/${p}`
+      }
+
+      fullUrl = encodeURI(fullUrl)
+
+      window.open(fullUrl, '_blank')
     } catch {
-      toast({ title: 'Gagal download dokumen', variant: 'destructive' })
+      toast({
+        title: 'Gagal membuka dokumen',
+        variant: 'destructive'
+      })
     } finally {
       setDownloading(null)
     }
   }
-  
-  if (pathArray.length === 0) return <div className="p-2 border border-dashed rounded text-gray-400 text-xs text-center">{label} (-)</div>
-  
+
+  if (pathArray.length === 0) {
+    return (
+      <div className="p-2 border border-dashed rounded text-gray-400 text-xs text-center">
+        {label} (-)
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-1">
       {pathArray.map((p, i) => {
         let fullUrl = p
-        if (p.startsWith('http')) {
-          fullUrl = p
-        } else {
+
+        if (!p.startsWith('http')) {
           fullUrl = `https://matchingjob.mendunia.id/dokumen/${p}`
         }
+
         return (
           <div key={i} className="flex gap-1">
-            <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="flex-1 block p-2 border border-blue-200 rounded text-blue-600 text-xs text-center hover:bg-blue-50">
-              <FileText size={12} className="mx-auto mb-1" />{label} {pathArray.length > 1 ? `#${i + 1}` : ''}
+            <a
+              href={encodeURI(fullUrl)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 block p-2 border border-blue-200 rounded text-blue-600 text-xs text-center hover:bg-blue-50"
+            >
+              <FileText size={12} className="mx-auto mb-1" />
+              {label} {pathArray.length > 1 ? `#${i + 1}` : ''}
             </a>
+
             <button
               onClick={() => handleDownload(p, i)}
               disabled={downloading === `${i}`}
               className="p-2 border border-green-200 rounded text-green-600 text-xs hover:bg-green-50 disabled:opacity-50"
               title="Download"
             >
-              {downloading === `${i}` ? <Loader2 size={12} className="animate-spin mx-auto" /> : <Download size={12} className="mx-auto" />}
+              {downloading === `${i}`
+                ? <Loader2 size={12} className="animate-spin mx-auto" />
+                : <Download size={12} className="mx-auto" />
+              }
             </button>
           </div>
         )

@@ -213,8 +213,17 @@ export default function EditKandidatModal({
 
   const getFileUrl = (path_file: string) => {
     if (!path_file) return '#'
-    const cleaned = path_file.replace(/^(\.\/|\.\.\/|uploads\/)+/, '')
-    return `/uploads/${cleaned}`
+
+    const normalized = path_file.replace(/\\/g, '/').replace(/^\.\//, '')
+
+    if (normalized.match(/^https?:\/\//)) return normalized
+    if (normalized.startsWith('/')) return normalized
+    if (normalized.startsWith('uploads/')) return `/${normalized}`
+
+    const firstSegment = normalized.split('/')[0]
+    if (firstSegment && firstSegment.includes('.')) return `/${normalized}`
+
+    return `/uploads/${normalized}`
   }
 
   const handleUploadDokumen = async (jenis_dokumen: string, file: File) => {

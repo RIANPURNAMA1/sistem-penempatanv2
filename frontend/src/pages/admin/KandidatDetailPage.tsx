@@ -25,11 +25,25 @@ import ProgresDetailCard from "@/components/kandidat/ProgresDetailCard";
 
 const getFileUrl = (pathFile: string | null | undefined): string => {
   if (!pathFile) return "";
-  const cleaned = pathFile
-    .replace(/\\/g, "/")
-    .replace(/^\/+/, "")
-    .replace(/^uploads\//, "");
-  return `/uploads/${cleaned}`;
+
+  const normalized = pathFile.replace(/\\/g, "/").replace(/^\.\//, "");
+
+  // Full URL already
+  if (normalized.match(/^https?:\/\//)) return normalized;
+
+  // Already absolute path
+  if (normalized.startsWith("/")) return normalized;
+
+  // Explicit uploads/ prefix
+  if (normalized.startsWith("uploads/")) return `/${normalized}`;
+
+  // Old data: first segment contains a dot (domain-like folder name)
+  // e.g. "matchingjob.mendunia.id/dokumen/foto/file.jpg"
+  const firstSegment = normalized.split("/")[0];
+  if (firstSegment && firstSegment.includes(".")) return `/${normalized}`;
+
+  // New data: stored in uploads/ directory
+  return `/uploads/${normalized}`;
 };
 
 const statusFormulirConfig: Record<string, { label: string; variant: string }> =

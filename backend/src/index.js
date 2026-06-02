@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { getRedis } = require('./config/redis');
 
 const app = express();
 app.use(cors({
@@ -42,4 +43,14 @@ const PORT = process.env.PORT || 5005;
 app.listen(PORT, () => {
   console.log(`✅ Server berjalan di port ${PORT}`);
   console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
+  const redis = getRedis();
+  if (redis) {
+    redis.connect().then(() => {
+      console.log('⚡ Redis cache siap');
+    }).catch(err => {
+      console.log('⚠️  Redis tidak tersedia, cache dinonaktifkan');
+    });
+  } else {
+    console.log('ℹ️  Redis tidak dikonfigurasi (REDIS_URL kosong)');
+  }
 });

@@ -1,8 +1,19 @@
 const pool = require('../config/database');
+const cache = require('../utils/cache');
+
+const CACHE_PREFIX = 'cabang';
+
+const invalidateCabangCache = async () => {
+  await cache.delByPrefix(CACHE_PREFIX);
+};
 
 const getAll = async (req, res) => {
   try {
+    const cached = await cache.get(CACHE_PREFIX);
+    if (cached) return res.json({ success: true, data: cached });
+
     const [rows] = await pool.query('SELECT * FROM cabang ORDER BY created_at DESC');
+    await cache.set(CACHE_PREFIX, rows, 300);
     res.json({ success: true, data: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });
@@ -31,6 +42,7 @@ const create = async (req, res) => {
       'INSERT INTO cabang (nama_cabang, kode_cabang, alamat, kota, provinsi, telepon, email, status) VALUES (?,?,?,?,?,?,?,?)',
       [nama_cabang, kode_cabang, alamat, kota, provinsi, telepon, email, status || 'aktif']
     );
+    await invalidateCabangCache();
     res.status(201).json({ success: true, message: 'Cabang berhasil ditambahkan', id: result.insertId });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });
@@ -46,6 +58,7 @@ const update = async (req, res) => {
       'UPDATE cabang SET nama_cabang=?, kode_cabang=?, alamat=?, kota=?, provinsi=?, telepon=?, email=?, status=? WHERE id=?',
       [nama_cabang, kode_cabang, alamat, kota, provinsi, telepon, email, status, req.params.id]
     );
+    await invalidateCabangCache();
     res.json({ success: true, message: 'Cabang berhasil diupdate' });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });
@@ -57,6 +70,7 @@ const remove = async (req, res) => {
     const [existing] = await pool.query('SELECT id FROM cabang WHERE id = ?', [req.params.id]);
     if (!existing.length) return res.status(404).json({ success: false, message: 'Cabang tidak ditemukan' });
     await pool.query('DELETE FROM cabang WHERE id = ?', [req.params.id]);
+    await invalidateCabangCache();
     res.json({ success: true, message: 'Cabang berhasil dihapus' });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });

@@ -1,11 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
+const cache = require('../utils/cache');
+
+const invalidateJoborderCache = async () => {
+  await cache.delByPrefix('joborder');
+};
 
 // GET all job orders with kandidat and perusahaan data
 router.get('/', async (req, res) => {
   try {
     const { tanggal_awal, tanggal_akhir } = req.query;
+    const cacheKey = `joborder:${JSON.stringify({ tanggal_awal, tanggal_akhir })}`;
+    const cached = await cache.get(cacheKey);
+    if (cached) return res.json({ success: true, data: cached });
     
     let whereClause = '';
     const params = [];
@@ -40,6 +48,7 @@ router.get('/', async (req, res) => {
     results.forEach(r => {
       r.kandidat_ids = r.kandidat_ids ? r.kandidat_ids.split(',').map(Number) : [];
     });
+    await cache.set(cacheKey, results, 30);
     res.json({ success: true, data: results });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -131,6 +140,7 @@ router.post('/', async (req, res) => {
     }
 
     await connection.commit();
+    await invalidateJoborderCache();
     res.json({ success: true, message: 'Job order berhasil ditambahkan', data: { id: jobOrderId } });
   } catch (err) {
     await connection.rollback();
@@ -221,6 +231,7 @@ router.put('/:id', async (req, res) => {
     }
 
     await connection.commit();
+    await invalidateJoborderCache();
     res.json({ success: true, message: 'Job order berhasil diupdate' });
   } catch (err) {
     await connection.rollback();
@@ -234,6 +245,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM job_order WHERE id = ?', [req.params.id]);
+    await invalidateJoborderCache();
     res.json({ success: true, message: 'Job order berhasil dihapus' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

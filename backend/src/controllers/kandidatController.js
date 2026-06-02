@@ -1,5 +1,17 @@
 const pool = require('../config/database');
 const axios = require('axios');
+const cache = require('../utils/cache');
+
+const INVALIDATE_PREFIXES = ['stats', 'kandidat_list', 'kandidat:'];
+
+const invalidateKandidatCache = async (kandidatId) => {
+  for (const prefix of INVALIDATE_PREFIXES) {
+    await cache.delByPrefix(prefix);
+  }
+  if (kandidatId) {
+    await cache.del(`kandidat:${kandidatId}`);
+  }
+};
 
 // ============================================================
 // KONFIGURASI STARSENDER
@@ -105,6 +117,12 @@ const getAll = async (req, res) => {
     } = req.query;
 
     const user = req.user;
+
+    const cacheKey = cache.generateKey('kandidat_list', req);
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return res.json({ success: true, data: cached });
+    }
 
     // 🔥 BASE URL DINAMIS (AUTO DETECT)
     const BASE_URL = `${req.protocol}://${req.get("host")}`;
@@ -223,13 +241,9 @@ const getAll = async (req, res) => {
       };
     });
 
-    // ============================================================
-    // RESPONSE
-    // ============================================================
-    res.json({
-      success: true,
-      data,
-    });
+    await cache.set(cacheKey, data, 15);
+
+    res.json({ success: true, data });
 
   } catch (err) {
     console.error("ERROR GET ALL KANDIDAT:", err);
@@ -246,6 +260,18 @@ const getAll = async (req, res) => {
 const getById = async (req, res) => {
   try {
     const user = req.user;
+
+    const cacheKey = `kandidat:${req.params.id}`;
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      if (
+        user.role === "admin_cabang" &&
+        cached.cabang_id !== user.cabang_id
+      ) {
+        return res.status(403).json({ success: false, message: "Akses ditolak" });
+      }
+      return res.json({ success: true, data: cached });
+    }
 
     // 🔥 BASE URL DINAMIS
     const BASE_URL = `${req.protocol}://${req.get("host")}`;
@@ -343,19 +369,17 @@ const getById = async (req, res) => {
       [dataProfil.id]
     );
 
-    // ============================================================
-    // RESPONSE FINAL
-    // ============================================================
-    res.json({
-      success: true,
-      data: {
-        ...dataProfil,
-        pendidikan,
-        pengalaman,
-        keluarga,
-        dokumen,
-      },
-    });
+    const result = {
+      ...dataProfil,
+      pendidikan,
+      pengalaman,
+      keluarga,
+      dokumen,
+    };
+
+    await cache.set(cacheKey, result, 30);
+
+    res.json({ success: true, data: result });
 
   } catch (err) {
     console.error("ERROR GET BY ID:", err);
@@ -670,6 +694,7 @@ const updateStatus = async (req, res) => {
       await sendWhatsApp(nomor_hp, pesanWA);
     }
 
+    await invalidateKandidatCache(req.params.id);
     res.json({ success: true, message: 'Status berhasil diupdate dan notifikasi dikirim' });
   } catch (err) {
     console.error(err);
@@ -708,6 +733,7 @@ const updateProgres = async (req, res) => {
       `Mengubah progres dari "${oldValue || 'null'}" menjadi "${status_progres}"`
     );
 
+    await invalidateKandidatCache(req.params.id);
     res.json({ success: true, message: 'Progres berhasil diupdate' });
   } catch (err) {
     console.error(err);
@@ -742,6 +768,7 @@ const updateKeberangkatan = async (req, res) => {
       `Mengubah status keberangkatan dari "${oldValue || 'null'}" menjadi "${status_keberangkatan}"`
     );
 
+    await invalidateKandidatCache(req.params.id);
     res.json({ success: true, message: 'Status keberangkatan berhasil diupdate' });
   } catch (err) {
     console.error(err);
@@ -902,6 +929,7 @@ if (nomor_hp) {
   await sendWhatsApp(nomor_hp, pesanWA);
 }
 
+await invalidateKandidatCache(req.params.id);
 res.json({
   success: true,
   message: 'Berhasil update tanpa error'
@@ -951,6 +979,7 @@ const submitForm = async (req, res) => {
       console.error('[WHATSAPP] Gagal mengirim notifikasi:', err.message)
     );
 
+    await invalidateKandidatCache(kandidatId);
     res.json({ success: true, message: 'Formulir berhasil dikirim', status: 'submitted' });
   } catch (err) {
     console.error(err);
@@ -1003,6 +1032,7 @@ const screeningKandidat = async (req, res) => {
 
     addHistory(id, adminId, adminNama, 'status_change', 'status_formulir', profil[0].status_formulir, 'approved', message);
 
+    await invalidateKandidatCache(id);
     res.json({ success: true, message, hasJft, hasSsw });
   } catch (err) {
     console.error(err);
@@ -1056,6 +1086,7 @@ const batchScreening = async (req, res) => {
       }
     }
 
+    await invalidateKandidatCache();
     res.json({ 
       success: true, 
       message: `${approved} kandidat disetujui, ${skipped} dilewati (tidak ada sertifikat)`,
@@ -1127,6 +1158,8 @@ const uploadDokumen = async (req, res) => {
       [profil[0].id, jenis_dokumen, req.file.originalname, normalizedPath, req.file.size, req.file.mimetype]
     );
 
+    const kandidatId = profil[0].id;
+    await invalidateKandidatCache(kandidatId);
     res.json({ 
       success: true, 
       message: 'Dokumen berhasil diupload', 
@@ -1172,6 +1205,7 @@ const adminUploadDokumen = async (req, res) => {
       [kandidatId, jenis_dokumen, req.file.originalname, normalizedPath, req.file.size, req.file.mimetype]
     );
 
+    await invalidateKandidatCache(kandidatId);
     res.json({
       success: true,
       message: 'Dokumen berhasil diupload',
@@ -1209,6 +1243,7 @@ const adminDeleteDokumen = async (req, res) => {
 
     await pool.query('DELETE FROM kandidat_dokumen WHERE id = ?', [docs[0].id]);
 
+    await invalidateKandidatCache(kandidatId);
     res.json({ success: true, message: 'Dokumen berhasil dihapus' });
   } catch (err) {
     console.error(err);
@@ -1223,6 +1258,12 @@ const getStats = async (req, res) => {
   try {
     const user = req.user;
     const { start_date, end_date, filter_type } = req.query;
+
+    const cacheKey = cache.generateKey('stats', req);
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return res.json({ success: true, data: cached, fromCache: true });
+    }
     
     let dateFilter = '';
     const dateParams = [];
@@ -1296,7 +1337,6 @@ const getStats = async (req, res) => {
       GROUP BY kp.cabang_id, c.nama_cabang, kp.status_progres
       ORDER BY c.nama_cabang, kp.status_progres
     `, params);
-    console.log('byCabangProgres:', byCabangProgres);
 
     const jftWhere = whereClause ? whereClause : 'WHERE 1=1';
 
@@ -1380,8 +1420,6 @@ const getStats = async (req, res) => {
       ORDER BY c.nama_cabang
     `, interviewParams);
 
-    console.log('interviewByCabang:', interviewByCabang);
-
     // Interview & Lulus by Gender
     const [interviewByGender] = await pool.query(`
       SELECT kp.jenis_kelamin,
@@ -1392,24 +1430,25 @@ const getStats = async (req, res) => {
       GROUP BY kp.jenis_kelamin
     `, params);
 
-    res.json({
-      success: true,
-      data: { 
-        total: total[0].total, 
-        byStatus, 
-        byCabang, 
-        bySSWGender, 
-        bySSWProgres, 
-        byCabangProgres, 
-        jftByGender, 
-        jftByCabang, 
-        sswByGender, 
-        sswByCabang,
-        interviewByCabang,
-        interviewByGender,
-        allProfiles
-      },
-    });
+    const result = { 
+      total: total[0].total, 
+      byStatus, 
+      byCabang, 
+      bySSWGender, 
+      bySSWProgres, 
+      byCabangProgres, 
+      jftByGender, 
+      jftByCabang, 
+      sswByGender, 
+      sswByCabang,
+      interviewByCabang,
+      interviewByGender,
+      allProfiles
+    };
+
+    await cache.set(cacheKey, result, 30);
+
+    res.json({ success: true, data: result });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -1661,6 +1700,7 @@ const importKandidat = async (req, res) => {
     }
 
     await conn.commit();
+    await invalidateKandidatCache();
     res.json({ success: true, message: 'Kandidat berhasil diimport' });
 
   } catch (err) {
@@ -1677,9 +1717,12 @@ const importKandidat = async (req, res) => {
 // ============================================================
 const updateProfileByAdmin = async (req, res) => {
   const conn = await pool.getConnection();
+  const toNull = (val) => (val === '' || val === undefined ? null : val);
   try {
     const kandidatId = parseInt(req.params.id);
-    const profileData = req.body;
+    const { pendidikan, pengalaman, keluarga, penghasilan_keluarga, ...profileData } = req.body;
+
+    await conn.beginTransaction();
 
     const allowedFields = [
       'nama_katakana','nama_romaji','tempat_lahir','tanggal_lahir','umur','jenis_kelamin',
@@ -1688,7 +1731,8 @@ const updateProfileByAdmin = async (req, res) => {
       'nomor_hp','email_kontak','alamat_lengkap','kontak_ortu_nama','kontak_ortu_hp',
       'sudah_vaksin','penglihatan_kanan','penglihatan_kiri','berkacamata','lensa_kontak',
       'buta_warna','kondisi_kesehatan','riwayat_penyakit','bertato','merokok','minum_alkohol',
-      'intensitas_alkohol','level_jlpt','level_jft','lama_belajar_jepang','level_bahasa_jepang',
+      'intensitas_alkohol','pendidikan_terakhir',
+      'level_jlpt','level_jft','lama_belajar_jepang','level_bahasa_jepang',
       'pernah_ke_jepang','keluarga_di_jepang','tujuan_ke_jepang','alasan_ke_jepang',
       'cita_cita_setelah_jepang','rencana_pengiriman_uang','kelebihan_diri','kekurangan_diri',
       'hobi','keahlian','bersedia_shift','bersedia_lembur','bersedia_hari_libur',
@@ -1697,16 +1741,18 @@ const updateProfileByAdmin = async (req, res) => {
 
     const updates = {};
     allowedFields.forEach(f => {
-      if (profileData[f] !== undefined) updates[f] = profileData[f];
+      if (profileData[f] !== undefined) updates[f] = toNull(profileData[f]);
     });
+
+    if (penghasilan_keluarga !== undefined) {
+      updates['penghasilan_keluarga'] = toNull(penghasilan_keluarga);
+    }
 
     if (Object.keys(updates).length > 0) {
       if (updates.tanggal_lahir && typeof updates.tanggal_lahir === 'string') {
         updates.tanggal_lahir = updates.tanggal_lahir.split('T')[0];
       }
 
-      console.log('Updating fields:', Object.keys(updates));
-      console.log('Values:', Object.values(updates));
       const setClause = Object.keys(updates).map(k => `${k} = ?`).join(', ');
       await conn.query(
         `UPDATE kandidat_profil SET ${setClause} WHERE id = ?`,
@@ -1719,8 +1765,105 @@ const updateProfileByAdmin = async (req, res) => {
       );
     }
 
+    // ============================================================
+    // PENDIDIKAN
+    // ============================================================
+
+    if (pendidikan && Array.isArray(pendidikan)) {
+      await conn.query(
+        'DELETE FROM kandidat_pendidikan WHERE kandidat_id = ?',
+        [kandidatId]
+      );
+
+      for (const p of pendidikan) {
+        if (p.nama_sekolah || p.jenjang) {
+          await conn.query(
+            `INSERT INTO kandidat_pendidikan 
+            (kandidat_id, jenjang, nama_sekolah, bulan_masuk, tahun_masuk, bulan_lulus, tahun_lulus, jurusan)
+            VALUES (?,?,?,?,?,?,?,?)`,
+            [
+              kandidatId,
+              p.jenjang || null,
+              p.nama_sekolah || null,
+              p.bulan_masuk || null,
+              toNull(p.tahun_masuk),
+              p.bulan_lulus || null,
+              toNull(p.tahun_lulus),
+              p.jurusan || null
+            ]
+          );
+        }
+      }
+    }
+
+    // ============================================================
+    // PENGALAMAN
+    // ============================================================
+
+    if (pengalaman && Array.isArray(pengalaman)) {
+      await conn.query(
+        'DELETE FROM kandidat_pengalaman_kerja WHERE kandidat_id = ?',
+        [kandidatId]
+      );
+
+      for (const p of pengalaman) {
+        if (p.nama_perusahaan) {
+          await conn.query(
+            `INSERT INTO kandidat_pengalaman_kerja 
+            (kandidat_id, nama_perusahaan, alamat_perusahaan, posisi, bulan_masuk, tahun_masuk, bulan_keluar, tahun_keluar, masih_bekerja, deskripsi_pekerjaan)
+            VALUES (?,?,?,?,?,?,?,?,?,?)`,
+            [
+              kandidatId,
+              p.nama_perusahaan || null,
+              p.alamat_perusahaan || null,
+              p.posisi || null,
+              p.bulan_masuk || null,
+              toNull(p.tahun_masuk),
+              p.bulan_keluar || null,
+              toNull(p.tahun_keluar),
+              p.masih_bekerja || false,
+              p.deskripsi_pekerjaan || null
+            ]
+          );
+        }
+      }
+    }
+
+    // ============================================================
+    // KELUARGA
+    // ============================================================
+
+    if (keluarga && Array.isArray(keluarga)) {
+      await conn.query(
+        'DELETE FROM kandidat_keluarga WHERE kandidat_id = ?',
+        [kandidatId]
+      );
+
+      for (const k of keluarga) {
+        if (k.nama || k.hubungan) {
+          await conn.query(
+            `INSERT INTO kandidat_keluarga 
+            (kandidat_id, hubungan, nama, usia, pekerjaan, penghasilan, urutan)
+            VALUES (?,?,?,?,?,?,?)`,
+            [
+              kandidatId,
+              k.hubungan || null,
+              k.nama || null,
+              toNull(k.usia),
+              k.pekerjaan || null,
+              toNull(k.penghasilan),
+              k.urutan || 1
+            ]
+          );
+        }
+      }
+    }
+
+    await conn.commit();
+
     res.json({ success: true, message: 'Data berhasil disimpan' });
   } catch (err) {
+    await conn.rollback();
     console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });
   } finally {
@@ -1749,6 +1892,7 @@ const softDelete = async (req, res) => {
 
     await addHistory(id, req.user?.id || null, req.user?.nama || 'System', 'delete', null, null, null, 'Kandidat dihapus (soft delete)');
 
+    await invalidateKandidatCache(id);
     res.json({ success: true, message: 'Kandidat berhasil dihapus' });
   } catch (err) {
     console.error(err);
@@ -1777,6 +1921,7 @@ const restore = async (req, res) => {
 
     await addHistory(id, req.user?.id || null, req.user?.nama || 'System', 'update', null, null, null, 'Kandidat dipulihkan dari hapus');
 
+    await invalidateKandidatCache(id);
     res.json({ success: true, message: 'Kandidat berhasil dipulihkan' });
   } catch (err) {
     console.error(err);
@@ -1866,6 +2011,7 @@ const restoreAllDeleted = async (req, res) => {
       await addHistory(row.id, user.id || null, user.nama || 'System', 'update', null, null, null, 'Kandidat dipulihkan dari hapus massal');
     }
 
+    await invalidateKandidatCache();
     res.json({ success: true, message: `${rows.length} kandidat berhasil dipulihkan`, count: rows.length });
   } catch (err) {
     console.error(err);

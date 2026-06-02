@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, authorize } = require('../middleware/auth');
 const pool = require('../config/database');
+const cache = require('../utils/cache');
 
 let refreshScheduler = null;
 const setRefreshSchedulerFn = (fn) => { refreshScheduler = fn; };
@@ -13,9 +14,17 @@ const DEFAULT_SETTINGS = {
   auto_screening_range_end: { value: '18:00', type: 'string', description: 'Jam selesai range screening aktif (HH:MM)' },
 };
 
+const invalidateSettingsCache = async () => {
+  await cache.delByPrefix('settings');
+};
+
 router.get('/', async (req, res) => {
   try {
+    const cached = await cache.get('settings:all');
+    if (cached) return res.json({ success: true, data: cached });
+
     const [rows] = await pool.query('SELECT setting_key, setting_value, setting_type, description FROM sys_settings');
+    await cache.set('settings:all', rows, 120);
     res.json({ success: true, data: rows });
   } catch (err) {
     console.error(err);
@@ -59,6 +68,7 @@ router.put('/:key', authenticate, authorize('admin_penempatan'), async (req, res
       refreshScheduler();
     }
 
+    await invalidateSettingsCache();
     res.json({ success: true, message: 'Setting updated' });
   } catch (err) {
     console.error(err);
@@ -79,6 +89,7 @@ router.post('/:key/reset', authenticate, authorize('admin_penempatan'), async (r
       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), setting_type = VALUES(setting_type), description = VALUES(description)
     `, [req.params.key, def.value, def.type, def.description]);
 
+    await invalidateSettingsCache();
     res.json({ success: true, message: 'Setting direset ke default' });
   } catch (err) {
     console.error(err);

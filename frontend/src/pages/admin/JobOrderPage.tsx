@@ -817,17 +817,17 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Tanggal Mensetsu 1</label>
+                  <label className="text-sm font-medium text-slate-700">Tanggal Mensetsu 1 (opsional)</label>
                   <Input type="date" value={form.tanggal_mensetsu_1} onChange={e => setForm(p => ({ ...p, tanggal_mensetsu_1: e.target.value }))} />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Tanggal Mensetsu 2</label>
+                  <label className="text-sm font-medium text-slate-700">Tanggal Mensetsu 2 (opsional)</label>
                   <Input type="date" value={form.tanggal_mensetsu_2} onChange={e => setForm(p => ({ ...p, tanggal_mensetsu_2: e.target.value }))} />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Tanggal Mensetsu 3</label>
+                  <label className="text-sm font-medium text-slate-700">Tanggal Mensetsu 3 (opsional)</label>
                   <Input type="date" value={form.tanggal_mensetsu_3} onChange={e => setForm(p => ({ ...p, tanggal_mensetsu_3: e.target.value }))} />
                 </div>
 

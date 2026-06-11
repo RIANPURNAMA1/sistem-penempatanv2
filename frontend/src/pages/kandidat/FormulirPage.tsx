@@ -72,6 +72,19 @@ export default function FormulirPage() {
     pengalaman: [],
     keluarga: defaultKeluarga,
     sertifikat_ssw: [],
+    pernah_ke_jepang: null,
+    keluarga_di_jepang: null,
+    kenalan_di_jepang: null,
+    sudah_vaksin: null,
+    berkacamata: null,
+    lensa_kontak: null,
+    buta_warna: null,
+    bertato: null,
+    merokok: null,
+    minum_alkohol: null,
+    bersedia_shift: null,
+    bersedia_lembur: null,
+    bersedia_hari_libur: null,
   });
 
   useEffect(() => {

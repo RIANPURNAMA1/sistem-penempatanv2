@@ -117,15 +117,15 @@ router.post('/', async (req, res) => {
         nomor, perusahaan_id, institusi, tanggal_terbit, detail_job_order,
         bidang_ssw, nama_grup, link_grup, biaya_awal, biaya_akhir,
         tanggal_cv, pic_cv, tanggal_mensetsu_1, tanggal_mensetsu_2, tanggal_mensetsu_3,
-        status_kelulusan
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        status_kelulusan, keterangan
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const values = [
       nomor, perusahaan_id || null, institusi || null, tanggal_terbit, detail_job_order,
       bidang_ssw, nama_grup, link_grup, biaya_awal || 0, biaya_akhir || 0,
       tanggal_cv, pic_cv, tanggal_mensetsu_1, tanggal_mensetsu_2, tanggal_mensetsu_3,
-      status_kelulusan || 'Menunggu'
+      status_kelulusan || 'Menunggu', req.body.keterangan || null
     ];
 
     const [result] = await connection.query(sql, values);
@@ -193,7 +193,8 @@ router.put('/:id', async (req, res) => {
         tanggal_mensetsu_1 = ?,
         tanggal_mensetsu_2 = ?,
         tanggal_mensetsu_3 = ?,
-        status_kelulusan = ?
+        status_kelulusan = ?,
+        keterangan = ?
       WHERE id = ?
     `;
 
@@ -214,6 +215,7 @@ router.put('/:id', async (req, res) => {
       tanggal_mensetsu_2,
       tanggal_mensetsu_3,
       status_kelulusan,
+      req.body.keterangan || null,
       req.params.id
     ];
 
@@ -238,6 +240,18 @@ router.put('/:id', async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   } finally {
     connection.release();
+  }
+});
+
+// PATCH keterangan only (inline edit)
+router.patch('/:id/keterangan', async (req, res) => {
+  try {
+    const { keterangan } = req.body;
+    await pool.query('UPDATE job_order SET keterangan = ? WHERE id = ?', [keterangan || null, req.params.id]);
+    await invalidateJoborderCache();
+    res.json({ success: true, message: 'Keterangan berhasil diupdate' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

@@ -664,6 +664,14 @@ const migrations = [
     },
     sql: `ALTER TABLE kandidat_profil MODIFY COLUMN rencana_pengiriman_uang BIGINT DEFAULT NULL`
   },
+  {
+    name: 'add_keterangan_to_job_order',
+    check: async (conn) => {
+      const [cols] = await conn.query('SHOW COLUMNS FROM job_order LIKE "keterangan"');
+      return cols.length > 0;
+    },
+    sql: `ALTER TABLE job_order ADD COLUMN keterangan TEXT AFTER status_kelulusan`
+  },
 ];
 
 async function runMigrations() {

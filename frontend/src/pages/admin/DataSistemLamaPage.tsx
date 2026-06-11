@@ -29,6 +29,7 @@ import DashboardSistemLama from "@/components/admin-sistem-lama/DashboardSistemL
 import {
   generatePendaftaranPDF,
   generatePendaftaranExcel,
+  generateAllPendaftaranExcel,
   downloadDokumen,
 } from "@/lib/pendaftaranGenerator";
 
@@ -228,7 +229,7 @@ export default function DataSistemLamaPage() {
 
       {activeTab === "pendaftaran" && (
         <div className="overflow-visible">
-          <div className="flex justify-between mb-4">
+          <div className="flex flex-col sm:flex-row justify-between gap-3 mb-4">
             <div className="relative w-full max-w-md">
               <Search
                 size={16}
@@ -241,6 +242,19 @@ export default function DataSistemLamaPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                if (filteredData.length === 0) {
+                  toast({ title: "Tidak ada data untuk di-export", variant: "destructive" })
+                  return
+                }
+                generateAllPendaftaranExcel(filteredData)
+                toast({ title: "Berhasil mengexport semua data pendaftaran" })
+              }}
+            >
+              <Download size={14} className="mr-2" /> Export Excel
+            </Button>
           </div>
 
           {/* Mobile: Card Layout */}
@@ -969,7 +983,6 @@ function LinkFileWithDownload({
     <div className="flex flex-col gap-1">
       {pathArray.map((p, i) => {
         const fullUrl = encodeURI(buildUrl(p));
-
         return (
           <div key={i} className="flex gap-1">
             <a
@@ -995,6 +1008,7 @@ function LinkFileWithDownload({
               )}
             </button>
           </div>
+          
         );
       })}
     </div>

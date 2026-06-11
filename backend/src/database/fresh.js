@@ -225,6 +225,7 @@ const migrations = [
     tanggal_mensetsu_2 DATE,
     tanggal_mensetsu_3 DATE,
     status_kelulusan ENUM('Menunggu', 'Lulus', 'Tidak Lulus', 'Tidak Hadir') DEFAULT 'Menunggu',
+    keterangan TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (perusahaan_id) REFERENCES perusahaan(id) ON DELETE SET NULL

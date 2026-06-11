@@ -259,41 +259,77 @@ export default function KandidatListPage() {
         return;
       }
 
+      const firstRow = jsonData[0] || {};
+      const isOldFormat = "NAMA" in firstRow;
+
       let successCount = 0;
       let errorCount = 0;
+      let skippedCount = 0;
 
       for (const row of jsonData) {
         try {
-          if (!row["Nama Romaji"] && !row["Nama Katakana"]) {
-            errorCount++;
-            continue;
+          if (isOldFormat) {
+            if (!row["NAMA"]) {
+              errorCount++;
+              continue;
+            }
+
+            const mapVerifikasi = (v: string): string => {
+              if (v === "diterima") return "approved";
+              if (v === "ditolak") return "rejected";
+              if (v === "menunggu") return "submitted";
+              return "draft";
+            };
+
+            await api.post("/kandidat/import", {
+              nama_romaji: row["NAMA"] || "",
+              email: row["EMAIL"] || "",
+              jenis_kelamin: row["JENIS KELAMIN"] || "",
+              nama_cabang: row["CABANG"] || "",
+              pendidikan_terakhir: row["PENDIDIKAN TERAKHIR"] || "",
+              status_formulir: row["VERIFIKASI"]
+                ? mapVerifikasi(String(row["VERIFIKASI"]).toLowerCase())
+                : "draft",
+              status_progres: "Pending",
+              sertifikat_ssw: "",
+              level_bahasa_jepang: "",
+            });
+          } else {
+            if (!row["Nama Romaji"] && !row["Nama Katakana"]) {
+              errorCount++;
+              continue;
+            }
+
+            await api.post("/kandidat/import", {
+              nama_romaji: row["Nama Romaji"] || "",
+              nama_katakana: row["Nama Katakana"] || "",
+              email: row["Email"] || "",
+              jenis_kelamin: row["Jenis Kelamin"] || "",
+              umur: row["Umur"] ? parseInt(row["Umur"]) : null,
+              nama_cabang: row["Cabang"] || "",
+              pendidikan_terakhir: row["Pendidikan Terakhir"] || "",
+              status_formulir: row["Status Formulir"] || "draft",
+              status_progres: row["Status Progres"] || "Pending",
+              status_keberangkatan: row["Status Keberangkatan"] || "",
+              sertifikat_ssw: row["Bidang SSW"] || "",
+              level_bahasa_jepang: row["Level Bahasa Jepang"] || "",
+            });
           }
 
-          await api.post("/kandidat/import", {
-            nama_romaji: row["Nama Romaji"] || "",
-            nama_katakana: row["Nama Katakana"] || "",
-            email: row["Email"] || "",
-            jenis_kelamin: row["Jenis Kelamin"] || "",
-            umur: row["Umur"] ? parseInt(row["Umur"]) : null,
-            nama_cabang: row["Cabang"] || "",
-            pendidikan_terakhir: row["Pendidikan Terakhir"] || "",
-            status_formulir: row["Status Formulir"] || "draft",
-            status_progres: row["Status Progres"] || "Pending",
-            status_keberangkatan: row["Status Keberangkatan"] || "",
-            sertifikat_ssw: row["Bidang SSW"] || "",
-            level_bahasa_jepang: row["Level Bahasa Jepang"] || "",
-          });
-
           successCount++;
-        } catch (err) {
-          console.error(`Error importing row:`, row, err);
-          errorCount++;
+        } catch (err: any) {
+          if (err?.response?.data?.skipped) {
+            skippedCount++;
+          } else {
+            console.error(`Error importing row:`, row, err);
+            errorCount++;
+          }
         }
       }
 
       toast({
         title: "Import selesai",
-        description: `Berhasil: ${successCount}, Gagal: ${errorCount}`,
+        description: `Berhasil: ${successCount}, Dilewati (nama duplikat): ${skippedCount}, Gagal: ${errorCount}`,
         variant: successCount > 0 ? "success" : "destructive",
       });
 

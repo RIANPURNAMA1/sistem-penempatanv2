@@ -43,6 +43,7 @@ export const dokumenTypes = [
 export const ssw_options = [
   "Pengolahan Makanan",
   "Pertanian",
+  "Peternakan",
   "Gaishoku",
   "Kaigo (perawat)",
   "Building Cleaning",

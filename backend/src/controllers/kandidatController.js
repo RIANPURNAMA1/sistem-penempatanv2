@@ -1614,6 +1614,19 @@ const importKandidat = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Nama romaji atau katakana harus diisi' });
     }
 
+    const cekNama = nama_romaji || nama_katakana;
+    if (cekNama) {
+      const [duplicate] = await conn.query(
+        'SELECT id FROM kandidat_profil WHERE (nama_romaji = ? OR nama_katakana = ?) AND deleted_at IS NULL LIMIT 1',
+        [cekNama.trim(), cekNama.trim()]
+      );
+      if (duplicate.length > 0) {
+        await conn.rollback();
+        conn.release();
+        return res.status(409).json({ success: false, skipped: true, message: `"${cekNama}" sudah ada, dilewati` });
+      }
+    }
+
     let cabangId = null;
     if (nama_cabang) {
       const [cabangRows] = await conn.query('SELECT id FROM cabang WHERE nama_cabang = ? LIMIT 1', [nama_cabang.trim()]);
@@ -1626,26 +1639,26 @@ const importKandidat = async (req, res) => {
     }
 
     let userId = null;
+    const namaUser = nama_romaji || nama_katakana || 'kandidat';
+
     if (email) {
       const [userRows] = await conn.query('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
       if (userRows.length > 0) {
         userId = userRows[0].id;
       } else {
-        const defaultPassword = email.split('@')[0] + '123';
         const [newUser] = await conn.query(
           'INSERT INTO users (email, nama, password, role) VALUES (?, ?, ?, ?)',
-          [email, nama_romaji || nama_katakana, defaultPassword, 'kandidat']
+          [email, namaUser, '12345678', 'kandidat']
         );
         userId = newUser.insertId;
       }
     }
 
     if (!userId) {
-      const defaultEmail = `${nama_romaji || nama_katakana}_${Date.now()}@temp.com`;
-      const defaultPassword = (nama_romaji || nama_katakana) + '123';
+      const dummyEmail = `${namaUser.replace(/\s+/g, '').toLowerCase()}_${Date.now()}@kandidat.com`;
       const [newUser] = await conn.query(
         'INSERT INTO users (email, nama, password, role) VALUES (?, ?, ?, ?)',
-        [defaultEmail, nama_romaji || nama_katakana, defaultPassword, 'kandidat']
+        [dummyEmail, namaUser, '12345678', 'kandidat']
       );
       userId = newUser.insertId;
     }

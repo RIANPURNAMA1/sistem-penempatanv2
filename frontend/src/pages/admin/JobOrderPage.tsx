@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/hooks/useToast'
 import api from '@/lib/api'
 import { Plus, Search, Edit, Trash2, Loader2, FileText, X, Eye, Filter, Briefcase, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { ssw_options } from '@/components/form-kandidat/constants'
 
 const statusConfig: Record<string, { label: string; bg: string; text: string }> = {
   'Menunggu': { label: 'Menunggu', bg: 'bg-slate-100', text: 'text-slate-700' },
@@ -26,8 +27,9 @@ export default function JobOrderPage() {
   const [filterPerusahaan, setFilterPerusahaan] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterBidangSsw, setFilterBidangSsw] = useState('all')
-  const [filterTanggalAwal, setFilterTanggalAwal] = useState('')
-  const [filterTanggalAkhir, setFilterTanggalAkhir] = useState('')
+const [filterTanggalAwal, setFilterTanggalAwal] = useState('')
+const [filterTanggalAkhir, setFilterTanggalAkhir] = useState('')
+const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
   const [showFilters, setShowFilters] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
@@ -231,8 +233,23 @@ export default function JobOrderPage() {
       tanggal_mensetsu_2: item.tanggal_mensetsu_2 || '',
       tanggal_mensetsu_3: item.tanggal_mensetsu_3 || '',
       status_kelulusan: item.status_kelulusan || 'Menunggu',
+      keterangan: item.keterangan || '',
     })
     setShowModal(true)
+  }
+
+  const handleSaveKeterangan = async (id: number, keterangan: string) => {
+    setSavingKeterangan(id)
+    try {
+      await api.patch(`/joborder/${id}/keterangan`, { keterangan })
+      setData((prev: any[]) =>
+        prev.map((item) => (item.id === id ? { ...item, keterangan } : item))
+      )
+    } catch {
+      toast({ title: 'Gagal menyimpan keterangan', variant: 'destructive' })
+    } finally {
+      setSavingKeterangan(null)
+    }
   }
 
   const handleDelete = async (id: number) => {
@@ -496,6 +513,31 @@ export default function JobOrderPage() {
                       <span className="text-gray-400">Tanggal Terbit</span>
                       <p className="text-gray-600">{formatDate(item.tanggal_terbit)}</p>
                     </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-400">Keterangan</span>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          defaultValue={item.keterangan || ''}
+                          onBlur={(e) => {
+                            const val = e.target.value
+                            if (val !== (item.keterangan || '')) {
+                              handleSaveKeterangan(item.id, val)
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              (e.target as HTMLInputElement).blur()
+                            }
+                          }}
+                          placeholder="Ketik keterangan..."
+                          className="w-full bg-gray-50 border border-gray-200 rounded px-2 py-1 text-xs text-gray-700 outline-none focus:border-[#1e3a5f]"
+                        />
+                        {savingKeterangan === item.id && (
+                          <Loader2 size={12} className="animate-spin text-gray-400 flex-shrink-0" />
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2 pt-2 border-t">
@@ -541,13 +583,14 @@ export default function JobOrderPage() {
                 <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">BIDANG SSW</th>
                 <th className="text-right px-4 py-3 font-medium text-xs text-gray-500">BIAYA</th>
                 <th className="text-center px-4 py-3 font-medium text-xs text-gray-500">STATUS</th>
+                <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">KETERANGAN</th>
                 <th className="text-center px-4 py-3 font-medium text-xs text-gray-500">AKSI</th>
               </tr>
             </thead>
             <tbody className="divide-y-0">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="text-center px-4 py-12">
+                  <td colSpan={9} className="text-center px-4 py-12">
                     <div className="flex items-center justify-center gap-2 text-gray-400">
                       <Loader2 size={20} className="animate-spin" />
                       <span>Memuat data...</span>
@@ -556,7 +599,7 @@ export default function JobOrderPage() {
                 </tr>
               ) : paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center px-4 py-12">
+                  <td colSpan={9} className="text-center px-4 py-12">
                     <div className="flex flex-col items-center">
                       <FileText size={40} className="text-gray-300 mb-2" />
                       <p className="text-gray-500">Tidak ada data</p>
@@ -604,6 +647,30 @@ export default function JobOrderPage() {
                         <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${stCfg.bg} ${stCfg.text}`}>
                           {stCfg.label}
                         </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            defaultValue={item.keterangan || ''}
+                            onBlur={(e) => {
+                              const val = e.target.value
+                              if (val !== (item.keterangan || '')) {
+                                handleSaveKeterangan(item.id, val)
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                (e.target as HTMLInputElement).blur()
+                              }
+                            }}
+                            placeholder="Ketik keterangan..."
+                            className="w-full bg-transparent border border-transparent hover:border-gray-300 focus:border-[#1e3a5f] rounded px-2 py-1 text-xs text-gray-700 outline-none transition-colors"
+                          />
+                          {savingKeterangan === item.id && (
+                            <Loader2 size={12} className="animate-spin text-gray-400 flex-shrink-0" />
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
@@ -709,7 +776,14 @@ export default function JobOrderPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700">Bidang SSW</label>
-                  <Input value={form.bidang_ssw} onChange={e => setForm(p => ({ ...p, bidang_ssw: e.target.value }))} placeholder="Misal: Food Service" />
+                  <Select value={form.bidang_ssw} onValueChange={v => setForm(p => ({ ...p, bidang_ssw: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Pilih bidang SSW..." /></SelectTrigger>
+                    <SelectContent>
+                      {ssw_options.map(o => (
+                        <SelectItem key={o} value={o}>{o}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">

@@ -227,3 +227,126 @@ export const generatePendaftaranExcel = (data: any) => {
   XLSX.writeFile(wb, fileName)
   return fileName
 }
+
+export const generateAllPendaftaranExcel = (data: any[]) => {
+  const wb = XLSX.utils.book_new()
+
+  const headers = [
+    'NO',
+    'NAMA',
+    'NIK',
+    'EMAIL',
+    'NO. WA',
+    'JENIS KELAMIN',
+    'AGAMA',
+    'TEMPAT LAHIR',
+    'TANGGAL LAHIR',
+    'PENDIDIKAN TERAKHIR',
+    'STATUS',
+    'ID PROMETRIC',
+    'STATUS JFT',
+    'STATUS SSW',
+    'VERIFIKASI',
+    'CABANG',
+    'TANGGAL DAFTAR',
+  ]
+
+  const rows = data.map((item, idx) => [
+    idx + 1,
+    item.nama || '-',
+    item.nik || '-',
+    item.email || '-',
+    item.no_wa || '-',
+    item.jenis_kelamin || '-',
+    item.agama || '-',
+    item.tempat_lahir || '-',
+    item.tempat_tanggal_lahir || '-',
+    item.pendidikan_terakhir || '-',
+    item.status || '-',
+    item.id_prometric || '-',
+    item.status_jft || '-',
+    item.status_ssw || '-',
+    item.verifikasi || '-',
+    item.nama_cabang || '-',
+    item.created_at
+      ? new Date(item.created_at).toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })
+      : '-',
+  ])
+
+  const sheetData = [headers, ...rows]
+  const ws = XLSX.utils.aoa_to_sheet(sheetData)
+
+  const colWidths = [
+    { wch: 4 },
+    { wch: 28 },
+    { wch: 18 },
+    { wch: 30 },
+    { wch: 16 },
+    { wch: 14 },
+    { wch: 12 },
+    { wch: 16 },
+    { wch: 18 },
+    { wch: 20 },
+    { wch: 14 },
+    { wch: 18 },
+    { wch: 16 },
+    { wch: 16 },
+    { wch: 14 },
+    { wch: 20 },
+    { wch: 20 },
+  ]
+  ws['!cols'] = colWidths
+
+  ws['!rows'] = [
+    ...headers.map(() => ({ hpx: 30 })),
+    ...rows.map(() => ({ hpx: 22 })),
+  ]
+
+  const headerStyle = {
+    font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+    fill: { fgColor: { rgb: '1F4E79' } },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+    border: {
+      top: { style: 'thin', color: { rgb: 'FFFFFF' } },
+      bottom: { style: 'thin', color: { rgb: 'FFFFFF' } },
+      left: { style: 'thin', color: { rgb: 'FFFFFF' } },
+      right: { style: 'thin', color: { rgb: 'FFFFFF' } },
+    },
+  }
+  const cellStyle = {
+    font: { sz: 10 },
+    alignment: { vertical: 'center', wrapText: true },
+    border: {
+      top: { style: 'thin', color: { rgb: 'D9D9D9' } },
+      bottom: { style: 'thin', color: { rgb: 'D9D9D9' } },
+      left: { style: 'thin', color: { rgb: 'D9D9D9' } },
+      right: { style: 'thin', color: { rgb: 'D9D9D9' } },
+    },
+  }
+
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:Q1')
+  for (let C = range.s.c; C <= range.e.c; C++) {
+    const headerAddr = XLSX.utils.encode_cell({ r: 0, c: C })
+    if (!ws[headerAddr]) ws[headerAddr] = { v: headers[C], t: 's' }
+    ws[headerAddr].s = headerStyle
+  }
+
+  for (let R = 1; R <= range.e.r; R++) {
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const addr = XLSX.utils.encode_cell({ r: R, c: C })
+      if (ws[addr]) {
+        ws[addr].s = cellStyle
+      }
+    }
+  }
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Data Pendaftaran')
+
+  const fileName = `Semua_Pendaftaran_${new Date().toISOString().slice(0, 10)}.xlsx`
+  XLSX.writeFile(wb, fileName)
+  return fileName
+}

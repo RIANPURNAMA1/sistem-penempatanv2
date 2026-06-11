@@ -121,7 +121,7 @@ export default function LoginPage() {
         <div className="hidden lg:flex lg:w-1/2 bg-[#1e3a5f] text-white flex-col justify-between p-12">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center overflow-hidden p-1">
-              <img src={LogoMenduniaJepang} alt="Logo" className="w-full h-full object-contain" />
+              <img src={LogoMenduniaJepang} alt="Logo" width={40} height={40} className="w-full h-full object-contain" />
             </div>
             <span className="font-semibold text-lg">Sistem Penempatan</span>
           </div>
@@ -140,7 +140,7 @@ export default function LoginPage() {
           <div className="w-full max-w-md space-y-8">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center p-1">
-                <img src={LogoMenduniaJepang} alt="Logo" className="w-full h-full object-contain" />
+                <img src={LogoMenduniaJepang} alt="Logo" width={40} height={40} className="w-full h-full object-contain" />
               </div>
               <span className="font-semibold text-sm">Sistem Penempatan</span>
             </div>

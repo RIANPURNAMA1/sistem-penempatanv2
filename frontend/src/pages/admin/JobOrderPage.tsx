@@ -188,9 +188,9 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
         biaya_akhir: form.biaya_akhir ? parseFloat(form.biaya_akhir) : 0,
         tanggal_cv: form.tanggal_cv,
         pic_cv: form.pic_cv,
-        tanggal_mensetsu_1: form.tanggal_mensetsu_1,
-        tanggal_mensetsu_2: form.tanggal_mensetsu_2,
-        tanggal_mensetsu_3: form.tanggal_mensetsu_3,
+        tanggal_mensetsu_1: form.tanggal_mensetsu_1 || null,
+        tanggal_mensetsu_2: form.tanggal_mensetsu_2 || null,
+        tanggal_mensetsu_3: form.tanggal_mensetsu_3 || null,
         status_kelulusan: form.status_kelulusan,
       }
       

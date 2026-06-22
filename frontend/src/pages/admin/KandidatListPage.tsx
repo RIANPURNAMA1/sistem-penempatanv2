@@ -35,6 +35,7 @@ import {
   FileSpreadsheet,
   Trash2,
   RefreshCw,
+  MessageCircle,
 } from "lucide-react";
 import HistoryModal from "@/components/HistoryModal";
 import * as XLSX from "xlsx";
@@ -140,9 +141,14 @@ export default function KandidatListPage() {
   } | null>(null);
   const [screeningLoading, setScreeningLoading] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
+  const [followUpLoading, setFollowUpLoading] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [deleteConfirm, setDeleteConfirm] = useState<{
+    id: number;
+    nama: string;
+  } | null>(null);
+  const [followUpConfirm, setFollowUpConfirm] = useState<{
     id: number;
     nama: string;
   } | null>(null);
@@ -396,6 +402,25 @@ export default function KandidatListPage() {
       .then((r) => setDeletedData(r.data.data))
       .finally(() => setDeletedLoading(false));
   };
+
+  const handleFollowUp = async (id: number, nama: string) => {
+    setFollowUpConfirm({ id, nama })
+  }
+
+  const confirmFollowUp = async () => {
+    if (!followUpConfirm) return
+    const { id, nama } = followUpConfirm
+    setFollowUpConfirm(null)
+    setFollowUpLoading(id)
+    try {
+      const res = await api.post(`/kandidat/${id}/follow-up-draft`)
+      toast({ title: 'Berhasil!', description: res.data?.message || 'Follow up terkirim', variant: 'success' as any })
+    } catch (err: any) {
+      toast({ title: 'Gagal', description: err?.response?.data?.message || 'Terjadi kesalahan', variant: 'destructive' })
+    } finally {
+      setFollowUpLoading(null)
+    }
+  }
 
   const handleRestoreAll = async () => {
     setBulkActionLoading(true);
@@ -1193,6 +1218,19 @@ export default function KandidatListPage() {
                         <Eye size={13} /> Detail
                       </button>
                     </Link>
+                    {item.status_formulir === 'draft' && (
+                      <button
+                        onClick={() => handleFollowUp(item.id, item.nama_romaji || item.nama || "")}
+                        disabled={followUpLoading === item.id}
+                        className="flex-1 inline-flex items-center justify-center gap-1 h-8 rounded-md border border-blue-200 bg-white text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
+                      >
+                        {followUpLoading === item.id
+                          ? <Loader2 size={13} className="animate-spin" />
+                          : <MessageCircle size={13} />
+                        }
+                        Follow Up
+                      </button>
+                    )}
                     <button
                       onClick={() =>
                         setDeleteConfirm({
@@ -1394,6 +1432,21 @@ export default function KandidatListPage() {
                               <Eye size={14} />
                             </Button>
                           </Link>
+                          {item.status_formulir === 'draft' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => handleFollowUp(item.id, item.nama_romaji || item.nama || "")}
+                              disabled={followUpLoading === item.id}
+                              title="Follow Up WA"
+                            >
+                              {followUpLoading === item.id
+                                ? <Loader2 size={14} className="animate-spin" />
+                                : <MessageCircle size={14} />
+                              }
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1505,6 +1558,40 @@ export default function KandidatListPage() {
       )}
 
       {/* ── DELETE CONFIRMATION MODAL ── */}
+      {followUpConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm mx-4 p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <MessageCircle size={20} className="text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Follow Up WhatsApp</h3>
+                <p className="text-sm text-gray-500">Kirim pengingat ke kandidat</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600">
+              Kirim WhatsApp follow up ke{" "}
+              <strong>{followUpConfirm.nama}</strong> untuk melengkapi formulir?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFollowUpConfirm(null)}
+                className="flex-1 h-10 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmFollowUp}
+                className="flex-1 h-10 rounded-lg bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Kirim WA
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-sm mx-4 p-6 space-y-4">

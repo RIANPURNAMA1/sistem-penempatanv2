@@ -2063,6 +2063,59 @@ const permanentAllDeleted = async (req, res) => {
 };
 
 // ============================================================
+// FOLLOW UP DRAFT KANDIDAT (KIRIM WA)
+// ============================================================
+const followUpDraft = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [kandidat] = await pool.query(
+      'SELECT id, nama_romaji, nomor_hp, status_formulir FROM kandidat_profil WHERE id = ?',
+      [id]
+    );
+
+    if (!kandidat.length) {
+      return res.status(404).json({ success: false, message: 'Kandidat tidak ditemukan' });
+    }
+
+    const k = kandidat[0];
+
+    if (k.status_formulir !== 'draft') {
+      return res.status(400).json({ success: false, message: 'Follow up hanya untuk kandidat dengan status draft' });
+    }
+
+    if (!k.nomor_hp) {
+      return res.status(400).json({ success: false, message: 'Kandidat belum memiliki nomor HP' });
+    }
+
+    const pesanWA =
+      `Halo ${k.nama_romaji}, 👋\n\n` +
+      `Kami melihat Anda belum menyelesaikan formulir pendaftaran.\n\n` +
+      `Silakan login ke sistem dan lengkapi data Anda agar dapat diproses lebih lanjut.\n\n` +
+      `Jika ada kendala, hubungi admin kami.\n\n` +
+      `Terima kasih.\n\n` +
+      `_Pesan otomatis dari Sistem Penempatan Kandidat._`;
+
+    const result = await sendWhatsApp(k.nomor_hp, pesanWA);
+
+    await saveNotificationLog(
+      k.nomor_hp,
+      pesanWA,
+      result.success ? 'sent' : 'failed',
+      result.success ? null : JSON.stringify(result.error)
+    );
+
+    if (result.success) {
+      res.json({ success: true, message: `Follow up berhasil dikirim ke ${k.nama_romaji}` });
+    } else {
+      res.status(500).json({ success: false, message: 'Gagal mengirim WhatsApp', error: result.error });
+    }
+  } catch (err) {
+    console.error('[FOLLOW UP] Error:', err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// ============================================================
 // EXPORTS
 // ============================================================
 module.exports = {
@@ -2087,6 +2140,7 @@ module.exports = {
   addHistory,
   updateProfileByAdmin,
   importKandidat,
+  followUpDraft,
   softDelete,
   restore,
   permanentDelete,

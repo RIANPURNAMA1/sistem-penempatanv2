@@ -124,7 +124,7 @@ router.post('/', async (req, res) => {
     const values = [
       nomor, perusahaan_id || null, institusi || null, tanggal_terbit, detail_job_order,
       bidang_ssw, nama_grup, link_grup, biaya_awal || 0, biaya_akhir || 0,
-      tanggal_cv, pic_cv, tanggal_mensetsu_1, tanggal_mensetsu_2, tanggal_mensetsu_3,
+      tanggal_cv, pic_cv, tanggal_mensetsu_1 || null, tanggal_mensetsu_2 || null, tanggal_mensetsu_3 || null,
       status_kelulusan || 'Menunggu', req.body.keterangan || null
     ];
 
@@ -211,9 +211,9 @@ router.put('/:id', async (req, res) => {
       biaya_akhir || 0,
       tanggal_cv,
       pic_cv,
-      tanggal_mensetsu_1,
-      tanggal_mensetsu_2,
-      tanggal_mensetsu_3,
+      tanggal_mensetsu_1 || null,
+      tanggal_mensetsu_2 || null,
+      tanggal_mensetsu_3 || null,
       status_kelulusan,
       req.body.keterangan || null,
       req.params.id

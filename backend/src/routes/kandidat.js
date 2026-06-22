@@ -29,6 +29,7 @@ router.patch('/:id/keberangkatan', authorize('admin_penempatan', 'admin_cabang')
 router.patch('/:id/progres-lengkap', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateProgresLengkap);
 router.patch('/:id/screening', authorize('admin_penempatan', 'admin_cabang'), ctrl.screeningKandidat);
 router.post('/batch-screening', authorize('admin_penempatan', 'admin_cabang'), ctrl.batchScreening);
+router.post('/:id/follow-up-draft', authorize('admin_penempatan', 'admin_cabang'), ctrl.followUpDraft);
 router.put('/:id/update-profile', authorize('admin_penempatan', 'admin_cabang'), ctrl.updateProfileByAdmin);
 router.post('/:id/upload-dokumen', authorize('admin_penempatan', 'admin_cabang'), uploadDokumenMiddleware, ctrl.adminUploadDokumen);
 router.delete('/:id/dokumen', authorize('admin_penempatan', 'admin_cabang'), ctrl.adminDeleteDokumen);

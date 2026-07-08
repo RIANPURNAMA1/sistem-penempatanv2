@@ -34,6 +34,8 @@ router.put('/:id/update-profile', authorize('admin_penempatan', 'admin_cabang'),
 router.post('/:id/upload-dokumen', authorize('admin_penempatan', 'admin_cabang'), uploadDokumenMiddleware, ctrl.adminUploadDokumen);
 router.delete('/:id/dokumen', authorize('admin_penempatan', 'admin_cabang'), ctrl.adminDeleteDokumen);
 router.post('/import', authorize('admin_penempatan', 'admin_cabang'), ctrl.importKandidat);
+router.post('/import-ai/parse', authorize('admin_penempatan', 'admin_cabang'), ctrl.parseKandidatAI);
+router.post('/import-ai', authorize('admin_penempatan', 'admin_cabang'), ctrl.importKandidatAI);
 
 // Soft delete & restore
 router.delete('/:id', authorize('admin_penempatan', 'admin_cabang'), ctrl.softDelete);

@@ -2,6 +2,8 @@ node_modules
 dist
 .env
 .env.local
-.DS_Storebackend/.env
-.env
+.DS_Store
+backend/.env
 *.env
+
+backend/uploads/

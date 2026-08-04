@@ -156,11 +156,11 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email atau Nama</Label>
                 <Input
                   id="email"
-                  type="email"
-                  placeholder="email@contoh.com"
+                  type="text"
+                  placeholder="email@contoh.com atau nama Anda"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required

@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const bcrypt = require('bcryptjs');
 const axios = require('axios');
 const cache = require('../utils/cache');
 
@@ -1615,15 +1616,19 @@ const importKandidat = async (req, res) => {
     }
 
     const cekNama = nama_romaji || nama_katakana;
+    let existingKandidatId = null;
+    let userId = null;
+    let isUpdate = false;
+
     if (cekNama) {
-      const [duplicate] = await conn.query(
-        'SELECT id FROM kandidat_profil WHERE (nama_romaji = ? OR nama_katakana = ?) AND deleted_at IS NULL LIMIT 1',
+      const [existing] = await conn.query(
+        'SELECT kp.id, kp.user_id FROM kandidat_profil kp WHERE (kp.nama_romaji = ? OR kp.nama_katakana = ?) AND kp.deleted_at IS NULL LIMIT 1',
         [cekNama.trim(), cekNama.trim()]
       );
-      if (duplicate.length > 0) {
-        await conn.rollback();
-        conn.release();
-        return res.status(409).json({ success: false, skipped: true, message: `"${cekNama}" sudah ada, dilewati` });
+      if (existing.length > 0) {
+        existingKandidatId = existing[0].id;
+        userId = existing[0].user_id;
+        isUpdate = true;
       }
     }
 
@@ -1638,41 +1643,44 @@ const importKandidat = async (req, res) => {
       }
     }
 
-    let userId = null;
     const namaUser = nama_romaji || nama_katakana || 'kandidat';
+    const hashedPassword = await bcrypt.hash('12345678', 10);
 
-    if (email) {
-      const [userRows] = await conn.query('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
-      if (userRows.length > 0) {
-        userId = userRows[0].id;
+    if (!userId) {
+      if (email) {
+        const [userRows] = await conn.query('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
+        if (userRows.length > 0) {
+          userId = userRows[0].id;
+        } else {
+          const [newUser] = await conn.query(
+            'INSERT INTO users (email, nama, password, role) VALUES (?, ?, ?, ?)',
+            [email, namaUser, hashedPassword, 'kandidat']
+          );
+          userId = newUser.insertId;
+        }
       } else {
+        const dummyEmail = `${namaUser.replace(/\s+/g, '').toLowerCase()}_${Date.now()}@kandidat.com`;
         const [newUser] = await conn.query(
           'INSERT INTO users (email, nama, password, role) VALUES (?, ?, ?, ?)',
-          [email, namaUser, '12345678', 'kandidat']
+          [dummyEmail, namaUser, hashedPassword, 'kandidat']
         );
         userId = newUser.insertId;
       }
+    } else if (isUpdate && email) {
+      const [existingEmail] = await conn.query('SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1', [email, userId]);
+      if (existingEmail.length === 0) {
+        await conn.query('UPDATE users SET email = ?, nama = ? WHERE id = ?', [email, namaUser, userId]);
+      }
     }
 
-    if (!userId) {
-      const dummyEmail = `${namaUser.replace(/\s+/g, '').toLowerCase()}_${Date.now()}@kandidat.com`;
-      const [newUser] = await conn.query(
-        'INSERT INTO users (email, nama, password, role) VALUES (?, ?, ?, ?)',
-        [dummyEmail, namaUser, '12345678', 'kandidat']
-      );
-      userId = newUser.insertId;
-    }
-
-    const [existingProfil] = await conn.query('SELECT id FROM kandidat_profil WHERE user_id = ?', [userId]);
-    
-    if (existingProfil.length > 0) {
+    if (existingKandidatId) {
       await conn.query(
         `UPDATE kandidat_profil SET 
           nama_romaji = ?, nama_katakana = ?, jenis_kelamin = ?, umur = ?,
           cabang_id = ?, pendidikan_terakhir = ?, status_formulir = ?,
           status_progres = ?, status_keberangkatan = ?, sertifikat_ssw = ?,
           level_bahasa_jepang = ?
-        WHERE user_id = ?`,
+        WHERE id = ?`,
         [
           nama_romaji || null,
           nama_katakana || null,
@@ -1685,36 +1693,62 @@ const importKandidat = async (req, res) => {
           status_keberangkatan || null,
           sertifikat_ssw || null,
           level_bahasa_jepang || null,
-          userId,
+          existingKandidatId,
         ]
       );
     } else {
-      await conn.query(
-        `INSERT INTO kandidat_profil (
-          user_id, nama_romaji, nama_katakana, jenis_kelamin, umur,
-          cabang_id, pendidikan_terakhir, status_formulir, status_progres,
-          status_keberangkatan, sertifikat_ssw, level_bahasa_jepang
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          userId,
-          nama_romaji || null,
-          nama_katakana || null,
-          jenis_kelamin || null,
-          umur || null,
-          cabangId,
-          pendidikan_terakhir || null,
-          status_formulir || 'draft',
-          status_progres || 'Pending',
-          status_keberangkatan || null,
-          sertifikat_ssw || null,
-          level_bahasa_jepang || null,
-        ]
-      );
+      const [existingProfil] = await conn.query('SELECT id FROM kandidat_profil WHERE user_id = ?', [userId]);
+      if (existingProfil.length > 0) {
+        await conn.query(
+          `UPDATE kandidat_profil SET 
+            nama_romaji = ?, nama_katakana = ?, jenis_kelamin = ?, umur = ?,
+            cabang_id = ?, pendidikan_terakhir = ?, status_formulir = ?,
+            status_progres = ?, status_keberangkatan = ?, sertifikat_ssw = ?,
+            level_bahasa_jepang = ?
+          WHERE user_id = ?`,
+          [
+            nama_romaji || null,
+            nama_katakana || null,
+            jenis_kelamin || null,
+            umur || null,
+            cabangId,
+            pendidikan_terakhir || null,
+            status_formulir || 'draft',
+            status_progres || 'Pending',
+            status_keberangkatan || null,
+            sertifikat_ssw || null,
+            level_bahasa_jepang || null,
+            userId,
+          ]
+        );
+      } else {
+        await conn.query(
+          `INSERT INTO kandidat_profil (
+            user_id, nama_romaji, nama_katakana, jenis_kelamin, umur,
+            cabang_id, pendidikan_terakhir, status_formulir, status_progres,
+            status_keberangkatan, sertifikat_ssw, level_bahasa_jepang
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            userId,
+            nama_romaji || null,
+            nama_katakana || null,
+            jenis_kelamin || null,
+            umur || null,
+            cabangId,
+            pendidikan_terakhir || null,
+            status_formulir || 'draft',
+            status_progres || 'Pending',
+            status_keberangkatan || null,
+            sertifikat_ssw || null,
+            level_bahasa_jepang || null,
+          ]
+        );
+      }
     }
 
     await conn.commit();
     await invalidateKandidatCache();
-    res.json({ success: true, message: 'Kandidat berhasil diimport' });
+    res.json({ success: true, message: isUpdate ? 'Data kandidat berhasil diperbarui' : 'Kandidat berhasil diimport' });
 
   } catch (err) {
     await conn.rollback();
@@ -2116,6 +2150,207 @@ const followUpDraft = async (req, res) => {
 };
 
 // ============================================================
+// IMPORT KANDIDAT VIA AI (GROQ) — PARSE ONLY (no DB write)
+// ============================================================
+const parseKandidatAI = async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text?.trim()) {
+      return res.status(400).json({ success: false, message: 'Data teks tidak boleh kosong' });
+    }
+
+    const GROQ_API_KEY = process.env.GROQ_API_KEY;
+    if (!GROQ_API_KEY) {
+      return res.status(500).json({ success: false, message: 'GROQ_API_KEY tidak dikonfigurasi' });
+    }
+
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-oss-120b',
+        messages: [
+          {
+            role: 'system',
+            content: `Ekstrak nama orang dan email dari teks. Return ONLY JSON array of objects with keys "nama" (string) dan "email" (string atau null). Contoh: [{"nama":"Budi","email":"budi@mail.com"},{"nama":"Siti","email":null}]. HANYA JSON.`
+          },
+          {
+            role: 'user',
+            content: `Data:\n${text.slice(0, 5000)}`
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 4096,
+      }),
+    });
+
+    if (!groqResponse.ok) {
+      const errText = await groqResponse.text();
+      console.error('[parseKandidatAI] Groq API error:', errText);
+      return res.status(502).json({ success: false, message: 'Gagal memproses dengan AI: ' + errText.slice(0, 200) });
+    }
+
+    const groqData = await groqResponse.json();
+
+    let reply = groqData.choices?.[0]?.message?.content?.trim();
+    if (!reply) {
+      reply = groqData.choices?.[0]?.message?.reasoning?.trim();
+    }
+    if (!reply) {
+      return res.status(502).json({ success: false, message: 'AI tidak mengembalikan data' });
+    }
+
+    let extractedData;
+    try {
+      const jsonStr = reply.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      extractedData = JSON.parse(jsonStr);
+      if (!Array.isArray(extractedData)) {
+        throw new Error('Response bukan array');
+      }
+    } catch (e) {
+      console.error('[parseKandidatAI] Parse error:', e.message, 'Reply:', reply);
+      return res.status(502).json({ success: false, message: 'Gagal mengparse response AI' });
+    }
+
+    res.json({
+      success: true,
+      data: extractedData.slice(0, 100),
+      total: extractedData.length,
+    });
+  } catch (err) {
+    console.error('[parseKandidatAI] Error:', err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// ============================================================
+// IMPORT KANDIDAT VIA AI (GROQ) — SAVE TO DB
+// ============================================================
+const importKandidatAI = async (req, res) => {
+  try {
+    const { data: entries } = req.body;
+    if (!Array.isArray(entries) || entries.length === 0) {
+      return res.status(400).json({ success: false, message: 'Data tidak boleh kosong' });
+    }
+
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const results = [];
+
+      for (const entry of entries.slice(0, 100)) {
+        const nama = (entry.nama || '').trim();
+        const email = (entry.email || '').trim();
+        if (!nama) continue;
+
+        const hashedPassword = await bcrypt.hash('12345678', 10);
+        let userId = null;
+        let existingKandidatId = null;
+        let status = 'baru';
+
+        // Cek existing kandidat by nama
+        const [existing] = await conn.query(
+          'SELECT kp.id, kp.user_id FROM kandidat_profil kp WHERE (kp.nama_romaji = ? OR kp.nama_katakana = ?) AND kp.deleted_at IS NULL LIMIT 1',
+          [nama, nama]
+        );
+        if (existing.length > 0) {
+          existingKandidatId = existing[0].id;
+          userId = existing[0].user_id;
+        }
+
+        if (!userId) {
+          if (email) {
+            const [userRows] = await conn.query('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
+            if (userRows.length > 0) {
+              userId = userRows[0].id;
+              // Reset password ke 1-8 untuk existing user
+              await conn.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, userId]);
+              status = 'password_reset';
+            } else {
+              const [newUser] = await conn.query(
+                'INSERT INTO users (email, nama, password, role) VALUES (?, ?, ?, ?)',
+                [email, nama, hashedPassword, 'kandidat']
+              );
+              userId = newUser.insertId;
+            }
+          } else {
+            const dummyEmail = `${nama.replace(/\s+/g, '').toLowerCase()}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}@kandidat.com`;
+            const [newUser] = await conn.query(
+              'INSERT INTO users (email, nama, password, role) VALUES (?, ?, ?, ?)',
+              [dummyEmail, nama, hashedPassword, 'kandidat']
+            );
+            userId = newUser.insertId;
+          }
+        } else {
+          // User exists — reset password ke 1-8
+          await conn.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, userId]);
+          if (email) {
+            await conn.query('UPDATE users SET email = ? WHERE id = ?', [email, userId]);
+          }
+        }
+
+        if (existingKandidatId) {
+          await conn.query(
+            'UPDATE kandidat_profil SET nama_romaji = ?, cabang_id = NULL WHERE id = ?',
+            [nama, existingKandidatId]
+          );
+          status = 'updated';
+        } else {
+          const [existingProfil] = await conn.query('SELECT id FROM kandidat_profil WHERE user_id = ?', [userId]);
+          if (existingProfil.length > 0) {
+            await conn.query(
+              'UPDATE kandidat_profil SET nama_romaji = ? WHERE user_id = ?',
+              [nama, userId]
+            );
+            status = 'updated';
+          } else {
+            await conn.query(
+              `INSERT INTO kandidat_profil (user_id, nama_romaji, status_formulir, status_progres) VALUES (?, ?, ?, ?)`,
+              [userId, nama, 'draft', 'Job Matching']
+            );
+          }
+        }
+
+        // Ambil email user dari DB untuk dikembalikan
+        const [userRow] = await conn.query('SELECT email FROM users WHERE id = ?', [userId]);
+
+        results.push({
+          nama,
+          email: userRow[0]?.email || email || null,
+          status,
+          userId,
+        });
+      }
+
+      await conn.commit();
+      await invalidateKandidatCache();
+
+      const baruCount = results.filter(r => r.status === 'baru').length;
+      const updateCount = results.filter(r => r.status === 'updated').length;
+      const resetCount = results.filter(r => r.status === 'password_reset').length;
+
+      res.json({
+        success: true,
+        data: results,
+        message: `Selesai: ${baruCount} baru, ${updateCount} diperbarui, ${resetCount} password direset`,
+      });
+    } catch (err) {
+      await conn.rollback();
+      console.error('[importKandidatAI] Transaction error:', err);
+      res.status(500).json({ success: false, message: 'Gagal menyimpan data', error: err.message });
+    } finally {
+      conn.release();
+    }
+  } catch (err) {
+    console.error('[importKandidatAI] Error:', err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// ============================================================
 // EXPORTS
 // ============================================================
 module.exports = {
@@ -2140,6 +2375,8 @@ module.exports = {
   addHistory,
   updateProfileByAdmin,
   importKandidat,
+  parseKandidatAI,
+  importKandidatAI,
   followUpDraft,
   softDelete,
   restore,

@@ -5,9 +5,10 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from '@/hooks/useToast'
 import api from '@/lib/api'
+import * as XLSX from 'xlsx'
 import {
   Plus, Pencil, Trash2, Loader2, Search, Users, X,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Download
 } from 'lucide-react'
 
 interface User {
@@ -60,6 +61,23 @@ export default function UsersPage() {
   }
 
   const clearSearch = () => { setSearch(''); setDebouncedSearch('') }
+
+  const handleExportExcel = () => {
+    const rows = filtered.map((u, i) => ({
+      'No': i + 1,
+      'Nama': u.nama,
+      'Email': u.email,
+      'Status': u.status === 'aktif' ? 'Aktif' : 'Nonaktif',
+      'Tanggal Dibuat': u.created_at ? new Date(u.created_at).toLocaleDateString('id-ID') : '—',
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Users')
+    ws['!cols'] = [
+      { wch: 5 }, { wch: 30 }, { wch: 35 }, { wch: 10 }, { wch: 15 },
+    ]
+    XLSX.writeFile(wb, `Data_User_${new Date().toISOString().split('T')[0]}.xlsx`)
+  }
 
   const filtered = data.filter(u =>
     !debouncedSearch ||
@@ -147,13 +165,24 @@ export default function UsersPage() {
           </p>
         </div>
         {/* Ikon saja di layar <400px, teks muncul di ≥400px */}
-        <Button
-          onClick={openCreate}
-          className="bg-[#1e3a5f] hover:bg-[#2d5a8a] h-8 sm:h-9 shrink-0 px-2 sm:px-3 text-xs"
-        >
-          <Plus size={14} className="shrink-0" />
-          <span className="hidden min-[400px]:inline ml-1 whitespace-nowrap">Tambah User</span>
-        </Button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            variant="outline"
+            onClick={handleExportExcel}
+            className="h-8 sm:h-9 px-2 sm:px-3 text-xs border-gray-200 hover:bg-gray-50"
+            disabled={loading || filtered.length === 0}
+          >
+            <Download size={14} className="shrink-0" />
+            <span className="hidden min-[400px]:inline ml-1 whitespace-nowrap">Export</span>
+          </Button>
+          <Button
+            onClick={openCreate}
+            className="bg-[#1e3a5f] hover:bg-[#2d5a8a] h-8 sm:h-9 shrink-0 px-2 sm:px-3 text-xs"
+          >
+            <Plus size={14} className="shrink-0" />
+            <span className="hidden min-[400px]:inline ml-1 whitespace-nowrap">Tambah User</span>
+          </Button>
+        </div>
       </div>
 
       {/* ── Search ── */}

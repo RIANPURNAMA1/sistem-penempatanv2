@@ -36,6 +36,7 @@ import {
   Trash2,
   RefreshCw,
   MessageCircle,
+  Sparkles,
 } from "lucide-react";
 import HistoryModal from "@/components/HistoryModal";
 import * as XLSX from "xlsx";
@@ -166,6 +167,11 @@ export default function KandidatListPage() {
   const [restoreAllConfirm, setRestoreAllConfirm] = useState(false);
   const [permanentAllConfirm, setPermanentAllConfirm] = useState(false);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [showAIImport, setShowAIImport] = useState(false);
+  const [aiRawText, setAiRawText] = useState("");
+  const [aiParsing, setAiParsing] = useState(false);
+  const [aiPreviewData, setAiPreviewData] = useState<{nama: string; email: string | null; status?: string}[] | null>(null);
+  const [aiImporting, setAiImporting] = useState(false);
 
   const handleExportExcel = () => {
     if (data.length === 0) {
@@ -335,7 +341,7 @@ export default function KandidatListPage() {
 
       toast({
         title: "Import selesai",
-        description: `Berhasil: ${successCount}, Dilewati (nama duplikat): ${skippedCount}, Gagal: ${errorCount}`,
+        description: `Berhasil: ${successCount}${skippedCount > 0 ? `, Dilewati: ${skippedCount}` : ''}, Gagal: ${errorCount}`,
         variant: successCount > 0 ? "success" : "destructive",
       });
 
@@ -672,6 +678,24 @@ export default function KandidatListPage() {
           >
             <FileSpreadsheet size={13} className="shrink-0" />
             <span>Export</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setShowAIImport(true);
+              setAiPreviewData(null);
+              setAiRawText("");
+            }}
+            className={`
+              inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5
+              text-xs font-medium transition-colors
+              bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white
+              focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-purple-400
+              whitespace-nowrap shadow-sm
+            `}
+          >
+            <Sparkles size={13} className="shrink-0" />
+            <span>Import AI</span>
           </button>
 
           {/* Tombol Filter */}
@@ -1944,6 +1968,183 @@ export default function KandidatListPage() {
                 {bulkActionLoading ? "Memproses..." : "Hapus Semua"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── AI IMPORT MODAL ── */}
+      {showAIImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl mx-4 p-6 space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                  <Sparkles size={20} className="text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Import dengan AI</h3>
+                  <p className="text-sm text-gray-500">
+                    AI akan membaca nama dan email dari data Anda
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAIImport(false)}
+                className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {!aiPreviewData ? (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Tempel Data
+                  </label>
+                  <textarea
+                    value={aiRawText}
+                    onChange={(e) => setAiRawText(e.target.value)}
+                    placeholder="Tempel data kandidat di sini...&#10;&#10;Contoh:&#10;M ALDI FARIJI - aldi@gmail.com&#10;Muhamad Hoerul Saleh - hoerul@email.com&#10;Fairuz Khairunnisa"
+                    rows={8}
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-y"
+                  />
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!aiRawText.trim()) {
+                      toast({ title: "Data teks masih kosong", variant: "destructive" });
+                      return;
+                    }
+                    setAiParsing(true);
+                    try {
+                      const res = await api.post("/kandidat/import-ai/parse", { text: aiRawText });
+                      setAiPreviewData(res.data.data);
+                      toast({
+                        title: "Data berhasil diparse",
+                        description: `${res.data.total} data ditemukan`,
+                      });
+                    } catch (err: any) {
+                      toast({
+                        title: "Gagal memparse data",
+                        description: err?.response?.data?.message || "Terjadi kesalahan",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setAiParsing(false);
+                    }
+                  }}
+                  disabled={aiParsing || !aiRawText.trim()}
+                  className="w-full inline-flex items-center justify-center gap-2 h-10 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-sm font-medium text-white hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {aiParsing ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Memproses dengan AI...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={16} />
+                      Parse dengan AI
+                    </>
+                  )}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex-1 overflow-y-auto">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-gray-700">
+                      Preview ({aiPreviewData.length} data ditemukan)
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setAiPreviewData(null);
+                          setAiRawText("");
+                        }}
+                        className="text-xs text-gray-500 hover:text-gray-700 underline"
+                      >
+                        Kembali
+                      </button>
+                    </div>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="text-left px-3 py-2 font-medium text-xs text-gray-500">#</th>
+                        <th className="text-left px-3 py-2 font-medium text-xs text-gray-500">Nama</th>
+                        <th className="text-left px-3 py-2 font-medium text-xs text-gray-500">Email</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {aiPreviewData.map((item, i) => (
+                        <tr key={i} className="hover:bg-gray-50">
+                          <td className="px-3 py-2 text-xs text-gray-400">{i + 1}</td>
+                          <td className="px-3 py-2 text-sm font-medium text-gray-900">
+                            {item.nama || "-"}
+                          </td>
+                          <td className="px-3 py-2 text-sm text-gray-600">
+                            {item.email || <span className="text-gray-400 italic">(tanpa email)</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Password default untuk semua akun: <strong>12345678</strong>
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    setAiImporting(true);
+                    try {
+                      const res = await api.post("/kandidat/import-ai", { data: aiPreviewData });
+                      const result = res.data.data;
+                      const baruCount = result.filter((d: any) => d.status === 'baru').length;
+                      const updateCount = result.filter((d: any) => d.status === 'updated').length;
+                      const resetCount = result.filter((d: any) => d.status === 'password_reset').length;
+
+                      const lines = [`${baruCount} baru`];
+                      if (updateCount) lines.push(`${updateCount} diperbarui`);
+                      if (resetCount) lines.push(`${resetCount} password direset`);
+
+                      toast({
+                        title: "Import selesai",
+                        description: lines.join(', '),
+                        variant: "success",
+                      });
+                      setShowAIImport(false);
+                      setAiPreviewData(null);
+                      setAiRawText("");
+                      load();
+                    } catch (err: any) {
+                      toast({
+                        title: "Gagal import",
+                        description: err?.response?.data?.message || "Terjadi kesalahan",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setAiImporting(false);
+                    }
+                  }}
+                  disabled={aiImporting}
+                  className="w-full inline-flex items-center justify-center gap-2 h-10 rounded-lg bg-green-600 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {aiImporting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Mengimport...
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={16} />
+                      Import {aiPreviewData.length} Data
+                    </>
+                  )}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

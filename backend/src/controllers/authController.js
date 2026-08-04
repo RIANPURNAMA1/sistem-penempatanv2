@@ -33,11 +33,11 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Email dan password wajib diisi' });
+      return res.status(400).json({ success: false, message: 'Email/nama dan password wajib diisi' });
     }
     const [users] = await pool.query(
-      'SELECT u.*, c.nama_cabang FROM users u LEFT JOIN cabang c ON u.cabang_id = c.id WHERE u.email = ?',
-      [email]
+      'SELECT u.*, c.nama_cabang FROM users u LEFT JOIN cabang c ON u.cabang_id = c.id WHERE u.email = ? OR u.nama = ?',
+      [email, email]
     );
     if (!users.length) {
       return res.status(401).json({ success: false, message: 'Email atau password salah' });

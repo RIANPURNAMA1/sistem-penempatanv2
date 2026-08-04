@@ -125,7 +125,7 @@ const getKandidatById = async (req, res) => {
     }
 
     const [rows] = await pool.query(
-      `SELECT ${PUBLIC_FIELDS}
+      `SELECT kp.*, TRIM(c.nama_cabang) as nama_cabang
        FROM kandidat_profil kp
        LEFT JOIN cabang c ON kp.cabang_id = c.id
        WHERE kp.id = ? AND kp.deleted_at IS NULL`,
@@ -136,17 +136,36 @@ const getKandidatById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Data tidak ditemukan' });
     }
 
+    const id = req.params.id;
+
     const [pendidikan] = await pool.query(
-      'SELECT jenjang, nama_sekolah, jurusan, tahun_masuk, tahun_lulus FROM kandidat_pendidikan WHERE kandidat_id = ? ORDER BY FIELD(jenjang,"SD","SMP","SMA/SMK","Perguruan Tinggi")',
-      [req.params.id]
+      'SELECT jenjang, nama_sekolah, jurusan, bulan_masuk, tahun_masuk, bulan_lulus, tahun_lulus FROM kandidat_pendidikan WHERE kandidat_id = ? ORDER BY FIELD(jenjang,"SD","SMP","SMA/SMK","Perguruan Tinggi")',
+      [id]
     );
 
     const [pengalaman] = await pool.query(
-      'SELECT nama_perusahaan, posisi, bulan_masuk, tahun_masuk, bulan_keluar, tahun_keluar, masih_bekerja FROM kandidat_pengalaman_kerja WHERE kandidat_id = ? ORDER BY tahun_masuk DESC',
-      [req.params.id]
+      'SELECT nama_perusahaan, alamat_perusahaan, posisi, bulan_masuk, tahun_masuk, bulan_keluar, tahun_keluar, masih_bekerja, deskripsi_pekerjaan FROM kandidat_pengalaman_kerja WHERE kandidat_id = ? ORDER BY tahun_masuk DESC',
+      [id]
     );
 
-    const result = { ...rows[0], pendidikan, pengalaman };
+    const [keluarga] = await pool.query(
+      'SELECT hubungan, nama, usia, pekerjaan, penghasilan FROM kandidat_keluarga WHERE kandidat_id = ? ORDER BY FIELD(hubungan,"Suami","Istri","Ayah","Ibu","Kakak","Adik","Lainnya")',
+      [id]
+    );
+
+    const [dokumenRows] = await pool.query(
+      'SELECT jenis_dokumen, nama_file, path_file, mime_type, ukuran_file, uploaded_at FROM kandidat_dokumen WHERE kandidat_id = ? ORDER BY uploaded_at DESC',
+      [id]
+    );
+
+    const fileBase = `${req.protocol}://${req.get('host')}`;
+    const dokumen = dokumenRows.map(d => {
+      const normalized = String(d.path_file || '').replace(/\\/g, '/').replace(/^\.\//, '');
+      const rel = normalized.startsWith('uploads/') ? `/${normalized}` : `/uploads/${normalized}`;
+      return { ...d, file_url: `${fileBase}${rel}` };
+    });
+
+    const result = { ...rows[0], nama_cabang: rows[0].nama_cabang || null, pendidikan, pengalaman, keluarga, dokumen };
     await cache.set(cacheKey, result, 30);
 
     res.json({ success: true, data: result });

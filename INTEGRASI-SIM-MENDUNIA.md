@@ -1,0 +1,367 @@
+# Panduan Integrasi API — Sistem SIM Mendunia
+
+Dokumen ini untuk tim developer **sim-mendunia** agar bisa mengambil data kandidat
+dari Sistem Penempatan (job.mendunia.id / api.penempatan.mendunia.id).
+
+---
+
+## 1. Informasi Umum
+
+| Item            | Nilai |
+|-----------------|-------|
+| Base URL        | `https://api.penempatan.mendunia.id` |
+| Format          | JSON |
+| Auth            | Header `x-api-key` (tidak perlu login/token) |
+| API Key         | `mendunia_eb5e66a28fda2f2159f9a2516bd5ed26fe3e4c5d3807a145` |
+| Masa berlaku    | Permanent (selama tidak di-regenerate/dihapus/dinonaktifkan) |
+
+> API key bersifat permanent. Jangan disimpan di kode frontend yang publik;
+> simpan di server/backend sim-mendunia.
+
+---
+
+## 2. Cara Autentikasi
+
+Setiap request **wajib** menyertakan header:
+
+```
+x-api-key: mendunia_eb5e66a28fda2f2159f9a2516bd5ed26fe3e4c5d3807a145
+```
+
+Jika key tidak ada / salah / nonaktif, respon:
+
+```json
+{
+  "success": false,
+  "message": "API key tidak valid"
+}
+```
+
+HTTP Status: `401`
+
+---
+
+## 3. Endpoint
+
+### 3.1 Daftar Kandidat (dengan pagination & filter)
+
+```
+GET /api/integrasi/kandidat
+```
+
+**Query Parameter (semua opsional):**
+
+| Parameter       | Tipe    | Keterangan |
+|-----------------|---------|------------|
+| `page`          | number  | Nomor halaman (default `1`) |
+| `limit`         | number  | Jumlah per halaman (default `50`, maks `200`) |
+| `search`        | string  | Cari berdasarkan `nama_romaji` atau `nama_katakana` (partial match) |
+| `status`        | string  | Filter `status_formulir` |
+| `status_progres`| string  | Filter `status_progres` |
+| `jenis_kelamin` | string  | Filter jenis kelamin (contoh: `Laki-laki` / `Perempuan`) |
+| `cabang_id`     | number  | Filter per cabang |
+| `bidang_ssw`    | string  | Filter `sertifikat_ssw` (partial match) |
+| `jenjang`       | string  | Filter `pendidikan_terakhir` |
+
+**Contoh Request:**
+
+```bash
+curl -H "x-api-key: mendunia_eb5e66a28fda2f2159f9a2516bd5ed26fe3e4c5d3807a145" \
+  "https://api.penempatan.mendunia.id/api/integrasi/kandidat?page=1&limit=10&search=sato"
+```
+
+**Contoh Respon:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "nama_katakana": "サトウ",
+      "nama_romaji": "Sato Taro",
+      "tempat_lahir": "Jakarta",
+      "tanggal_lahir": "1998-05-14",
+      "umur": 26,
+      "jenis_kelamin": "Laki-laki",
+      "status_pernikahan": "Lajang",
+      "jumlah_anak": 0,
+      "agama": "Islam",
+      "tinggi_badan": 170,
+      "berat_badan": 65,
+      "golongan_darah": "A",
+      "nomor_hp": "081234567890",
+      "email_kontak": "sato@example.com",
+      "alamat_lengkap": "Jl. Merdeka No. 1, Jakarta",
+      "pendidikan_terakhir": "SMA/SMK",
+      "level_jlpt": "N3",
+      "level_jft": null,
+      "sertifikat_ssw": "Teknik Mesin",
+      "level_bahasa_jepang": "Menengah",
+      "status_formulir": "Lengkap",
+      "status_progres": "Seleksi",
+      "status_keberangkatan": "Belum Berangkat",
+      "nama_perusahaan": "PT. Jepang Maju",
+      "bidang_ssw": "Teknik Mesin",
+      "institusi": null,
+      "created_at": "2024-01-10T09:30:00.000Z",
+      "updated_at": "2024-02-01T12:00:00.000Z",
+      "nama_cabang": "Jakarta"
+    }
+  ],
+  "pagination": {
+    "total": 125,
+    "page": 1,
+    "limit": 10,
+    "total_pages": 13
+  }
+}
+```
+
+---
+
+### 3.2 Detail Kandidat per ID
+
+```
+GET /api/integrasi/kandidat/:id
+```
+
+**Contoh Request:**
+
+```bash
+curl -H "x-api-key: mendunia_eb5e66a28fda2f2159f9a2516bd5ed26fe3e4c5d3807a145" \
+  "https://api.penempatan.mendunia.id/api/integrasi/kandidat/1"
+```
+
+**Contoh Respon** (detail lengkap = seluruh field profil + array `pendidikan`, `pengalaman`, `keluarga`, `dokumen`):
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 41,
+    "nama_katakana": "ライハン ナウファル ヒバテゥラー",
+    "nama_romaji": "Raihan Naufal Hibatullah",
+    "tempat_lahir": "Tuban",
+    "tanggal_lahir": "2007-03-19T17:00:00.000Z",
+    "umur": 19,
+    "jenis_kelamin": "Laki-laki",
+    "pendidikan_terakhir": "SMA/SMK",
+    "status_pernikahan": "Belum Menikah",
+    "agama": "Islam",
+    "tinggi_badan": 165,
+    "berat_badan": 52,
+    "golongan_darah": "O",
+    "ukuran_baju": "L",
+    "lingkar_pinggang": 77.0,
+    "panjang_telapak_kaki": 26.0,
+    "sim_dimiliki": "A",
+    "nomor_hp": "082230737550",
+    "email_kontak": "naufalraihan549@gmail.com",
+    "kontak_ortu_nama": "Jiyatno",
+    "kontak_ortu_hp": "0812-2914-7773",
+    "alamat_lengkap": "Jl.Kerecaan Rt. 01/ Rw. 08 ...",
+    "sudah_vaksin": 1,
+    "penglihatan_kanan": "3",
+    "penglihatan_kiri": "3",
+    "berkacamata": 1,
+    "lensa_kontak": 0,
+    "buta_warna": 0,
+    "kondisi_kesehatan": "Sehat",
+    "riwayat_penyakit": "Tidak ada",
+    "bertato": 0,
+    "merokok": 0,
+    "minum_alkohol": 0,
+    "level_jlpt": "Belum ada",
+    "level_jft": "A2",
+    "lama_belajar_jepang": "9 bulan",
+    "level_bahasa_jepang": "Menengah",
+    "pernah_ke_jepang": 0,
+    "keluarga_di_jepang": 0,
+    "kenalan_di_jepang": 0,
+    "sertifikat_ssw": "Pertanian",
+    "id_prometric": null,
+    "password_prometric": null,
+    "tujuan_ke_jepang": "untuk mempelajari teknologi ...",
+    "alasan_ke_jepang": "saya ingin melihat keindahan jepang ...",
+    "cita_cita_setelah_jepang": "saat saya pulang ke Indonesia ...",
+    "rencana_pengiriman_uang": 6,
+    "kelebihan_diri": "saya pandai bekerja dalam tim ...",
+    "kekurangan_diri": "saya memerlukan sedikit waktu ...",
+    "hobi": "jogging",
+    "keahlian": "bisa menyetir mobil",
+    "lama_tinggal_jepang": "3-5 tahun",
+    "lama_kerja_perusahaan": "1-2 tahun",
+    "rencana_pulang": "3-4 kali",
+    "sumber_biaya": "Dana Talang LPK",
+    "biaya_disiapkan": "10-20 Juta",
+    "bersedia_shift": 1,
+    "bersedia_lembur": 1,
+    "bersedia_hari_libur": 1,
+    "penghasilan_keluarga": 4,
+    "status_formulir": "draft",
+    "status_progres": "lamar ke perusahaan",
+    "status_keberangkatan": null,
+    "nama_perusahaan": "LPK SO Sekai Indonesia",
+    "bidang_ssw": "Pertanian",
+    "institusi": "",
+    "tgl_setsumeikai": null,
+    "tgl_mensetsu_1": null,
+    "tgl_mensetsu_2": null,
+    "catatan_mensetsu": null,
+    "biaya_pemberkasan": null,
+    "adm_tahap_1": null,
+    "adm_tahap_2": null,
+    "dokumen_dikirim": null,
+    "terbit_kontrak": null,
+    "kontrak_dikirim_tsk": null,
+    "terbit_paspor": null,
+    "masuk_imigrasi": null,
+    "coe_terbit": null,
+    "ektkln_pembuatan": null,
+    "dokumen_dikirim_2": null,
+    "visa": null,
+    "jadwal_penerbangan": null,
+    "created_at": "2026-05-25T06:33:00.000Z",
+    "updated_at": "2026-08-03T03:26:55.000Z",
+    "nama_cabang": "Bojonegoro Sukses Mendunia",
+    "pendidikan": [
+      {
+        "jenjang": "SMA/SMK",
+        "nama_sekolah": "MAN 1 BOJONEGORO",
+        "jurusan": "Ips",
+        "bulan_masuk": "Juli",
+        "tahun_masuk": 2022,
+        "bulan_lulus": "Mei",
+        "tahun_lulus": 2025
+      }
+    ],
+    "pengalaman": [
+      {
+        "nama_perusahaan": "Brilink TRIATMAJA",
+        "alamat_perusahaan": null,
+        "posisi": "staf",
+        "bulan_masuk": "Mei",
+        "tahun_masuk": 2025,
+        "bulan_keluar": "Agustus",
+        "tahun_keluar": 2025,
+        "masih_bekerja": 0,
+        "deskripsi_pekerjaan": null
+      }
+    ],
+    "keluarga": [
+      {
+        "hubungan": "Ayah",
+        "nama": "Jiyatno",
+        "usia": 47,
+        "pekerjaan": "wiraswasta",
+        "penghasilan": "Rp 4 / bulan"
+      },
+      {
+        "hubungan": "Ibu",
+        "nama": "Siti Lailatu Sa'adah",
+        "usia": 47,
+        "pekerjaan": "ibu rumahtangga",
+        "penghasilan": null
+      }
+    ],
+    "dokumen": [
+      {
+        "jenis_dokumen": "sertifikat_jft",
+        "nama_file": "1.png",
+        "path_file": "uploads/.../1.png",
+        "mime_type": "image/png",
+        "ukuran_file": 123456,
+        "uploaded_at": "2026-01-01T00:00:00.000Z",
+        "file_url": "https://api.penempatan.mendunia.id/uploads/.../1.png"
+      }
+    ]
+  }
+}
+```
+
+> `file_url` pada dokumen berisi URL lengkap file (dibangun otomatis dari host API).
+
+Jika id tidak ditemukan:
+
+```json
+{
+  "success": false,
+  "message": "Data tidak ditemukan"
+}
+```
+
+HTTP Status: `404`
+
+---
+
+## 4. Daftar Field yang Dikembalikan
+
+**List & Detail (detail menambah `pendidikan` dan `pengalaman`):**
+
+`id`, `nama_katakana`, `nama_romaji`, `tempat_lahir`, `tanggal_lahir`, `umur`,
+`jenis_kelamin`, `status_pernikahan`, `jumlah_anak`, `agama`, `tinggi_badan`,
+`berat_badan`, `golongan_darah`, `nomor_hp`, `email_kontak`, `alamat_lengkap`,
+`pendidikan_terakhir`, `level_jlpt`, `level_jft`, `sertifikat_ssw`,
+`level_bahasa_jepang`, `status_formulir`, `status_progres`,
+`status_keberangkatan`, `nama_perusahaan`, `bidang_ssw`, `institusi`,
+`created_at`, `updated_at`, `nama_cabang`
+
+---
+
+## 5. Kode Error
+
+| HTTP Status | Keterangan |
+|-------------|------------|
+| `200`       | Sukses |
+| `401`       | API key tidak ditemukan / tidak valid / nonaktif |
+| `404`       | Data kandidat tidak ditemukan |
+| `500`       | Server error |
+
+---
+
+## 6. Contoh Implementasi
+
+### Node.js / Axios
+
+```js
+const axios = require('axios');
+
+const api = axios.create({
+  baseURL: 'https://api.penempatan.mendunia.id',
+  headers: {
+    'x-api-key': 'mendunia_eb5e66a28fda2f2159f9a2516bd5ed26fe3e4c5d3807a145',
+  },
+});
+
+// List kandidat
+const res = await api.get('/api/integrasi/kandidat', {
+  params: { page: 1, limit: 50, search: 'sato' },
+});
+console.log(res.data.data, res.data.pagination);
+
+// Detail kandidat
+const detail = await api.get('/api/integrasi/kandidat/1');
+console.log(detail.data.data);
+```
+
+### PHP / cURL
+
+```php
+$ch = curl_init('https://api.penempatan.mendunia.id/api/integrasi/kandidat?page=1&limit=10');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'x-api-key: mendunia_eb5e66a28fda2f2159f9a2516bd5ed26fe3e4c5d3807a145',
+]);
+$response = curl_exec($ch);
+curl_close($ch);
+$data = json_decode($response, true);
+```
+
+---
+
+## 7. Catatan
+
+1. **HTTPS wajib** — jangan panggil endpoint pakai `http://` (akan diblokir browser sebagai mixed content).
+2. **Rate limit:** tidak ada saat ini, tapi mohon pakai `page`/`limit` agar efisien.
+3. API key bersifat permanent; untuk pembaruan/perubahan key, hubungi admin Sistem Penempatan.

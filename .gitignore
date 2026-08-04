@@ -4,6 +4,9 @@ dist
 .env.local
 .DS_Store
 backend/.env
+frontend/.env
+frontend/.env
+frontend/.env.production
 *.env
 frontend/dist/
 backend/uploads/

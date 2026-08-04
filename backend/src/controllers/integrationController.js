@@ -591,6 +591,236 @@ const getCabangById = async (req, res) => {
   }
 };
 
+// ============================================================
+// DASHBOARD / STATISTIK
+// GET /api/integrasi/dashboard
+// ============================================================
+const getDashboard = async (req, res) => {
+  try {
+    const { start_date, end_date, filter_type, cabang_id } = req.query;
+
+    let dateFilter = '';
+    const dateParams = [];
+
+    if (filter_type === 'today') {
+      dateFilter = ' AND DATE(kp.created_at) = ?';
+      dateParams.push(new Date().toISOString().split('T')[0]);
+    } else if (filter_type === 'yesterday') {
+      dateFilter = ' AND DATE(kp.created_at) = ?';
+      dateParams.push(new Date(Date.now() - 86400000).toISOString().split('T')[0]);
+    } else if (filter_type === 'week') {
+      dateFilter = ' AND DATE(kp.created_at) >= ?';
+      dateParams.push(new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]);
+    } else if (filter_type === 'month') {
+      dateFilter = ' AND DATE(kp.created_at) >= ?';
+      dateParams.push(new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]);
+    } else if (start_date && end_date) {
+      dateFilter = ' AND DATE(kp.created_at) BETWEEN ? AND ?';
+      dateParams.push(start_date, end_date);
+    }
+
+    let whereClause = dateFilter ? `WHERE 1=1${dateFilter}` : '';
+    const params = [...dateParams];
+
+    if (cabang_id) {
+      whereClause += whereClause ? ' AND kp.cabang_id = ?' : 'WHERE kp.cabang_id = ?';
+      params.push(cabang_id);
+    }
+
+    const [total] = await pool.query(
+      `SELECT COUNT(*) as total FROM kandidat_profil kp ${whereClause}`,
+      params
+    );
+
+    const allStatusWhere = whereClause || 'WHERE 1=1';
+    const [byStatus] = await pool.query(
+      `SELECT status_formulir, COUNT(*) as count FROM kandidat_profil kp ${allStatusWhere} GROUP BY status_formulir`,
+      params
+    );
+
+    const approvedWhere = whereClause
+      ? whereClause + ` AND kp.status_formulir = ${pool.escape('approved')}`
+      : `WHERE kp.status_formulir = ${pool.escape('approved')}`;
+
+    const [byCabang] = await pool.query(
+      `SELECT TRIM(c.nama_cabang) as nama_cabang, COUNT(kp.id) as count
+       FROM kandidat_profil kp
+       LEFT JOIN cabang c ON kp.cabang_id = c.id
+       ${approvedWhere}
+       GROUP BY kp.cabang_id, c.nama_cabang`,
+      params
+    );
+
+    const [allProfiles] = await pool.query(
+      `SELECT kp.sertifikat_ssw, kp.jenis_kelamin, kp.status_progres, c.nama_cabang
+       FROM kandidat_profil kp
+       LEFT JOIN cabang c ON kp.cabang_id = c.id
+       ${approvedWhere}`,
+      params
+    );
+
+    const sswList = [
+      'Pengolahan Makanan', 'Pertanian', 'Gaishoku', 'Kaigo (perawat)',
+      'Building Cleaning', 'Restoran', 'Driver', 'Perhotelah',
+      'Perbaikan dan Perawatan Mobil', 'Konstruksi', 'Perikanan',
+    ];
+    const progresList = [
+      'Job Matching', 'Pending', 'lamar ke perusahaan', 'Interview',
+      'Jadwalkan Interview Ulang', 'Lulus interview', 'Gagal Interview',
+      'Pemberkasan', 'Berangkat', 'Ditolak',
+    ];
+
+    const bySSWGender = [];
+    const bySSWProgres = [];
+
+    sswList.forEach((ssw) => {
+      const bySSW = allProfiles.filter((p) => {
+        if (!p.sertifikat_ssw) return false;
+        return p.sertifikat_ssw.split(',').map((s) => s.trim()).includes(ssw);
+      });
+      const laki = bySSW.filter((p) => p.jenis_kelamin === 'Laki-laki').length;
+      const perempuan = bySSW.filter((p) => p.jenis_kelamin === 'Perempuan').length;
+      bySSWGender.push({ ssw, laki, perempuan, total: laki + perempuan });
+
+      const progresCounts = Object.fromEntries(progresList.map((p) => [p, 0]));
+      bySSW.forEach((p) => {
+        const key = p.status_progres || 'Pending';
+        if (progresCounts[key] !== undefined) progresCounts[key]++;
+      });
+      bySSWProgres.push({
+        ssw,
+        progres: Object.entries(progresCounts).map(([status, count]) => ({ status, count })),
+      });
+    });
+
+    const [byCabangProgres] = await pool.query(
+      `SELECT TRIM(c.nama_cabang) as nama_cabang, kp.status_progres, COUNT(kp.id) as count
+       FROM kandidat_profil kp
+       LEFT JOIN cabang c ON kp.cabang_id = c.id
+       ${whereClause} AND kp.status_formulir = 'approved'
+       GROUP BY kp.cabang_id, c.nama_cabang, kp.status_progres
+       ORDER BY c.nama_cabang, kp.status_progres`,
+      params
+    );
+
+    const jftWhere = whereClause ? whereClause : 'WHERE 1=1';
+
+    const [jftByGender] = await pool.query(
+      `SELECT kp.jenis_kelamin,
+        COUNT(DISTINCT CASE WHEN jft.id IS NOT NULL THEN kp.id END) as has_jft,
+        COUNT(DISTINCT CASE WHEN jft.id IS NULL THEN kp.id END) as no_jft
+       FROM kandidat_profil kp
+       LEFT JOIN kandidat_dokumen jft ON jft.kandidat_id = kp.id AND jft.jenis_dokumen = 'sertifikat_jft'
+       ${jftWhere} GROUP BY kp.jenis_kelamin`,
+      params
+    );
+
+    const [jftByCabang] = await pool.query(
+      `SELECT c.nama_cabang,
+        COUNT(DISTINCT CASE WHEN jft.id IS NOT NULL THEN kp.id END) as has_jft,
+        COUNT(DISTINCT CASE WHEN jft.id IS NULL THEN kp.id END) as no_jft
+       FROM kandidat_profil kp
+       LEFT JOIN kandidat_dokumen jft ON jft.kandidat_id = kp.id AND jft.jenis_dokumen = 'sertifikat_jft'
+       LEFT JOIN cabang c ON kp.cabang_id = c.id
+       ${whereClause} GROUP BY kp.cabang_id, c.nama_cabang ORDER BY c.nama_cabang`,
+      params
+    );
+
+    const [sswByGender] = await pool.query(
+      `SELECT kp.jenis_kelamin,
+        COUNT(DISTINCT CASE WHEN ssw.id IS NOT NULL THEN kp.id END) as has_ssw,
+        COUNT(DISTINCT CASE WHEN ssw.id IS NULL THEN kp.id END) as no_ssw
+       FROM kandidat_profil kp
+       LEFT JOIN kandidat_dokumen ssw ON ssw.kandidat_id = kp.id AND ssw.jenis_dokumen LIKE 'ssw_%'
+       ${jftWhere} GROUP BY kp.jenis_kelamin`,
+      params
+    );
+
+    const [sswByCabang] = await pool.query(
+      `SELECT c.nama_cabang,
+        COUNT(DISTINCT CASE WHEN ssw.id IS NOT NULL THEN kp.id END) as has_ssw,
+        COUNT(DISTINCT CASE WHEN ssw.id IS NULL THEN kp.id END) as no_ssw
+       FROM kandidat_profil kp
+       LEFT JOIN kandidat_dokumen ssw ON ssw.kandidat_id = kp.id AND ssw.jenis_dokumen LIKE 'ssw_%'
+       LEFT JOIN cabang c ON kp.cabang_id = c.id
+       ${whereClause} GROUP BY kp.cabang_id, c.nama_cabang ORDER BY c.nama_cabang`,
+      params
+    );
+
+    let interviewFilter = '';
+    const interviewParams = [];
+
+    if (filter_type === 'today') {
+      interviewFilter = ' AND DATE(kh.created_at) = ?';
+      interviewParams.push(new Date().toISOString().split('T')[0]);
+    } else if (filter_type === 'yesterday') {
+      interviewFilter = ' AND DATE(kh.created_at) = ?';
+      interviewParams.push(new Date(Date.now() - 86400000).toISOString().split('T')[0]);
+    } else if (filter_type === 'week') {
+      interviewFilter = ' AND DATE(kh.created_at) >= ?';
+      interviewParams.push(new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]);
+    } else if (filter_type === 'month') {
+      interviewFilter = ' AND DATE(kh.created_at) >= ?';
+      interviewParams.push(new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]);
+    } else if (start_date && end_date) {
+      interviewFilter = ' AND DATE(kh.created_at) BETWEEN ? AND ?';
+      interviewParams.push(start_date, end_date);
+    }
+
+    if (cabang_id) {
+      interviewFilter += ' AND kp.cabang_id = ?';
+      interviewParams.push(cabang_id);
+    }
+
+    const [interviewByCabang] = await pool.query(
+      `SELECT c.nama_cabang,
+        COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value = 'Interview' AND kp.jenis_kelamin = 'Laki-laki' THEN kh.kandidat_id END) as interview_laki,
+        COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value = 'Interview' AND kp.jenis_kelamin = 'Perempuan' THEN kh.kandidat_id END) as interview_perempuan,
+        COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value = 'Jadwalkan Interview Ulang' AND kp.jenis_kelamin = 'Laki-laki' THEN kh.kandidat_id END) as jadwalkan_laki,
+        COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value = 'Jadwalkan Interview Ulang' AND kp.jenis_kelamin = 'Perempuan' THEN kh.kandidat_id END) as jadwalkan_perempuan,
+        COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value = 'Lulus interview' AND kp.jenis_kelamin = 'Laki-laki' THEN kh.kandidat_id END) as lulus_laki,
+        COUNT(DISTINCT CASE WHEN kh.field_name = 'status_progres' AND kh.new_value = 'Lulus interview' AND kp.jenis_kelamin = 'Perempuan' THEN kh.kandidat_id END) as lulus_perempuan
+       FROM kandidat_history kh
+       JOIN kandidat_profil kp ON kh.kandidat_id = kp.id
+       LEFT JOIN cabang c ON kp.cabang_id = c.id
+       WHERE kh.field_name = 'status_progres' ${interviewFilter}
+       GROUP BY kp.cabang_id, c.nama_cabang
+       ORDER BY c.nama_cabang`,
+      interviewParams
+    );
+
+    const [interviewByGender] = await pool.query(
+      `SELECT kp.jenis_kelamin,
+        COUNT(DISTINCT CASE WHEN kp.status_progres IN ('Interview', 'Jadwalkan Interview Ulang') THEN kp.id END) as interview,
+        COUNT(DISTINCT CASE WHEN kp.status_progres = 'Lulus interview' THEN kp.id END) as lulus
+       FROM kandidat_profil kp
+       ${jftWhere}
+       GROUP BY kp.jenis_kelamin`,
+      params
+    );
+
+    const result = {
+      total: total[0].total,
+      byStatus,
+      byCabang,
+      bySSWGender,
+      bySSWProgres,
+      byCabangProgres,
+      jftByGender,
+      jftByCabang,
+      sswByGender,
+      sswByCabang,
+      interviewByCabang,
+      interviewByGender,
+    };
+
+    res.json({ success: true, data: result });
+  } catch (err) {
+    console.error('[INTEGRASI] Error getDashboard:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 const getApiClients = async (req, res) => {
   try {
     const [rows] = await pool.query(`
@@ -700,4 +930,4 @@ const deleteApiClient = async (req, res) => {
   }
 };
 
-module.exports = { getKandidat, getKandidatById, createKandidat, updateKandidatById, uploadDokumen, deleteDokumen, getCabang, getCabangById, getApiClients, createApiClient, updateApiClient, regenerateApiKey, deleteApiClient };
+module.exports = { getKandidat, getKandidatById, createKandidat, updateKandidatById, uploadDokumen, deleteDokumen, getCabang, getCabangById, getDashboard, getApiClients, createApiClient, updateApiClient, regenerateApiKey, deleteApiClient };

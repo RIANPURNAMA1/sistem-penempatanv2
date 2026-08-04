@@ -553,6 +553,85 @@ Jika id tidak ditemukan: HTTP `404`, `{ "success": false, "message": "Cabang tid
 
 ---
 
+### 4.7 Dashboard / Statistik Kandidat
+
+```
+GET /api/integrasi/dashboard
+```
+
+Menampilkan statistik keseluruhan (sama dengan dashboard admin).
+
+**Query Parameter (opsional):**
+
+| Parameter     | Tipe   | Keterangan |
+|---------------|--------|------------|
+| `filter_type` | string | `today`, `yesterday`, `week`, `month` (filter berdasarkan tanggal dibuat) |
+| `start_date`  | string | Format `YYYY-MM-DD` (awal rentang, wajib disertai `end_date`) |
+| `end_date`    | string | Format `YYYY-MM-DD` |
+| `cabang_id`   | number | Filter hanya satu cabang |
+
+**Contoh Request:**
+
+```bash
+curl -H "x-api-key: mendunia_eb5e66a28fda2f2159f9a2516bd5ed26fe3e4c5d3807a145" \
+  "https://api.penempatan.mendunia.id/api/integrasi/dashboard"
+```
+
+**Struktur Respon:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "total": 385,
+    "byStatus": [
+      { "status_formulir": "draft", "count": 268 },
+      { "status_formulir": "submitted", "count": 30 },
+      { "status_formulir": "reviewed", "count": 41 },
+      { "status_formulir": "approved", "count": 45 }
+    ],
+    "byCabang": [
+      { "nama_cabang": "Bojonegoro Sukses Mendunia", "count": 12 }
+    ],
+    "bySSWGender": [
+      { "ssw": "Pertanian", "laki": 11, "perempuan": 7, "total": 18 }
+    ],
+    "bySSWProgres": [
+      { "ssw": "Pertanian", "progres": [ { "status": "Job Matching", "count": 5 } ] }
+    ],
+    "byCabangProgres": [
+      { "nama_cabang": "Bojonegoro Sukses Mendunia", "status_progres": "Interview", "count": 1 }
+    ],
+    "jftByGender": [
+      { "jenis_kelamin": "Laki-laki", "has_jft": 187, "no_jft": 22 }
+    ],
+    "jftByCabang": [
+      { "nama_cabang": "Bojonegoro Sukses Mendunia", "has_jft": 10, "no_jft": 2 }
+    ],
+    "sswByGender": [
+      { "jenis_kelamin": "Laki-laki", "has_ssw": 21, "no_ssw": 188 }
+    ],
+    "sswByCabang": [
+      { "nama_cabang": "Bojonegoro Sukses Mendunia", "has_ssw": 3, "no_ssw": 9 }
+    ],
+    "interviewByCabang": [
+      { "nama_cabang": "Bojonegoro Sukses Mendunia", "interview_laki": 1, "interview_perempuan": 0, "jadwalkan_laki": 0, "jadwalkan_perempuan": 0, "lulus_laki": 0, "lulus_perempuan": 0 }
+    ],
+    "interviewByGender": [
+      { "jenis_kelamin": "Laki-laki", "interview": 1, "lulus": 0 }
+    ]
+  }
+}
+```
+
+**Catatan:**
+- `byStatus` berisi jumlah kandidat per `status_formulir` (`draft`, `submitted`, `reviewed`, `approved`, `rejected`). Dari sini sim-mendunia bisa hitung "Terkirim", "Direview", "Disetujui", dan "Draft".
+- `bySSWGender` = statistik per bidang SSW (berdasarkan kandidat `approved`).
+- `jftByGender`/`sswByGender` = jumlah punya/belum sertifikat JFT & SSW per gender.
+- `interviewByCabang`/`interviewByGender` = jumlah interview & lulus interview (berdasarkan histori perubahan status).
+
+---
+
 ## 5. Daftar Field yang Dikembalikan
 
 **List:** field dasar kandidat.
@@ -635,6 +714,10 @@ await api.post('/api/integrasi/kandidat/42/upload-dokumen?jenis_dokumen=pas_foto
 // List cabang
 const cabang = await api.get('/api/integrasi/cabang');
 console.log(cabang.data.data);
+
+// Dashboard statistik
+const dashboard = await api.get('/api/integrasi/dashboard');
+console.log(dashboard.data.data.total, dashboard.data.data.byStatus);
 ```
 
 ### PHP / cURL

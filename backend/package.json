@@ -11,7 +11,8 @@
     "db:seed": "node src/seed.js",
     "db:seed:admin": "node src/seed-admin.js",
     "db:fresh": "node src/truncate.js",
-    "db:truncate": "node src/truncate.js"
+    "db:truncate": "node src/truncate.js",
+    "db:apikey": "node src/seed-api-client.js"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.0",

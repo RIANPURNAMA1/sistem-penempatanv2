@@ -672,6 +672,22 @@ const migrations = [
     },
     sql: `ALTER TABLE job_order ADD COLUMN keterangan TEXT AFTER status_kelulusan`
   },
+  {
+    name: 'create_api_clients',
+    check: async (conn) => {
+      const [t] = await conn.query("SHOW TABLES LIKE 'api_clients'");
+      return t.length > 0;
+    },
+    sql: `CREATE TABLE IF NOT EXISTS api_clients (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      nama_sistem VARCHAR(200) NOT NULL,
+      api_key VARCHAR(100) UNIQUE NOT NULL,
+      active TINYINT(1) DEFAULT 1,
+      last_used_at TIMESTAMP NULL DEFAULT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`
+  },
 ];
 
 async function runMigrations() {

@@ -20,6 +20,7 @@ import {
   PanelLeftOpen,
   Search,
   History,
+  KeyRound,
 } from "lucide-react";
 import {
   Dialog,
@@ -80,6 +81,12 @@ const navItems: NavItem[] = [
     label: "Data Sistem Lama",
     href: "/data-sistem-lama",
     icon: Database,
+    roles: ["admin_penempatan"],
+  },
+  {
+    label: "API Key",
+    href: "/api-key",
+    icon: KeyRound,
     roles: ["admin_penempatan"],
   },
   {

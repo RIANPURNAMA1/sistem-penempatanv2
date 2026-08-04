@@ -15,6 +15,7 @@ import KandidatDashboardPage from '@/pages/kandidat/KandidatDashboardPage'
 import KandidatHistoryPage from '@/pages/kandidat/KandidatHistoryPage'
 import DataSistemLamaPage from '@/pages/admin/DataSistemLamaPage'
 import CvPage from '@/pages/admin/CvPage'
+import ApiKeyPage from '@/pages/admin/ApiKeyPage'
 import ProfilPage from '@/pages/kandidat/ProfilPage'
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
 import { useAuthStore } from '@/store/authStore'
@@ -73,6 +74,11 @@ export default function App() {
         <Route path="/data-sistem-lama" element={
           <ProtectedRoute roles={['admin_penempatan']}>
             <DataSistemLamaPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/api-key" element={
+          <ProtectedRoute roles={['admin_penempatan']}>
+            <ApiKeyPage />
           </ProtectedRoute>
         } />
         <Route path="/cv/:id" element={

@@ -1,6 +1,270 @@
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const pool = require('../config/database');
 const cache = require('../utils/cache');
+
+// ============================================================
+// HELPER UNTUK INPUT DATA FORMULIR (via API key)
+// ============================================================
+
+const toNull = (val) => (val === '' || val === undefined || val === null ? null : val);
+
+const toDateOnly = (val) => {
+  if (!val || val === '') return null;
+  try {
+    return new Date(val).toISOString().split('T')[0];
+  } catch {
+    return null;
+  }
+};
+
+const toBool = (val) => {
+  if (val === true || val === 1 || val === '1' || val === 'true') return 1;
+  if (val === false || val === 0 || val === '0' || val === 'false') return 0;
+  return null;
+};
+
+const BOOL_FIELDS = [
+  'sudah_vaksin', 'berkacamata', 'lensa_kontak', 'buta_warna', 'bertato',
+  'merokok', 'minum_alkohol', 'pernah_ke_jepang', 'keluarga_di_jepang',
+  'kenalan_di_jepang', 'bersedia_shift', 'bersedia_lembur', 'bersedia_hari_libur',
+];
+
+const PROFIL_FIELDS = [
+  'cabang_id', 'nama_katakana', 'nama_romaji', 'tempat_lahir', 'tanggal_lahir',
+  'umur', 'jenis_kelamin', 'status_pernikahan', 'jumlah_anak', 'agama',
+  'tinggi_badan', 'berat_badan', 'golongan_darah', 'tangan_dominan', 'ukuran_baju',
+  'lingkar_pinggang', 'panjang_telapak_kaki', 'sim_dimiliki', 'nomor_hp',
+  'email_kontak', 'alamat_lengkap', 'kontak_ortu_nama', 'kontak_ortu_hp',
+  'sudah_vaksin', 'penglihatan_kanan', 'penglihatan_kiri', 'berkacamata',
+  'lensa_kontak', 'buta_warna', 'kondisi_kesehatan', 'riwayat_penyakit',
+  'bertato', 'merokok', 'minum_alkohol', 'intensitas_alkohol', 'pendidikan_terakhir',
+  'pernah_ke_jepang', 'keluarga_di_jepang', 'hubungan_keluarga_jepang',
+  'status_kerabat_jepang', 'kontak_keluarga_jepang', 'kenalan_di_jepang',
+  'kenalan_jepang_detail', 'level_jlpt', 'level_jft', 'sertifikat_ssw',
+  'lama_belajar_jepang', 'level_bahasa_jepang', 'id_prometric', 'password_prometric',
+  'tujuan_ke_jepang', 'alasan_ke_jepang', 'cita_cita_setelah_jepang',
+  'rencana_pengiriman_uang', 'kelebihan_diri', 'kekurangan_diri', 'hobi',
+  'keahlian', 'bersedia_shift', 'bersedia_lembur', 'bersedia_hari_libur',
+  'lama_tinggal_jepang', 'lama_kerja_perusahaan', 'rencana_pulang',
+  'sumber_biaya', 'biaya_disiapkan', 'status_formulir', 'status_progres',
+];
+
+const saveKandidatData = async (conn, kandidatId, body) => {
+  const { pendidikan, pengalaman, keluarga, penghasilan_keluarga, ...profileData } = body;
+
+  if (Array.isArray(profileData.sertifikat_ssw)) {
+    profileData.sertifikat_ssw = profileData.sertifikat_ssw.join(', ');
+  }
+
+  const updates = {};
+  PROFIL_FIELDS.forEach((f) => {
+    if (profileData[f] === undefined) return;
+    if (f === 'tanggal_lahir') updates[f] = toDateOnly(profileData[f]);
+    else if (BOOL_FIELDS.includes(f)) updates[f] = toBool(profileData[f]);
+    else updates[f] = toNull(profileData[f]);
+  });
+  if (penghasilan_keluarga !== undefined) updates['penghasilan_keluarga'] = toNull(penghasilan_keluarga);
+
+  if (Object.keys(updates).length) {
+    const setClause = Object.keys(updates).map((k) => `${k} = ?`).join(', ');
+    await conn.query(
+      `UPDATE kandidat_profil SET ${setClause} WHERE id = ?`,
+      [...Object.values(updates), kandidatId]
+    );
+  }
+
+  if (pendidikan && Array.isArray(pendidikan)) {
+    await conn.query('DELETE FROM kandidat_pendidikan WHERE kandidat_id = ?', [kandidatId]);
+    for (const p of pendidikan) {
+      if (p.nama_sekolah || p.jenjang) {
+        await conn.query(
+          `INSERT INTO kandidat_pendidikan
+           (kandidat_id, jenjang, nama_sekolah, bulan_masuk, tahun_masuk, bulan_lulus, tahun_lulus, jurusan)
+           VALUES (?,?,?,?,?,?,?,?)`,
+          [
+            kandidatId,
+            p.jenjang || null,
+            p.nama_sekolah || null,
+            p.bulan_masuk || null,
+            toNull(p.tahun_masuk),
+            p.bulan_lulus || null,
+            toNull(p.tahun_lulus),
+            p.jurusan || null,
+          ]
+        );
+      }
+    }
+  }
+
+  if (pengalaman && Array.isArray(pengalaman)) {
+    await conn.query('DELETE FROM kandidat_pengalaman_kerja WHERE kandidat_id = ?', [kandidatId]);
+    for (const p of pengalaman) {
+      if (p.nama_perusahaan) {
+        await conn.query(
+          `INSERT INTO kandidat_pengalaman_kerja
+           (kandidat_id, nama_perusahaan, alamat_perusahaan, posisi, bulan_masuk, tahun_masuk, bulan_keluar, tahun_keluar, masih_bekerja, deskripsi_pekerjaan)
+           VALUES (?,?,?,?,?,?,?,?,?,?)`,
+          [
+            kandidatId,
+            p.nama_perusahaan || null,
+            p.alamat_perusahaan || null,
+            p.posisi || null,
+            p.bulan_masuk || null,
+            toNull(p.tahun_masuk),
+            p.bulan_keluar || null,
+            toNull(p.tahun_keluar),
+            toBool(p.masih_bekerja),
+            p.deskripsi_pekerjaan || null,
+          ]
+        );
+      }
+    }
+  }
+
+  if (keluarga && Array.isArray(keluarga)) {
+    await conn.query('DELETE FROM kandidat_keluarga WHERE kandidat_id = ?', [kandidatId]);
+    for (const k of keluarga) {
+      if (k.nama || k.hubungan) {
+        await conn.query(
+          `INSERT INTO kandidat_keluarga
+           (kandidat_id, hubungan, nama, usia, pekerjaan, penghasilan, urutan)
+           VALUES (?,?,?,?,?,?,?)`,
+          [
+            kandidatId,
+            k.hubungan || null,
+            k.nama || null,
+            toNull(k.usia),
+            k.pekerjaan || null,
+            toNull(k.penghasilan),
+            k.urutan || 1,
+          ]
+        );
+      }
+    }
+  }
+};
+
+// ============================================================
+// BUAT / ISI FORMULIR PENDAFTARAN KANDIDAT BARU
+// POST /api/integrasi/kandidat
+// ============================================================
+const createKandidat = async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const { email, nama_romaji, nama_katakana, cabang_id } = req.body;
+
+    if (!nama_romaji && !nama_katakana) {
+      return res.status(400).json({ success: false, message: 'nama_romaji atau nama_katakana wajib diisi' });
+    }
+
+    await conn.beginTransaction();
+
+    const namaUser = nama_romaji || nama_katakana;
+    let userId = null;
+
+    if (email) {
+      const [userRows] = await conn.query('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
+      if (userRows.length) {
+        userId = userRows[0].id;
+      } else {
+        const [newUser] = await conn.query(
+          'INSERT INTO users (email, nama, password, role) VALUES (?, ?, ?, ?)',
+          [email, namaUser, await bcrypt.hash('12345678', 10), 'kandidat']
+        );
+        userId = newUser.insertId;
+      }
+    } else {
+      const dummyEmail = `${namaUser.replace(/\s+/g, '').toLowerCase()}_${Date.now()}@kandidat.com`;
+      const [newUser] = await conn.query(
+        'INSERT INTO users (email, nama, password, role) VALUES (?, ?, ?, ?)',
+        [dummyEmail, namaUser, await bcrypt.hash('12345678', 10), 'kandidat']
+      );
+      userId = newUser.insertId;
+    }
+
+    const [existingProfil] = await conn.query(
+      'SELECT id FROM kandidat_profil WHERE user_id = ?',
+      [userId]
+    );
+
+    let kandidatId;
+    if (existingProfil.length) {
+      kandidatId = existingProfil[0].id;
+      await saveKandidatData(conn, kandidatId, req.body);
+    } else {
+      const [insert] = await conn.query(
+        `INSERT INTO kandidat_profil
+         (user_id, cabang_id, nama_romaji, nama_katakana, status_formulir, status_progres)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          userId,
+          toNull(cabang_id),
+          toNull(nama_romaji),
+          toNull(nama_katakana),
+          req.body.status_formulir || 'draft',
+          req.body.status_progres || 'Pending',
+        ]
+      );
+      kandidatId = insert.insertId;
+      await saveKandidatData(conn, kandidatId, req.body);
+    }
+
+    await conn.commit();
+    await cache.delByPrefix('kandidat');
+
+    res.status(201).json({
+      success: true,
+      message: 'Data formulir kandidat berhasil disimpan',
+      data: { id: kandidatId },
+    });
+  } catch (err) {
+    await conn.rollback();
+    console.error('[INTEGRASI] Error createKandidat:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  } finally {
+    conn.release();
+  }
+};
+
+// ============================================================
+// UPDATE DATA FORMULIR KANDIDAT BY ID
+// PUT /api/integrasi/kandidat/:id
+// ============================================================
+const updateKandidatById = async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const kandidatId = parseInt(req.params.id);
+    if (!kandidatId) {
+      return res.status(400).json({ success: false, message: 'ID kandidat tidak valid' });
+    }
+
+    const [rows] = await conn.query(
+      'SELECT id FROM kandidat_profil WHERE id = ? AND deleted_at IS NULL',
+      [kandidatId]
+    );
+    if (!rows.length) {
+      return res.status(404).json({ success: false, message: 'Kandidat tidak ditemukan' });
+    }
+
+    await conn.beginTransaction();
+    await saveKandidatData(conn, kandidatId, req.body);
+    await conn.commit();
+    await cache.delByPrefix('kandidat');
+
+    res.json({
+      success: true,
+      message: 'Data formulir kandidat berhasil diupdate',
+      data: { id: kandidatId },
+    });
+  } catch (err) {
+    await conn.rollback();
+    console.error('[INTEGRASI] Error updateKandidatById:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  } finally {
+    conn.release();
+  }
+};
 
 const PUBLIC_FIELDS = `
   kp.id,
@@ -284,4 +548,4 @@ const deleteApiClient = async (req, res) => {
   }
 };
 
-module.exports = { getKandidat, getKandidatById, getApiClients, createApiClient, updateApiClient, regenerateApiKey, deleteApiClient };
+module.exports = { getKandidat, getKandidatById, createKandidat, updateKandidatById, getApiClients, createApiClient, updateApiClient, regenerateApiKey, deleteApiClient };

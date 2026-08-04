@@ -7,6 +7,8 @@ const { authenticate, authorize } = require('../middleware/auth');
 // Endpoints publik untuk sistem lain (via API key)
 router.get('/kandidat', authApiKey, ctrl.getKandidat);
 router.get('/kandidat/:id', authApiKey, ctrl.getKandidatById);
+router.post('/kandidat', authApiKey, ctrl.createKandidat);
+router.put('/kandidat/:id', authApiKey, ctrl.updateKandidatById);
 
 // Manajemen API key (khusus admin)
 router.use('/api-clients', authenticate, authorize('admin_penempatan'));

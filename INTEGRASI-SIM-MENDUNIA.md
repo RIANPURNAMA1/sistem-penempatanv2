@@ -295,9 +295,133 @@ HTTP Status: `404`
 
 ---
 
-## 4. Daftar Field yang Dikembalikan
+## 4. Endpoint Input Data Formulir Pendaftaran
 
-**List & Detail (detail menambah `pendidikan` dan `pengalaman`):**
+### 4.1 Buat / Isi Formulir Kandidat Baru
+
+```
+POST /api/integrasi/kandidat
+Content-Type: application/json
+```
+
+Membuat kandidat baru (otomatis membuat akun `kandidat`). Jika `email` sudah
+terdaftar, data profil yang sudah ada akan diperbarui.
+
+**Body (JSON)** — field yang sama dengan form `/formulir`:
+
+```json
+{
+  "nama_romaji": "Raihan Naufal Hibatullah",
+  "nama_katakana": "ライハン ナウファル ヒバテゥラー",
+  "email": "naufalraihan549@gmail.com",
+  "tempat_lahir": "Tuban",
+  "tanggal_lahir": "2007-03-20",
+  "umur": 19,
+  "jenis_kelamin": "Laki-laki",
+  "status_pernikahan": "Belum Menikah",
+  "agama": "Islam",
+  "tinggi_badan": 165,
+  "berat_badan": 52,
+  "golongan_darah": "O",
+  "ukuran_baju": "L",
+  "lingkar_pinggang": 77.0,
+  "panjang_telapak_kaki": 26.0,
+  "sim_dimiliki": "A",
+  "nomor_hp": "082230737550",
+  "email_kontak": "naufalraihan549@gmail.com",
+  "kontak_ortu_nama": "Jiyatno",
+  "kontak_ortu_hp": "0812-2914-7773",
+  "alamat_lengkap": "Jl.Kerecaan ...",
+  "pendidikan_terakhir": "SMA/SMK",
+  "sertifikat_ssw": "Pertanian",
+  "level_jlpt": "Belum ada",
+  "level_jft": "A2",
+  "level_bahasa_jepang": "Menengah",
+  "status_formulir": "draft",
+  "status_progres": "Pending",
+  "penghasilan_keluarga": 4,
+  "pendidikan": [
+    { "jenjang": "SD", "nama_sekolah": "MI SALAFIYAH", "jurusan": null,
+      "bulan_masuk": "Juli", "tahun_masuk": 2013, "bulan_lulus": "Juli", "tahun_lulus": 2019 }
+  ],
+  "pengalaman": [
+    { "nama_perusahaan": "Brilink TRIATMAJA", "posisi": "staf",
+      "bulan_masuk": "Mei", "tahun_masuk": 2025, "bulan_keluar": "Agustus", "tahun_keluar": 2025,
+      "masih_bekerja": false, "deskripsi_pekerjaan": null }
+  ],
+  "keluarga": [
+    { "hubungan": "Ayah", "nama": "Jiyatno", "usia": 47, "pekerjaan": "wiraswasta", "penghasilan": "Rp 4 / bulan" },
+    { "hubungan": "Ibu", "nama": "Siti Lailatu Sa'adah", "usia": 47, "pekerjaan": "ibu rumahtangga" }
+  ]
+}
+```
+
+**Contoh Request:**
+
+```bash
+curl -X POST "https://api.penempatan.mendunia.id/api/integrasi/kandidat" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: mendunia_eb5e66a28fda2f2159f9a2516bd5ed26fe3e4c5d3807a145" \
+  -d '{ "nama_romaji": "Test Kandidat", "email": "test@example.com", "jenis_kelamin": "Laki-laki" }'
+```
+
+**Contoh Respon:**
+
+```json
+{
+  "success": true,
+  "message": "Data formulir kandidat berhasil disimpan",
+  "data": { "id": 42 }
+}
+```
+
+**Catatan:**
+- `tanggal_lahir` dikirim format `YYYY-MM-DD` (atau ISO, otomatis dinormalisasi).
+- Field boolean (`sudah_vaksin`, `berkacamata`, `bersedia_shift`, dll.) terima
+  `true/false`, `1/0`, atau `"1"/"0"`.
+- `sertifikat_ssw` bisa string `"Pertanian"` atau array `["Pertanian"]`.
+- Default password akun kandidat: `12345678` (jika email baru).
+
+---
+
+### 4.2 Update Data Formulir Kandidat yang Sudah Ada
+
+```
+PUT /api/integrasi/kandidat/:id
+Content-Type: application/json
+```
+
+Mengupdate data profil + `pendidikan` + `pengalaman` + `keluarga` kandidat
+berdasarkan ID. `pendidikan`/`pengalaman`/`keluarga` akan **diganti total** sesuai
+array yang dikirim (kosongkan array untuk menghapus).
+
+**Contoh Request:**
+
+```bash
+curl -X PUT "https://api.penempatan.mendunia.id/api/integrasi/kandidat/42" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: mendunia_eb5e66a28fda2f2159f9a2516bd5ed26fe3e4c5d3807a145" \
+  -d '{ "level_bahasa_jepang": "Lancar", "status_progres": "lamar ke perusahaan" }'
+```
+
+**Contoh Respon:**
+
+```json
+{
+  "success": true,
+  "message": "Data formulir kandidat berhasil diupdate",
+  "data": { "id": 42 }
+}
+```
+
+Jika id tidak ditemukan: HTTP `404`, `{ "success": false, "message": "Kandidat tidak ditemukan" }`.
+
+---
+
+## 5. Daftar Field yang Dikembalikan
+
+**List:** field dasar kandidat.
+**Detail:** seluruh kolom profil + array `pendidikan`, `pengalaman`, `keluarga`, dan `dokumen`.
 
 `id`, `nama_katakana`, `nama_romaji`, `tempat_lahir`, `tanggal_lahir`, `umur`,
 `jenis_kelamin`, `status_pernikahan`, `jumlah_anak`, `agama`, `tinggi_badan`,
@@ -309,18 +433,20 @@ HTTP Status: `404`
 
 ---
 
-## 5. Kode Error
+## 6. Kode Error
 
 | HTTP Status | Keterangan |
 |-------------|------------|
 | `200`       | Sukses |
+| `201`       | Kandidat berhasil dibuat |
+| `400`       | Data tidak valid (mis. nama kosong, ID tidak valid) |
 | `401`       | API key tidak ditemukan / tidak valid / nonaktif |
 | `404`       | Data kandidat tidak ditemukan |
 | `500`       | Server error |
 
 ---
 
-## 6. Contoh Implementasi
+## 7. Contoh Implementasi
 
 ### Node.js / Axios
 
@@ -343,6 +469,24 @@ console.log(res.data.data, res.data.pagination);
 // Detail kandidat
 const detail = await api.get('/api/integrasi/kandidat/1');
 console.log(detail.data.data);
+
+// Buat / isi formulir kandidat
+const created = await api.post('/api/integrasi/kandidat', {
+  nama_romaji: 'Raihan Naufal Hibatullah',
+  email: 'naufalraihan549@gmail.com',
+  jenis_kelamin: 'Laki-laki',
+  pendidikan_terakhir: 'SMA/SMK',
+  keluarga: [
+    { hubungan: 'Ayah', nama: 'Jiyatno', usia: 47, pekerjaan: 'wiraswasta' },
+  ],
+});
+console.log('Kandidat ID:', created.data.data.id);
+
+// Update formulir kandidat by id
+await api.put('/api/integrasi/kandidat/42', {
+  level_bahasa_jepang: 'Lancar',
+  status_progres: 'lamar ke perusahaan',
+});
 ```
 
 ### PHP / cURL
@@ -360,7 +504,7 @@ $data = json_decode($response, true);
 
 ---
 
-## 7. Catatan
+## 8. Catatan
 
 1. **HTTPS wajib** — jangan panggil endpoint pakai `http://` (akan diblokir browser sebagai mixed content).
 2. **Rate limit:** tidak ada saat ini, tapi mohon pakai `page`/`limit` agar efisien.

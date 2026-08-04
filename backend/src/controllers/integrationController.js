@@ -1,5 +1,7 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
 const pool = require('../config/database');
 const cache = require('../utils/cache');
 
@@ -263,6 +265,97 @@ const updateKandidatById = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   } finally {
     conn.release();
+  }
+};
+
+// ============================================================
+// UPLOAD DOKUMEN KANDIDAT
+// POST /api/integrasi/kandidat/:id/upload-dokumen?jenis_dokumen=...
+// (multipart/form-data, field: file)
+// ============================================================
+const uploadDokumen = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'File tidak ditemukan' });
+    }
+
+    const kandidatId = parseInt(req.params.id);
+    const jenis_dokumen = req.body.jenis_dokumen || req.query.jenis_dokumen;
+
+    if (!jenis_dokumen) {
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(400).json({ success: false, message: 'jenis_dokumen wajib diisi' });
+    }
+
+    const [kandidat] = await pool.query(
+      'SELECT id FROM kandidat_profil WHERE id = ? AND deleted_at IS NULL',
+      [kandidatId]
+    );
+    if (!kandidat.length) {
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(404).json({ success: false, message: 'Kandidat tidak ditemukan' });
+    }
+
+    const normalizedPath = req.file.path
+      .replace(/\\/g, '/')
+      .replace(/^.*?uploads\//, '');
+
+    await pool.query(
+      'DELETE FROM kandidat_dokumen WHERE kandidat_id = ? AND jenis_dokumen = ?',
+      [kandidatId, jenis_dokumen]
+    );
+
+    await pool.query(
+      'INSERT INTO kandidat_dokumen (kandidat_id, jenis_dokumen, nama_file, path_file, ukuran_file, mime_type) VALUES (?,?,?,?,?,?)',
+      [kandidatId, jenis_dokumen, req.file.originalname, normalizedPath, req.file.size, req.file.mimetype]
+    );
+
+    await cache.delByPrefix('kandidat');
+
+    res.json({
+      success: true,
+      message: 'Dokumen berhasil diupload',
+      path: normalizedPath,
+      size: `${(req.file.size / 1024).toFixed(2)} KB`,
+    });
+  } catch (err) {
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    console.error('[INTEGRASI] Error uploadDokumen:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// ============================================================
+// HAPUS DOKUMEN KANDIDAT
+// DELETE /api/integrasi/kandidat/:id/dokumen?jenis_dokumen=...
+// ============================================================
+const deleteDokumen = async (req, res) => {
+  try {
+    const kandidatId = parseInt(req.params.id);
+    const jenis_dokumen = req.query.jenis_dokumen;
+
+    if (!jenis_dokumen) {
+      return res.status(400).json({ success: false, message: 'jenis_dokumen wajib diisi' });
+    }
+
+    const [docs] = await pool.query(
+      'SELECT id, path_file FROM kandidat_dokumen WHERE kandidat_id = ? AND jenis_dokumen = ?',
+      [kandidatId, jenis_dokumen]
+    );
+    if (!docs.length) {
+      return res.status(404).json({ success: false, message: 'Dokumen tidak ditemukan' });
+    }
+
+    const filePath = path.join(__dirname, '..', '..', 'uploads', docs[0].path_file);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+    await pool.query('DELETE FROM kandidat_dokumen WHERE id = ?', [docs[0].id]);
+    await cache.delByPrefix('kandidat');
+
+    res.json({ success: true, message: 'Dokumen berhasil dihapus' });
+  } catch (err) {
+    console.error('[INTEGRASI] Error deleteDokumen:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -548,4 +641,4 @@ const deleteApiClient = async (req, res) => {
   }
 };
 
-module.exports = { getKandidat, getKandidatById, createKandidat, updateKandidatById, getApiClients, createApiClient, updateApiClient, regenerateApiKey, deleteApiClient };
+module.exports = { getKandidat, getKandidatById, createKandidat, updateKandidatById, uploadDokumen, deleteDokumen, getApiClients, createApiClient, updateApiClient, regenerateApiKey, deleteApiClient };

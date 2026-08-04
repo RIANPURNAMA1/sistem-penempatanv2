@@ -418,6 +418,83 @@ Jika id tidak ditemukan: HTTP `404`, `{ "success": false, "message": "Kandidat t
 
 ---
 
+### 4.3 Upload Dokumen Kandidat
+
+```
+POST /api/integrasi/kandidat/:id/upload-dokumen?jenis_dokumen=<jenis>
+Content-Type: multipart/form-data
+```
+
+Field multipart: `file` (file yang diupload).
+
+Mengganti dokumen dengan jenis yang sama (file lama otomatis dihapus dari DB).
+
+**Jenis dokumen yang didukung** (`jenis_dokumen`):
+
+| Jenis              | Wajib? |
+|--------------------|--------|
+| `sertifikat_jft`   | Ya |
+| `pas_foto`         | Ya |
+| `foto_full_body`   | Ya |
+| `kk`               | Ya |
+| `ktp`              | Ya |
+| `ijazah`           | Ya |
+| `akte`             | Ya |
+| `lainnya`          | Tidak |
+| `ssw_1`, `ssw_2`, ... | Tidak (Sertifikat SSW, bisa banyak) |
+| `video_perkenalan` | Tidak |
+
+**Batas ukuran:**
+- Dokumen standar & foto: **500KB**
+- `foto_full_body`: **3MB**
+- `video_perkenalan`: **20MB**
+
+Format: JPG, PNG, GIF, PDF, MP4, MOV, AVI, WEBM.
+
+**Contoh Request:**
+
+```bash
+curl -X POST "https://api.penempatan.mendunia.id/api/integrasi/kandidat/42/upload-dokumen?jenis_dokumen=pas_foto" \
+  -H "x-api-key: mendunia_eb5e66a28fda2f2159f9a2516bd5ed26fe3e4c5d3807a145" \
+  -F "file=@C:/foto/pas_foto.jpg"
+```
+
+**Contoh Respon:**
+
+```json
+{
+  "success": true,
+  "message": "Dokumen berhasil diupload",
+  "path": "42/1234567890-ab12.jpg",
+  "size": "245.10 KB"
+}
+```
+
+---
+
+### 4.4 Hapus Dokumen Kandidat
+
+```
+DELETE /api/integrasi/kandidat/:id/dokumen?jenis_dokumen=pas_foto
+```
+
+**Contoh Request:**
+
+```bash
+curl -X DELETE "https://api.penempatan.mendunia.id/api/integrasi/kandidat/42/dokumen?jenis_dokumen=pas_foto" \
+  -H "x-api-key: mendunia_eb5e66a28fda2f2159f9a2516bd5ed26fe3e4c5d3807a145"
+```
+
+**Contoh Respon:**
+
+```json
+{ "success": true, "message": "Dokumen berhasil dihapus" }
+```
+
+Jika dokumen tidak ada: HTTP `404`.
+
+---
+
 ## 5. Daftar Field yang Dikembalikan
 
 **List:** field dasar kandidat.
@@ -486,6 +563,15 @@ console.log('Kandidat ID:', created.data.data.id);
 await api.put('/api/integrasi/kandidat/42', {
   level_bahasa_jepang: 'Lancar',
   status_progres: 'lamar ke perusahaan',
+});
+
+// Upload dokumen (multipart/form-data)
+const FormData = require('form-data');
+const fs = require('fs');
+const fd = new FormData();
+fd.append('file', fs.createReadStream('pas_foto.jpg'));
+await api.post('/api/integrasi/kandidat/42/upload-dokumen?jenis_dokumen=pas_foto', fd, {
+  headers: fd.getHeaders(),
 });
 ```
 

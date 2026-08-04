@@ -5,5 +5,5 @@ dist
 .DS_Store
 backend/.env
 *.env
-
+frontend/dist/
 backend/uploads/

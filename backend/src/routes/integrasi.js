@@ -18,6 +18,8 @@ router.post('/kandidat', authApiKey, ctrl.createKandidat);
 router.put('/kandidat/:id', authApiKey, ctrl.updateKandidatById);
 router.post('/kandidat/:id/upload-dokumen', authApiKey, setKandidatUser, uploadDokumenMiddleware, ctrl.uploadDokumen);
 router.delete('/kandidat/:id/dokumen', authApiKey, ctrl.deleteDokumen);
+router.get('/cabang', authApiKey, ctrl.getCabang);
+router.get('/cabang/:id', authApiKey, ctrl.getCabangById);
 
 // Manajemen API key (khusus admin)
 router.use('/api-clients', authenticate, authorize('admin_penempatan'));

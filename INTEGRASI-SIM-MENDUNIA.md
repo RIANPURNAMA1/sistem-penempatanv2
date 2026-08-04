@@ -495,6 +495,64 @@ Jika dokumen tidak ada: HTTP `404`.
 
 ---
 
+### 4.5 Daftar Cabang
+
+```
+GET /api/integrasi/cabang
+```
+
+**Query Parameter (opsional):**
+
+| Parameter | Tipe   | Keterangan |
+|-----------|--------|------------|
+| `search`  | string | Cari `nama_cabang`, `kode_cabang`, `kota`, atau `provinsi` |
+| `status`  | string | Filter `aktif` / `nonaktif` |
+
+**Contoh Request:**
+
+```bash
+curl -H "x-api-key: mendunia_eb5e66a28fda2f2159f9a2516bd5ed26fe3e4c5d3807a145" \
+  "https://api.penempatan.mendunia.id/api/integrasi/cabang?search=bojonegoro"
+```
+
+**Contoh Respon:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 6,
+      "nama_cabang": "Bojonegoro Sukses Mendunia",
+      "kode_cabang": "BJsm",
+      "alamat": "Jl. Madrasah RT 003 RW 005 Sidodadi Sukosewu Bojonegoro Jawa Timur",
+      "kota": "Bojonegoro",
+      "provinsi": "Jawa Timur",
+      "telepon": "081234916191",
+      "email": "bojonegoromendunia@gmail.com",
+      "status": "aktif"
+    }
+  ]
+}
+```
+
+### 4.6 Detail Cabang
+
+```
+GET /api/integrasi/cabang/:id
+```
+
+**Contoh Request:**
+
+```bash
+curl -H "x-api-key: mendunia_eb5e66a28fda2f2159f9a2516bd5ed26fe3e4c5d3807a145" \
+  "https://api.penempatan.mendunia.id/api/integrasi/cabang/6"
+```
+
+Jika id tidak ditemukan: HTTP `404`, `{ "success": false, "message": "Cabang tidak ditemukan" }`.
+
+---
+
 ## 5. Daftar Field yang Dikembalikan
 
 **List:** field dasar kandidat.
@@ -573,6 +631,10 @@ fd.append('file', fs.createReadStream('pas_foto.jpg'));
 await api.post('/api/integrasi/kandidat/42/upload-dokumen?jenis_dokumen=pas_foto', fd, {
   headers: fd.getHeaders(),
 });
+
+// List cabang
+const cabang = await api.get('/api/integrasi/cabang');
+console.log(cabang.data.data);
 ```
 
 ### PHP / cURL

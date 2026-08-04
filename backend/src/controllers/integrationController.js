@@ -532,6 +532,65 @@ const getKandidatById = async (req, res) => {
   }
 };
 
+// ============================================================
+// DAFTAR CABANG
+// GET /api/integrasi/cabang
+// ============================================================
+const getCabang = async (req, res) => {
+  try {
+    const { search, status } = req.query;
+
+    let where = 'WHERE 1=1';
+    const params = [];
+
+    if (search) {
+      where += ' AND (nama_cabang LIKE ? OR kode_cabang LIKE ? OR kota LIKE ? OR provinsi LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    if (status) {
+      where += ' AND status = ?';
+      params.push(status);
+    }
+
+    const [rows] = await pool.query(
+      `SELECT id, nama_cabang, kode_cabang, alamat, kota, provinsi, telepon, email, status
+       FROM cabang
+       ${where}
+       ORDER BY nama_cabang ASC`,
+      params
+    );
+
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    console.error('[INTEGRASI] Error getCabang:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// ============================================================
+// DETAIL CABANG
+// GET /api/integrasi/cabang/:id
+// ============================================================
+const getCabangById = async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT id, nama_cabang, kode_cabang, alamat, kota, provinsi, telepon, email, status
+       FROM cabang
+       WHERE id = ?`,
+      [req.params.id]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ success: false, message: 'Cabang tidak ditemukan' });
+    }
+
+    res.json({ success: true, data: rows[0] });
+  } catch (err) {
+    console.error('[INTEGRASI] Error getCabangById:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 const getApiClients = async (req, res) => {
   try {
     const [rows] = await pool.query(`
@@ -641,4 +700,4 @@ const deleteApiClient = async (req, res) => {
   }
 };
 
-module.exports = { getKandidat, getKandidatById, createKandidat, updateKandidatById, uploadDokumen, deleteDokumen, getApiClients, createApiClient, updateApiClient, regenerateApiKey, deleteApiClient };
+module.exports = { getKandidat, getKandidatById, createKandidat, updateKandidatById, uploadDokumen, deleteDokumen, getCabang, getCabangById, getApiClients, createApiClient, updateApiClient, regenerateApiKey, deleteApiClient };

@@ -37,8 +37,10 @@ import {
   RefreshCw,
   MessageCircle,
   Sparkles,
+  Plus,
 } from "lucide-react";
 import HistoryModal from "@/components/HistoryModal";
+import TambahKandidatModal from "@/components/admin/TambahKandidatModal";
 import * as XLSX from "xlsx";
 
 interface Kandidat {
@@ -116,6 +118,7 @@ export default function KandidatListPage() {
   const [data, setData] = useState<Kandidat[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"all" | "draft">("all");
   const [status, setStatus] = useState("");
   const [cabangList, setCabangList] = useState<
     { id: number; nama_cabang: string }[]
@@ -140,6 +143,7 @@ export default function KandidatListPage() {
     id: number;
     nama: string;
   } | null>(null);
+  const [showTambah, setShowTambah] = useState(false);
   const [screeningLoading, setScreeningLoading] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const [followUpLoading, setFollowUpLoading] = useState<number | null>(null);
@@ -174,12 +178,12 @@ export default function KandidatListPage() {
   const [aiImporting, setAiImporting] = useState(false);
 
   const handleExportExcel = () => {
-    if (data.length === 0) {
+    if (listData.length === 0) {
       toast({ title: "Tidak ada data untuk diekspor", variant: "destructive" });
       return;
     }
 
-    const exportData = data.map((item, index) => ({
+    const exportData = listData.map((item, index) => ({
       No: index + 1,
       "Nama Romaji": item.nama_romaji || "",
       "Nama Katakana": item.nama_katakana || "",
@@ -609,8 +613,15 @@ export default function KandidatListPage() {
     }
   };
 
-  const totalPages = Math.ceil(data.length / itemsPerPage);
-  const paginatedData = data.slice(
+  const listData =
+    viewMode === "draft"
+      ? data.filter((k) => k.status_formulir === "draft")
+      : data.filter((k) => k.status_formulir !== "draft");
+
+  const draftCount = data.filter((k) => k.status_formulir === "draft").length;
+
+  const totalPages = Math.ceil(listData.length / itemsPerPage);
+  const paginatedData = listData.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
@@ -640,6 +651,20 @@ export default function KandidatListPage() {
             onChange={handleImportExcel}
             className="hidden"
           />
+
+          <button
+            onClick={() => setShowTambah(true)}
+            className="
+              inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5
+              text-xs font-medium transition-colors
+              bg-[#1e3a5f] text-white hover:bg-[#16304d] border-[#1e3a5f]
+              focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300
+              whitespace-nowrap
+            "
+          >
+            <Plus size={13} className="shrink-0" />
+            <span>Tambah</span>
+          </button>
 
           <button
             onClick={triggerImport}
@@ -762,6 +787,45 @@ export default function KandidatListPage() {
             <span>Data Dihapus</span>
           </button>
         </div>
+      </div>
+
+      {/* ── MENU SEMUA / DRAFT ── */}
+      <div className="flex gap-1.5 mb-4 bg-white rounded-xl border shadow-sm p-1.5 w-fit">
+        <button
+          onClick={() => {
+            setViewMode("all");
+            setCurrentPage(1);
+          }}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+            viewMode === "all"
+              ? "bg-[#1e3a5f] text-white"
+              : "text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          Semua
+        </button>
+        <button
+          onClick={() => {
+            setViewMode("draft");
+            setCurrentPage(1);
+          }}
+          className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+            viewMode === "draft"
+              ? "bg-[#1e3a5f] text-white"
+              : "text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          Draft
+          <span
+            className={`inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full text-[10px] font-bold px-1 ${
+              viewMode === "draft"
+                ? "bg-white/20 text-white"
+                : "bg-slate-200 text-slate-700"
+            }`}
+          >
+            {draftCount}
+          </span>
+        </button>
       </div>
 
       {/* ── SEARCH + STATUS FILTER ── */}
@@ -1078,7 +1142,7 @@ export default function KandidatListPage() {
             <Users size={16} className="text-gray-500 shrink-0" />
             <span className="font-medium text-gray-700 text-sm">Kandidat</span>
             {!loading && (
-              <span className="text-xs text-gray-500">{data.length} item</span>
+              <span className="text-xs text-gray-500">{listData.length} item</span>
             )}
           </div>
           {loading && <span className="text-xs text-gray-500">Memuat...</span>}
@@ -1496,13 +1560,13 @@ export default function KandidatListPage() {
         </div>
 
         {/* ── PAGINATION ── */}
-        {!loading && data.length > 0 && (
+        {!loading && listData.length > 0 && (
           <div className="px-3 xs:px-4 py-3 flex flex-col xs:flex-row items-start xs:items-center justify-between gap-2 bg-gray-50">
             <div className="flex items-center gap-2 xs:gap-3">
               <p className="text-[10px] xs:text-xs text-gray-500">
                 {(currentPage - 1) * itemsPerPage + 1}–
-                {Math.min(currentPage * itemsPerPage, data.length)} dari{" "}
-                {data.length}
+                {Math.min(currentPage * itemsPerPage, listData.length)} dari{" "}
+                {listData.length}
               </p>
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] xs:text-xs text-gray-400">
@@ -1580,6 +1644,13 @@ export default function KandidatListPage() {
           kandidatName={historyKandidat.nama}
         />
       )}
+
+      {/* ── TAMBAH KANDIDAT MODAL ── */}
+      <TambahKandidatModal
+        open={showTambah}
+        onOpenChange={setShowTambah}
+        onSuccess={load}
+      />
 
       {/* ── DELETE CONFIRMATION MODAL ── */}
       {followUpConfirm && (

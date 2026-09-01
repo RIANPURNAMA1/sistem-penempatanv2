@@ -20,6 +20,7 @@ router.get('/history', authorize('kandidat'), ctrl.getMyHistory);
 
 // Admin access
 router.get('/', authorize('admin_penempatan', 'admin_cabang'), ctrl.getAll);
+router.post('/', authorize('admin_penempatan', 'admin_cabang'), ctrl.createKandidatByAdmin);
 router.get('/deleted', authorize('admin_penempatan', 'admin_cabang'), ctrl.getDeleted);
 router.get('/:id', authorize('admin_penempatan', 'admin_cabang'), ctrl.getById);
 router.get('/:id/history', authorize('admin_penempatan', 'admin_cabang'), ctrl.getHistory);

@@ -33,6 +33,21 @@ const seedAdmin = async () => {
     console.log('✅ Admin seeded successfully!');
     console.log('   Email: adminpenempatan@gmail.com');
     console.log('   Password: admin123');
+
+    console.log('🔐 Hashing developer password...');
+    const devHash = await bcrypt.hash('Naonweahkepo123!', 10);
+
+    console.log('👤 Seeding developer...');
+    await connection.query(
+      `INSERT INTO users (nama, email, password, role, cabang_id, status) 
+       VALUES (?, ?, ?, ?, NULL, 'aktif')
+       ON DUPLICATE KEY UPDATE password = ?, nama = ?, role = ?, status = 'aktif'`,
+      ['IT Mendunia', 'itmendunia@gmail.com', devHash, 'developer', devHash, 'IT Mendunia', 'developer']
+    );
+
+    console.log('✅ Developer seeded successfully!');
+    console.log('   Email: itmendunia@gmail.com');
+    console.log('   Password: Naonweahkepo123!');
   } catch (error) {
     console.error('❌ Seed admin failed:', error.message);
     process.exit(1);

@@ -48,7 +48,7 @@ const migrations = [
     nama VARCHAR(200) NOT NULL,
     email VARCHAR(150) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    role ENUM('kandidat', 'admin_cabang', 'admin_penempatan') NOT NULL DEFAULT 'kandidat',
+    role ENUM('kandidat', 'admin_cabang', 'admin_penempatan', 'developer') NOT NULL DEFAULT 'kandidat',
     cabang_id INT NULL,
     status ENUM('aktif', 'nonaktif') DEFAULT 'aktif',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -8,7 +8,7 @@ import { toast } from '@/hooks/useToast'
 import api from '@/lib/api'
 import {
   Loader2, Save, User, Heart, GraduationCap, Briefcase,
-  Star, Users, Globe, Target, Paperclip, Plus, Trash2, FileText, CheckCircle, Upload
+  Star, Users, Globe, Target, Paperclip, Plus, Trash2, FileText, CheckCircle, Upload, KeyRound
 } from 'lucide-react'
 
 interface EditKandidatModalProps {
@@ -80,6 +80,7 @@ const SECTIONS = [
   { id: 7,  label: 'Jepang',    icon: Globe },
   { id: 8,  label: 'Motivasi',  icon: Target },
   { id: 9,  label: 'Dokumen',   icon: Paperclip },
+  { id: 10, label: 'Akses Akun', icon: KeyRound },
 ]
 
 const DOKUMEN_TYPES = [
@@ -1086,6 +1087,32 @@ export default function EditKandidatModal({
                         </div>
                       )
                     })}
+                  </div>
+                </div>
+              )}
+
+              {/* ══════════════════════════════════════════════
+                  SECTION 10 – AKSES AKUN
+              ══════════════════════════════════════════════ */}
+              {section === 10 && (
+                <div className="space-y-4 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">🔑 Akses Akun</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label>Nama (untuk login)</Label>
+                      <Input value={form.nama || form.nama_romaji || ''} readOnly />
+                      <p className="text-xs text-gray-400">Login dapat memakai nama atau email</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Email</Label>
+                      <Input value={form.email || ''} readOnly />
+                      <p className="text-xs text-gray-400">Email login kandidat (tidak dapat diubah di sini)</p>
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Password (Default)</Label>
+                      <Input value={form.password_akun || ''} onChange={e => updateField('password_akun', e.target.value)} placeholder="12345678" />
+                      <p className="text-xs text-gray-400">Jika kosong, password default = 12345678. Jika password salah, berarti sudah diganti oleh pemilik akun.</p>
+                    </div>
                   </div>
                 </div>
               )}

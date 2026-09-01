@@ -34,6 +34,28 @@ export default function ApiKeyPage() {
   const [regenerateId, setRegenerateId] = useState<number | null>(null)
   const [regenerating, setRegenerating] = useState(false)
 
+  const [devLocked, setDevLocked] = useState(true)
+  const [devEmail, setDevEmail] = useState('')
+  const [devPassword, setDevPassword] = useState('')
+  const [devVerifying, setDevVerifying] = useState(false)
+
+  const verifyDeveloper = async () => {
+    if (!devEmail.trim() || !devPassword.trim()) {
+      toast({ title: 'Email dan password wajib diisi', variant: 'destructive' })
+      return
+    }
+    setDevVerifying(true)
+    try {
+      const r = await api.post('/auth/login-developer', { email: devEmail.trim(), password: devPassword })
+      if (r.data.success) {
+        setDevLocked(false)
+        load()
+      }
+    } catch (err: any) {
+      toast({ title: err.response?.data?.message || 'Verifikasi developer gagal', variant: 'destructive' })
+    } finally { setDevVerifying(false) }
+  }
+
   const load = () => {
     setLoading(true)
     api.get('/integrasi/api-clients')
@@ -132,6 +154,59 @@ export default function ApiKeyPage() {
       day: '2-digit', month: 'short', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
     })
+  }
+
+  // ── GATE: akses halaman hanya setelah verifikasi developer ──
+  if (devLocked) {
+    return (
+      <div className="w-full min-w-0 px-2.5 sm:px-4 md:px-6 py-3 sm:py-5 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="w-full max-w-sm bg-white rounded-2xl border shadow-sm p-6">
+            <div className="flex items-center gap-2.5 mb-1">
+              <div className="w-10 h-10 rounded-xl bg-[#1e3a5f]/10 flex items-center justify-center shrink-0">
+                <ShieldCheck size={18} className="text-[#1e3a5f]" />
+              </div>
+              <h2 className="text-sm sm:text-base font-bold text-gray-900">Akses Developer Diperlukan</h2>
+            </div>
+            <p className="text-[11px] sm:text-xs text-gray-500 mt-1.5 mb-4 leading-relaxed">
+              Halaman API Key hanya dapat diakses oleh developer. Masukkan email dan password developer untuk melanjutkan.
+            </p>
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-700">Email Developer</label>
+                <Input
+                  type="email"
+                  value={devEmail}
+                  onChange={e => setDevEmail(e.target.value)}
+                  placeholder="developer@example.com"
+                  className="h-9 text-xs sm:text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-700">Password</label>
+                <Input
+                  type="password"
+                  value={devPassword}
+                  onChange={e => setDevPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="h-9 text-xs sm:text-sm"
+                  onKeyDown={e => { if (e.key === 'Enter') verifyDeveloper() }}
+                />
+              </div>
+              <Button
+                onClick={verifyDeveloper}
+                disabled={devVerifying}
+                className="w-full h-9 text-xs bg-[#1e3a5f] hover:bg-[#2d5a8a]"
+              >
+                {devVerifying && <Loader2 size={13} className="mr-1 animate-spin" />}
+                Masuk
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

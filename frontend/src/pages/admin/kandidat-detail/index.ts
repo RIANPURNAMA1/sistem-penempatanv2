@@ -8,6 +8,7 @@ export { default as PendidikanCard } from "./PendidikanCard";
 export { default as KeluargaCard } from "./KeluargaCard";
 export { default as PengalamanCard } from "./PengalamanCard";
 export { default as JepangCard } from "./JepangCard";
+export { default as AksesAkunCard } from "./AksesAkunCard";
 export { default as MotivasiCard } from "./MotivasiCard";
 export { default as DokumenCard } from "./DokumenCard";
 export { default as DokumenRingkasanCard } from "./DokumenRingkasanCard";

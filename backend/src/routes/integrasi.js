@@ -12,6 +12,8 @@ const setKandidatUser = (req, res, next) => {
 };
 
 // Endpoints publik untuk sistem lain (via API key)
+router.get('/progres', authApiKey, ctrl.getProgresKandidat);
+router.get('/progres/:id', authApiKey, ctrl.getProgresKandidatById);
 router.get('/kandidat', authApiKey, ctrl.getKandidat);
 router.get('/kandidat/:id', authApiKey, ctrl.getKandidatById);
 router.post('/kandidat', authApiKey, ctrl.createKandidat);
@@ -22,8 +24,8 @@ router.get('/cabang', authApiKey, ctrl.getCabang);
 router.get('/cabang/:id', authApiKey, ctrl.getCabangById);
 router.get('/dashboard', authApiKey, ctrl.getDashboard);
 
-// Manajemen API key (khusus admin)
-router.use('/api-clients', authenticate, authorize('admin_penempatan'));
+// Manajemen API key (khusus admin/developer)
+router.use('/api-clients', authenticate, authorize('admin_penempatan', 'developer'));
 router.get('/api-clients', ctrl.getApiClients);
 router.post('/api-clients', ctrl.createApiClient);
 router.put('/api-clients/:id', ctrl.updateApiClient);

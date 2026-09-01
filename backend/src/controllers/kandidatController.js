@@ -1760,6 +1760,227 @@ const importKandidat = async (req, res) => {
 };
 
 // ============================================================
+// TAMBAH KANDIDAT OLEH ADMIN (buat akun + profil + data lengkap)
+// ============================================================
+const toNull2 = (val) => (val === '' || val === undefined || val === null ? null : val);
+
+const createKandidatByAdmin = async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const {
+      email,
+      password_akun,
+      nama_romaji,
+      nama_katakana,
+      cabang_id,
+      status_formulir,
+      status_progres,
+      nama,
+      pendidikan,
+      pengalaman,
+      keluarga,
+      ...profilData
+    } = req.body;
+
+    // Cabang wajib
+    let cabangId = cabang_id || null;
+    if (!cabangId) {
+      await conn.rollback();
+      return res.status(400).json({ success: false, message: 'Cabang (Mendunia) wajib diisi' });
+    }
+
+    const namaKandidat = nama_romaji || nama_katakana || nama;
+    if (!namaKandidat) {
+      await conn.rollback();
+      return res.status(400).json({ success: false, message: 'Nama kandidat wajib diisi' });
+    }
+
+    // ============================================================
+    // BUAT AKUN USERS (login email/nama + password)
+    // ============================================================
+    const defaultPassword = password_akun || '12345678';
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+    let userEmail = email;
+    if (!userEmail) {
+      userEmail = `${namaKandidat.replace(/\s+/g, '').toLowerCase()}_${Date.now()}@kandidat.com`;
+    }
+    const [existingUser] = await conn.query('SELECT id FROM users WHERE email = ? LIMIT 1', [userEmail]);
+    if (existingUser.length > 0) {
+      await conn.rollback();
+      return res.status(409).json({ success: false, message: 'Email sudah terdaftar' });
+    }
+
+    const [newUser] = await conn.query(
+      'INSERT INTO users (nama, email, password, role, cabang_id) VALUES (?, ?, ?, "kandidat", ?)',
+      [namaKandidat, userEmail, hashedPassword, cabangId]
+    );
+    const userId = newUser.insertId;
+
+    // ============================================================
+    // INSERT KANDIDAT_PROFIL
+    // ============================================================
+    const insertFields = {
+      user_id: userId,
+      cabang_id: cabangId,
+      nama_romaji: toNull2(nama_romaji),
+      nama_katakana: toNull2(nama_katakana),
+      password_akun: defaultPassword,
+      status_formulir: status_formulir || 'draft',
+      status_progres: status_progres || 'Pending',
+    };
+
+    const BOOL_FIELDS = [
+      'sudah_vaksin', 'berkacamata', 'lensa_kontak', 'buta_warna', 'bertato',
+      'merokok', 'minum_alkohol', 'pernah_ke_jepang', 'keluarga_di_jepang',
+      'kenalan_di_jepang', 'bersedia_shift', 'bersedia_lembur', 'bersedia_hari_libur',
+    ];
+
+    const PROFIL_FIELDS = [
+      'tempat_lahir', 'tanggal_lahir', 'umur', 'jenis_kelamin', 'status_pernikahan',
+      'jumlah_anak', 'agama', 'tinggi_badan', 'berat_badan', 'golongan_darah',
+      'tangan_dominan', 'ukuran_baju', 'lingkar_pinggang', 'panjang_telapak_kaki',
+      'sim_dimiliki', 'nomor_hp', 'email_kontak', 'alamat_lengkap', 'kontak_ortu_nama',
+      'kontak_ortu_hp', 'penghasilan_keluarga', 'sudah_vaksin', 'penglihatan_kanan',
+      'penglihatan_kiri', 'berkacamata', 'lensa_kontak', 'buta_warna', 'kondisi_kesehatan',
+      'riwayat_penyakit', 'bertato', 'merokok', 'minum_alkohol', 'intensitas_alkohol',
+      'pendidikan_terakhir', 'pernah_ke_jepang', 'keluarga_di_jepang',
+      'hubungan_keluarga_jepang', 'status_kerabat_jepang', 'kontak_keluarga_jepang',
+      'kenalan_di_jepang', 'kenalan_jepang_detail', 'level_jlpt', 'level_jft',
+      'sertifikat_ssw', 'lama_belajar_jepang', 'level_bahasa_jepang', 'id_prometric',
+      'password_prometric', 'tujuan_ke_jepang', 'alasan_ke_jepang',
+      'cita_cita_setelah_jepang', 'rencana_pengiriman_uang', 'kelebihan_diri',
+      'kekurangan_diri', 'hobi', 'keahlian', 'bersedia_shift', 'bersedia_lembur',
+      'bersedia_hari_libur', 'lama_tinggal_jepang', 'lama_kerja_perusahaan',
+      'rencana_pulang', 'sumber_biaya', 'biaya_disiapkan',
+    ];
+
+    PROFIL_FIELDS.forEach((f) => {
+      if (profilData[f] === undefined) return;
+      if (f === 'tanggal_lahir') {
+        insertFields[f] = profilData[f] ? String(profilData[f]).split('T')[0] : null;
+      } else if (BOOL_FIELDS.includes(f)) {
+        const v = profilData[f];
+        insertFields[f] = (v === true || v === 1 || v === '1' || v === 'true') ? 1
+          : (v === false || v === 0 || v === '0' || v === 'false') ? 0 : null;
+      } else {
+        insertFields[f] = toNull2(profilData[f]);
+      }
+    });
+
+    if (Array.isArray(insertFields.sertifikat_ssw)) {
+      insertFields.sertifikat_ssw = insertFields.sertifikat_ssw.join(', ');
+    }
+
+    const cols = Object.keys(insertFields);
+    const placeholders = cols.map(() => '?').join(', ');
+    const [profilResult] = await conn.query(
+      `INSERT INTO kandidat_profil (${cols.join(', ')}) VALUES (${placeholders})`,
+      Object.values(insertFields)
+    );
+    const kandidatId = profilResult.insertId;
+
+    // ============================================================
+    // PENDIDIKAN
+    // ============================================================
+    if (pendidikan && Array.isArray(pendidikan)) {
+      for (const p of pendidikan) {
+        if (p.nama_sekolah || p.jenjang) {
+          await conn.query(
+            `INSERT INTO kandidat_pendidikan
+             (kandidat_id, jenjang, nama_sekolah, bulan_masuk, tahun_masuk, bulan_lulus, tahun_lulus, jurusan)
+             VALUES (?,?,?,?,?,?,?,?)`,
+            [
+              kandidatId,
+              p.jenjang || null,
+              p.nama_sekolah || null,
+              p.bulan_masuk || null,
+              toNull2(p.tahun_masuk),
+              p.bulan_lulus || null,
+              toNull2(p.tahun_lulus),
+              p.jurusan || null,
+            ]
+          );
+        }
+      }
+    }
+
+    // ============================================================
+    // PENGALAMAN
+    // ============================================================
+    if (pengalaman && Array.isArray(pengalaman)) {
+      for (const p of pengalaman) {
+        if (p.nama_perusahaan) {
+          await conn.query(
+            `INSERT INTO kandidat_pengalaman_kerja
+             (kandidat_id, nama_perusahaan, alamat_perusahaan, posisi, bulan_masuk, tahun_masuk, bulan_keluar, tahun_keluar, masih_bekerja, deskripsi_pekerjaan)
+             VALUES (?,?,?,?,?,?,?,?,?,?)`,
+            [
+              kandidatId,
+              p.nama_perusahaan || null,
+              p.alamat_perusahaan || null,
+              p.posisi || null,
+              p.bulan_masuk || null,
+              toNull2(p.tahun_masuk),
+              p.bulan_keluar || null,
+              toNull2(p.tahun_keluar),
+              (p.masih_bekerja === true || p.masih_bekerja === 1 || p.masih_bekerja === '1') ? 1 : 0,
+              p.deskripsi_pekerjaan || null,
+            ]
+          );
+        }
+      }
+    }
+
+    // ============================================================
+    // KELUARGA
+    // ============================================================
+    if (keluarga && Array.isArray(keluarga)) {
+      for (const k of keluarga) {
+        if (k.nama || k.hubungan) {
+          await conn.query(
+            `INSERT INTO kandidat_keluarga
+             (kandidat_id, hubungan, nama, usia, pekerjaan, penghasilan, urutan)
+             VALUES (?,?,?,?,?,?,?)`,
+            [
+              kandidatId,
+              k.hubungan || null,
+              k.nama || null,
+              toNull2(k.usia),
+              k.pekerjaan || null,
+              toNull2(k.penghasilan),
+              k.urutan || 1,
+            ]
+          );
+        }
+      }
+    }
+
+    await conn.query(
+      `INSERT INTO kandidat_history (kandidat_id, admin_id, field_name, old_value, new_value, description) VALUES (?,?,?,?,?,?)`,
+      [kandidatId, req.user.id, 'create', '-', '-', 'Admin membuat kandidat baru']
+    );
+
+    await conn.commit();
+    await invalidateKandidatCache();
+
+    res.status(201).json({
+      success: true,
+      message: 'Kandidat berhasil ditambahkan',
+      data: { id: kandidatId, email: userEmail, password: defaultPassword },
+    });
+  } catch (err) {
+    await conn.rollback();
+    console.error('Tambah kandidat error:', err);
+    res.status(500).json({ success: false, message: 'Gagal menambah kandidat', error: err.message });
+  } finally {
+    conn.release();
+  }
+};
+
+// ============================================================
 // UPDATE PROFILE BY ADMIN
 // ============================================================
 const updateProfileByAdmin = async (req, res) => {
@@ -1784,6 +2005,7 @@ const updateProfileByAdmin = async (req, res) => {
       'cita_cita_setelah_jepang','rencana_pengiriman_uang','kelebihan_diri','kekurangan_diri',
       'hobi','keahlian','bersedia_shift','bersedia_lembur','bersedia_hari_libur',
       'lama_tinggal_jepang','lama_kerja_perusahaan','rencana_pulang','sumber_biaya','biaya_disiapkan',
+      'password_akun',
     ];
 
     const updates = {};
@@ -2375,6 +2597,7 @@ module.exports = {
   addHistory,
   updateProfileByAdmin,
   importKandidat,
+  createKandidatByAdmin,
   parseKandidatAI,
   importKandidatAI,
   followUpDraft,

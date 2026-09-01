@@ -85,7 +85,7 @@ const migrations = [
       nama VARCHAR(200) NOT NULL,
       email VARCHAR(150) UNIQUE NOT NULL,
       password VARCHAR(255) NOT NULL,
-      role ENUM('kandidat', 'admin_cabang', 'admin_penempatan') NOT NULL DEFAULT 'kandidat',
+      role ENUM('kandidat', 'admin_cabang', 'admin_penempatan', 'developer') NOT NULL DEFAULT 'kandidat',
       cabang_id INT NULL,
       status ENUM('aktif', 'nonaktif') DEFAULT 'aktif',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -373,6 +373,26 @@ const migrations = [
     sql: `INSERT INTO users (nama, email, password, role, cabang_id) VALUES 
       ('Admin Penempatan', 'admin@kandidat.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin_penempatan', NULL),
       ('Admin Bandung', 'admin.bdg@kandidat.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin_cabang', 2)`
+  },
+  {
+    name: 'add_developer_role',
+    check: async (conn) => {
+      const [cols] = await conn.query("SHOW COLUMNS FROM users LIKE 'role'");
+      if (cols.length === 0) return true;
+      const enumValues = cols[0].Type.replace('enum(', '').replace(')', '').replace(/'/g, '').split(',');
+      return enumValues.includes('developer');
+    },
+    sql: `ALTER TABLE users MODIFY COLUMN role ENUM('kandidat', 'admin_cabang', 'admin_penempatan', 'developer') NOT NULL DEFAULT 'kandidat'`
+  },
+  {
+    name: 'seed_default_developer',
+    check: async (conn) => {
+      const [rows] = await conn.query('SELECT COUNT(*) as cnt FROM users WHERE email = "itmendunia@gmail.com" AND role = "developer"');
+      return rows[0].cnt > 0;
+    },
+    sql: `INSERT INTO users (nama, email, password, role, cabang_id, status) 
+      VALUES ('IT Mendunia', 'itmendunia@gmail.com', '$2a$10$XuGQF5mS7wemEsFOnykRqe8Ratpsyv4v0AtdzHPYw2yS2fFw7/9gu', 'developer', NULL, 'aktif')
+      ON DUPLICATE KEY UPDATE password = VALUES(password), nama = VALUES(nama), role = VALUES(role), status = 'aktif'`
   },
   {
     name: 'create_job_order',
@@ -671,6 +691,14 @@ const migrations = [
       return cols.length > 0;
     },
     sql: `ALTER TABLE job_order ADD COLUMN keterangan TEXT AFTER status_kelulusan`
+  },
+  {
+    name: 'add_password_akun_to_kandidat_profil',
+    check: async (conn) => {
+      const [cols] = await conn.query('SHOW COLUMNS FROM kandidat_profil LIKE "password_akun"');
+      return cols.length > 0;
+    },
+    sql: `ALTER TABLE kandidat_profil ADD COLUMN password_akun VARCHAR(255) NULL`
   },
   {
     name: 'create_api_clients',

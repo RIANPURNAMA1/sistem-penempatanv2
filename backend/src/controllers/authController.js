@@ -312,4 +312,37 @@ const forgotPassword = async (req, res) => {
   }
 };
 
-module.exports = { register, login, googleLogin, sendForgotOtp, verifyOtp, getMe, updateProfile, changePassword, forgotPassword };
+const loginDeveloper = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email dan password wajib diisi' });
+    }
+    const [users] = await pool.query(
+      'SELECT * FROM users WHERE email = ? AND role = "developer"',
+      [email]
+    );
+    if (!users.length) {
+      return res.status(401).json({ success: false, message: 'Email atau password developer salah' });
+    }
+    const user = users[0];
+    if (user.status !== 'aktif') {
+      return res.status(401).json({ success: false, message: 'Akun developer tidak aktif' });
+    }
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      return res.status(401).json({ success: false, message: 'Email atau password developer salah' });
+    }
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
+      process.env.JWT_SECRET || 'secret',
+      { expiresIn: '12h' }
+    );
+    res.json({ success: true, token, user: { id: user.id, nama: user.nama, email: user.email, role: user.role } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+module.exports = { register, login, loginDeveloper, googleLogin, sendForgotOtp, verifyOtp, getMe, updateProfile, changePassword, forgotPassword };

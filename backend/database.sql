@@ -119,6 +119,9 @@ CREATE TABLE IF NOT EXISTS kandidat_profil (
   level_bahasa_jepang ENUM('Dasar', 'Menengah', 'Lancar'),
   id_prometric VARCHAR(100),
   password_prometric VARCHAR(100),
+
+  -- Akses Akun
+  password_akun VARCHAR(255),
   
   -- Motivasi
   tujuan_ke_jepang TEXT,

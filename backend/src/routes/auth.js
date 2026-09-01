@@ -6,6 +6,7 @@ const pool = require('../config/database');
 
 router.post('/register', authCtrl.register);
 router.post('/login', authCtrl.login);
+router.post('/login-developer', authCtrl.loginDeveloper);
 router.post('/google', authCtrl.googleLogin);
 router.post('/send-forgot-otp', authCtrl.sendForgotOtp);
 router.post('/verify-otp', authCtrl.verifyOtp);

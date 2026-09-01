@@ -121,7 +121,6 @@ curl -H "x-api-key: mendunia_eb5e66a28fda2f2159f9a2516bd5ed26fe3e4c5d3807a145" \
 ---
 
 ### 3.2 Detail Kandidat per ID
-
 ```
 GET /api/integrasi/kandidat/:id
 ```
@@ -292,6 +291,159 @@ Jika id tidak ditemukan:
 ```
 
 HTTP Status: `404`
+
+---
+
+### 3.3 Daftar Kartu Progres Kandidat
+
+Endpoint khusus untuk menampilkan **kartu progres kandidat** (timeline status
++ data profil + informasi proses) yang siap dirender di SIM-MENDUNIA.
+
+```
+GET /api/integrasi/progres
+```
+
+**Query Parameter (semua opsional):**
+
+| Parameter       | Tipe    | Keterangan |
+|-----------------|---------|------------|
+| `page`          | number  | Nomor halaman (default `1`) |
+| `limit`         | number  | Jumlah per halaman (default `50`, maks `200`) |
+| `search`        | string  | Cari nama_romaji, nama_katakana, email, atau nomor HP (partial match) |
+| `status`        | string  | Filter `status_formulir` |
+| `status_progres`| string  | Filter `status_progres` |
+| `jenis_kelamin` | string  | Filter jenis kelamin (`Laki-laki` / `Perempuan`) |
+| `cabang_id`     | number  | Filter per cabang |
+| `bidang_ssw`    | string  | Filter `bidang_ssw` (partial match) |
+| `jenjang`       | string  | Filter `pendidikan_terakhir` |
+
+**Contoh Request:**
+
+```bash
+curl -H "x-api-key: mendunia_eb5e66a28fda2f2159f9a2516bd5ed26fe3e4c5d3807a145" \
+  "https://api.penempatan.mendunia.id/api/integrasi/progres?page=1&limit=10&status_progres=Interview"
+```
+
+**Contoh Respon:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 41,
+      "nama": "Raihan Naufal Hibatullah",
+      "nama_romaji": "Raihan Naufal Hibatullah",
+      "nama_katakana": "ライハン ナウファル ヒバテゥラー",
+      "email": "naufalraihan549@gmail.com",
+      "nomor_hp": "082230737550",
+      "alamat_lengkap": "Jl.Kerecaan Rt. 01/ Rw. 08 ...",
+      "pendidikan_terakhir": "SMA/SMK",
+      "bergabung": "2026-05-25T06:33:00.000Z",
+      "nama_cabang": "Bojonegoro Sukses Mendunia",
+      "status_formulir": "approved",
+      "status_formulir_label": "Disetujui",
+      "status_progres": "Interview",
+      "status_progres_label": "Interview",
+      "progress": [
+        { "key": "Job Matching", "label": "Job Matching", "state": "completed" },
+        { "key": "Pending", "label": "Pending", "state": "completed" },
+        { "key": "lamar ke perusahaan", "label": "Lamar ke Perusahaan", "state": "completed" },
+        { "key": "Interview", "label": "Interview", "state": "current" },
+        { "key": "Jadwalkan Interview Ulang", "label": "Interview Ulang", "state": "upcoming" },
+        { "key": "Lulus interview", "label": "Lulus Interview", "state": "upcoming" },
+        { "key": "Pemberkasan", "label": "Pemberkasan", "state": "upcoming" },
+        { "key": "Berangkat", "label": "Berangkat", "state": "upcoming" }
+      ],
+      "progres_detail": {
+        "status_progres": "Interview",
+        "status_progres_label": "Interview",
+        "perusahaan": "AA",
+        "institusi": null,
+        "bidang_ssw": "Konstruksi",
+        "jadwal_interview": null,
+        "catatan_progres": null,
+        "catatan_admin": null,
+        "updated_at": "2026-08-03T03:26:55.000Z"
+      },
+      "proses_lainnya": {
+        "tgl_setsumeikai": null,
+        "tgl_mensetsu_1": null,
+        "tgl_mensetsu_2": null,
+        "catatan_mensetsu": null,
+        "biaya_pemberkasan": null,
+        "adm_tahap_1": null,
+        "adm_tahap_2": null,
+        "dokumen_dikirim": null,
+        "terbit_kontrak": null,
+        "kontrak_dikirim_tsk": null,
+        "terbit_paspor": null,
+        "masuk_imigrasi": null,
+        "coe_terbit": null,
+        "ektkln_pembuatan": null,
+        "dokumen_dikirim_2": null,
+        "visa": null,
+        "jadwal_penerbangan": null
+      }
+    }
+  ],
+  "pagination": {
+    "total": 12,
+    "page": 1,
+    "limit": 10,
+    "total_pages": 2
+  }
+}
+```
+
+**Keterangan field:**
+- `progress[]` berisi urutan tahapan kandidat dengan `state`:
+  - `completed` = tahap sudah dilalui
+  - `current`   = tahap aktif saat ini
+  - `upcoming`  = tahap selanjutnya
+- `status_formulir_label` = label bahasa Indonesia untuk `status_formulir`
+  (mis. `approved` → `Disetujui`).
+- `progres_detail` = bagian "Informasi Proses" (status progres, perusahaan,
+  bidang SSW, catatan, dsb).
+- `proses_lainnya` = field tracking pemberkasan/keberangkatan (tanggal setsumeikai,
+  mensetsu, pemberkasan, visa, jadwal penerbangan, dsb).
+
+---
+
+### 3.4 Detail Kartu Progres Kandidat
+
+```
+GET /api/integrasi/progres/:id
+```
+
+**Contoh Request:**
+
+```bash
+curl -H "x-api-key: mendunia_eb5e66a28fda2f2159f9a2516bd5ed26fe3e4c5d3807a145" \
+  "https://api.penempatan.mendunia.id/api/integrasi/progres/41"
+```
+
+**Contoh Respon:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 41,
+    "nama": "Raihan Naufal Hibatullah",
+    "email": "naufalraihan549@gmail.com",
+    "status_formulir": "approved",
+    "status_formulir_label": "Disetujui",
+    "status_progres": "Interview",
+    "status_progres_label": "Interview",
+    "progress": [ ... ],
+    "progres_detail": { ... },
+    "proses_lainnya": { ... }
+  }
+}
+```
+
+Jika id tidak ditemukan: HTTP `404`, `{ "success": false, "message": "Data tidak ditemukan" }`.
 
 ---
 

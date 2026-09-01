@@ -359,6 +359,218 @@ const deleteDokumen = async (req, res) => {
   }
 };
 
+// ============================================================
+// KARTU PROGRES KANDIDAT UNTUK SIM-MENDUNIA
+// ============================================================
+
+const PROGRES_STEPS_LIST = [
+  { key: 'Job Matching', label: 'Job Matching' },
+  { key: 'Pending', label: 'Pending' },
+  { key: 'lamar ke perusahaan', label: 'Lamar ke Perusahaan' },
+  { key: 'Interview', label: 'Interview' },
+  { key: 'Jadwalkan Interview Ulang', label: 'Interview Ulang' },
+  { key: 'Lulus interview', label: 'Lulus Interview' },
+  { key: 'Pemberkasan', label: 'Pemberkasan' },
+  { key: 'Berangkat', label: 'Berangkat' },
+];
+
+const STATUS_FORMULIR_LABELS = {
+  draft: 'Belum dikirim',
+  submitted: 'Menunggu review',
+  reviewed: 'Sedang direview',
+  approved: 'Disetujui',
+  rejected: 'Ditolak',
+};
+
+const mapProgresKandidat = (row) => {
+  const current = row.status_progres || 'Job Matching';
+  const currentIdx = PROGRES_STEPS_LIST.findIndex((s) => s.key === current);
+
+  const progress = PROGRES_STEPS_LIST.map((step, idx) => ({
+    ...step,
+    state: idx < currentIdx ? 'completed' : idx === currentIdx ? 'current' : 'upcoming',
+  }));
+
+  return {
+    id: row.id,
+    nama: row.nama_romaji || row.nama_katakana || '-',
+    nama_romaji: row.nama_romaji,
+    nama_katakana: row.nama_katakana,
+    email: row.email || row.email_kontak || null,
+    nomor_hp: row.nomor_hp,
+    alamat_lengkap: row.alamat_lengkap,
+    pendidikan_terakhir: row.pendidikan_terakhir,
+    bergabung: row.created_at,
+    nama_cabang: row.nama_cabang,
+    status_formulir: row.status_formulir || 'draft',
+    status_formulir_label: STATUS_FORMULIR_LABELS[row.status_formulir] || row.status_formulir,
+    status_progres: current,
+    status_progres_label:
+      currentIdx >= 0 ? PROGRES_STEPS_LIST[currentIdx].label : current,
+    progress,
+    progres_detail: {
+      status_progres: current,
+      status_progres_label: currentIdx >= 0 ? PROGRES_STEPS_LIST[currentIdx].label : current,
+      perusahaan: row.nama_perusahaan || null,
+      institusi: row.institusi || null,
+      bidang_ssw: row.bidang_ssw || null,
+      jadwal_interview: row.jadwal_interview || null,
+      catatan_progres: row.catatan_progres || null,
+      catatan_admin: row.catatan_admin || null,
+      updated_at: row.updated_at,
+    },
+    proses_lainnya: {
+      tgl_setsumeikai: row.tgl_setsumeikai || null,
+      tgl_mensetsu_1: row.tgl_mensetsu_1 || null,
+      tgl_mensetsu_2: row.tgl_mensetsu_2 || null,
+      catatan_mensetsu: row.catatan_mensetsu || null,
+      biaya_pemberkasan: row.biaya_pemberkasan || null,
+      adm_tahap_1: row.adm_tahap_1 || null,
+      adm_tahap_2: row.adm_tahap_2 || null,
+      dokumen_dikirim: row.dokumen_dikirim || null,
+      terbit_kontrak: row.terbit_kontrak || null,
+      kontrak_dikirim_tsk: row.kontrak_dikirim_tsk || null,
+      terbit_paspor: row.terbit_paspor || null,
+      masuk_imigrasi: row.masuk_imigrasi || null,
+      coe_terbit: row.coe_terbit || null,
+      ektkln_pembuatan: row.ektkln_pembuatan || null,
+      dokumen_dikirim_2: row.dokumen_dikirim_2 || null,
+      visa: row.visa || null,
+      jadwal_penerbangan: row.jadwal_penerbangan || null,
+    },
+  };
+};
+
+// ============================================================
+// DAFTAR KARTU PROGRES KANDIDAT
+// GET /api/integrasi/progres
+// ============================================================
+const getProgresKandidat = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 50,
+      search,
+      status,
+      status_progres,
+      jenis_kelamin,
+      cabang_id,
+      bidang_ssw,
+      jenjang,
+    } = req.query;
+
+    const pageNum = Math.max(parseInt(page) || 1, 1);
+    const limitNum = Math.min(Math.max(parseInt(limit) || 50, 1), 200);
+    const offset = (pageNum - 1) * limitNum;
+
+    let where = 'WHERE kp.deleted_at IS NULL';
+    const params = [];
+
+    if (search) {
+      where += ' AND (kp.nama_romaji LIKE ? OR kp.nama_katakana LIKE ? OR u.email LIKE ? OR kp.nomor_hp LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    if (status) {
+      where += ' AND kp.status_formulir = ?';
+      params.push(status);
+    }
+    if (status_progres) {
+      where += ' AND kp.status_progres = ?';
+      params.push(status_progres);
+    }
+    if (jenis_kelamin) {
+      where += ' AND kp.jenis_kelamin = ?';
+      params.push(jenis_kelamin);
+    }
+    if (cabang_id) {
+      where += ' AND kp.cabang_id = ?';
+      params.push(cabang_id);
+    }
+    if (bidang_ssw) {
+      where += ' AND kp.bidang_ssw LIKE ?';
+      params.push(`%${bidang_ssw}%`);
+    }
+    if (jenjang) {
+      where += ' AND kp.pendidikan_terakhir = ?';
+      params.push(jenjang);
+    }
+
+    const [[{ total }]] = await pool.query(
+      `SELECT COUNT(*) as total FROM kandidat_profil kp ${where}`,
+      params
+    );
+
+    const [rows] = await pool.query(
+      `SELECT kp.id, kp.nama_katakana, kp.nama_romaji, kp.nomor_hp, kp.email_kontak,
+              u.email, kp.alamat_lengkap, kp.pendidikan_terakhir, kp.jenis_kelamin,
+              kp.status_formulir, kp.status_progres, kp.nama_perusahaan, kp.institusi,
+              kp.bidang_ssw, kp.jadwal_interview, kp.catatan_progres, kp.catatan_admin,
+              kp.tgl_setsumeikai, kp.tgl_mensetsu_1, kp.tgl_mensetsu_2, kp.catatan_mensetsu,
+              kp.biaya_pemberkasan, kp.adm_tahap_1, kp.adm_tahap_2, kp.dokumen_dikirim,
+              kp.terbit_kontrak, kp.kontrak_dikirim_tsk, kp.terbit_paspor, kp.masuk_imigrasi,
+              kp.coe_terbit, kp.ektkln_pembuatan, kp.dokumen_dikirim_2, kp.visa,
+              kp.jadwal_penerbangan, kp.created_at, kp.updated_at,
+              TRIM(c.nama_cabang) as nama_cabang
+       FROM kandidat_profil kp
+       JOIN users u ON kp.user_id = u.id
+       LEFT JOIN cabang c ON kp.cabang_id = c.id
+       ${where}
+       ORDER BY kp.updated_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limitNum, offset]
+    );
+
+    res.json({
+      success: true,
+      data: rows.map(mapProgresKandidat),
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        total_pages: Math.ceil(total / limitNum),
+      },
+    });
+  } catch (err) {
+    console.error('[INTEGRASI] Error getProgresKandidat:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// ============================================================
+// DETAIL KARTU PROGRES KANDIDAT
+// GET /api/integrasi/progres/:id
+// ============================================================
+const getProgresKandidatById = async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT kp.id, kp.nama_katakana, kp.nama_romaji, kp.nomor_hp, kp.email_kontak,
+              u.email, kp.alamat_lengkap, kp.pendidikan_terakhir, kp.jenis_kelamin,
+              kp.status_formulir, kp.status_progres, kp.nama_perusahaan, kp.institusi,
+              kp.bidang_ssw, kp.jadwal_interview, kp.catatan_progres, kp.catatan_admin,
+              kp.tgl_setsumeikai, kp.tgl_mensetsu_1, kp.tgl_mensetsu_2, kp.catatan_mensetsu,
+              kp.biaya_pemberkasan, kp.adm_tahap_1, kp.adm_tahap_2, kp.dokumen_dikirim,
+              kp.terbit_kontrak, kp.kontrak_dikirim_tsk, kp.terbit_paspor, kp.masuk_imigrasi,
+              kp.coe_terbit, kp.ektkln_pembuatan, kp.dokumen_dikirim_2, kp.visa,
+              kp.jadwal_penerbangan, kp.created_at, kp.updated_at,
+              TRIM(c.nama_cabang) as nama_cabang
+       FROM kandidat_profil kp
+       JOIN users u ON kp.user_id = u.id
+       LEFT JOIN cabang c ON kp.cabang_id = c.id
+       WHERE kp.id = ? AND kp.deleted_at IS NULL`,
+      [req.params.id]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ success: false, message: 'Data tidak ditemukan' });
+    }
+
+    res.json({ success: true, data: mapProgresKandidat(rows[0]) });
+  } catch (err) {
+    console.error('[INTEGRASI] Error getProgresKandidatById:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 const PUBLIC_FIELDS = `
   kp.id,
   kp.nama_katakana,
@@ -930,4 +1142,4 @@ const deleteApiClient = async (req, res) => {
   }
 };
 
-module.exports = { getKandidat, getKandidatById, createKandidat, updateKandidatById, uploadDokumen, deleteDokumen, getCabang, getCabangById, getDashboard, getApiClients, createApiClient, updateApiClient, regenerateApiKey, deleteApiClient };
+module.exports = { getKandidat, getKandidatById, createKandidat, updateKandidatById, uploadDokumen, deleteDokumen, getCabang, getCabangById, getDashboard, getApiClients, createApiClient, updateApiClient, regenerateApiKey, deleteApiClient, getProgresKandidat, getProgresKandidatById };

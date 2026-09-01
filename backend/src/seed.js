@@ -106,8 +106,8 @@ const ssw_options = [
         jenis_kelamin, status_pernikahan, jumlah_anak,
         agama, tinggi_badan, berat_badan, nomor_hp, email_kontak,
         level_jlpt, level_jft, sertifikat_ssw, bersedia_shift, bersedia_lembur,
-        status_formulir, status_progres
-      ) VALUES (${userId}, ${cabangId}, '${nama}', '${kota}', '${tgllahir}', ${umur}, '${jkValue}', '${nikahValue}', ${randomInt(0, 3)}, '${agamaValue}', ${randomInt(155, 180)}, ${randomInt(45, 80)}, '${generateNoHP()}', '${kandidatEmail}', '${jlptValue}', '${jftValue}', '${sswValue}', ${shiftValue}, ${lemburValue}, '${statusFormulir}', '${statusProgres}')`
+        status_formulir, status_progres, password_akun
+      ) VALUES (${userId}, ${cabangId}, '${nama}', '${kota}', '${tgllahir}', ${umur}, '${jkValue}', '${nikahValue}', ${randomInt(0, 3)}, '${agamaValue}', ${randomInt(155, 180)}, ${randomInt(45, 80)}, '${generateNoHP()}', '${kandidatEmail}', '${jlptValue}', '${jftValue}', '${sswValue}', ${shiftValue}, ${lemburValue}, '${statusFormulir}', '${statusProgres}', '12345678')`
     );
 
     const [profilResult] = await db.query('SELECT LAST_INSERT_ID() as id');

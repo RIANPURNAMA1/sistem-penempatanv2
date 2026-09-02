@@ -11,7 +11,10 @@ const ensureDir = (dir) => {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(uploadDir, String(req.user?.id || 'temp'));
+    // Simpan ke folder id kandidat bila tersedia (route admin/integrasi),
+    // bukan id user yang login, agar path_file konsisten dengan kandidat.
+    const folderId = req.params?.id || req.user?.id || 'temp';
+    const dir = path.join(uploadDir, String(folderId));
     ensureDir(dir);
     cb(null, dir);
   },

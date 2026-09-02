@@ -59,6 +59,20 @@ const saveKandidatData = async (conn, kandidatId, body) => {
     profileData.sertifikat_ssw = profileData.sertifikat_ssw.join(', ');
   }
 
+  // Jaga agar penyimpanan draft dari siswa tidak menimpa status formulir
+  // yang sudah ditetapkan admin (mis. 'reviewed', 'submitted', 'approved', 'rejected').
+  // Draft hanya berlaku jika status saat ini masih 'draft' / belum ditetapkan.
+  if (profileData.status_formulir === 'draft') {
+    const [existing] = await conn.query(
+      'SELECT status_formulir FROM kandidat_profil WHERE id = ?',
+      [kandidatId]
+    );
+    const currentStatus = existing.length ? existing[0].status_formulir : null;
+    if (currentStatus && currentStatus !== 'draft') {
+      delete profileData.status_formulir;
+    }
+  }
+
   const updates = {};
   PROFIL_FIELDS.forEach((f) => {
     if (profileData[f] === undefined) return;

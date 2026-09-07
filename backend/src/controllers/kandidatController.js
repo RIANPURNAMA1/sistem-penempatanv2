@@ -22,21 +22,24 @@ const STARSENDER_DEFAULTS = {
   DEVICE_API_KEY: process.env.STARSENDER_DEVICE_API_KEY || '1d58b1c1-4b15-4089-a9be-8f3fd2174651',
   ACCOUNT_API_KEY: process.env.STARSENDER_ACCOUNT_API_KEY || 'f272bd85-1ea1-4bcc-9d88-b585b2bda634',
   ADMIN_PHONE: process.env.STARSENDER_ADMIN_PHONE || '089662695289',
+  SEND_DELAY: parseInt(process.env.STARSENDER_DELAY || '15', 10),
 };
 
 const getStarsenderConfig = async () => {
   try {
     const [rows] = await pool.query(
-      "SELECT setting_key, setting_value FROM sys_settings WHERE setting_key IN (?, ?, ?, ?)",
-      ['whatsapp_api_url', 'whatsapp_device_api_key', 'whatsapp_account_api_key', 'whatsapp_admin_phone']
+      "SELECT setting_key, setting_value FROM sys_settings WHERE setting_key IN (?, ?, ?, ?, ?)",
+      ['whatsapp_api_url', 'whatsapp_device_api_key', 'whatsapp_account_api_key', 'whatsapp_admin_phone', 'whatsapp_send_delay']
     );
     const map = {};
     rows.forEach(r => { map[r.setting_key] = r.setting_value; });
+    const dbDelay = parseInt(map.whatsapp_send_delay, 10);
     return {
       API_URL: map.whatsapp_api_url || STARSENDER_DEFAULTS.API_URL,
       DEVICE_API_KEY: map.whatsapp_device_api_key || STARSENDER_DEFAULTS.DEVICE_API_KEY,
       ACCOUNT_API_KEY: map.whatsapp_account_api_key || STARSENDER_DEFAULTS.ACCOUNT_API_KEY,
       ADMIN_PHONE: map.whatsapp_admin_phone || STARSENDER_DEFAULTS.ADMIN_PHONE,
+      SEND_DELAY: dbDelay >= 0 ? dbDelay : STARSENDER_DEFAULTS.SEND_DELAY,
     };
   } catch (err) {
     console.error('[STARSENDER] Gagal membaca konfigurasi dari database, pakai env:', err.message);
@@ -47,25 +50,27 @@ const getStarsenderConfig = async () => {
 // ============================================================
 // HELPER: Kirim WhatsApp via StarSender
 // ============================================================
-const sendWhatsApp = async (phoneNumber, message) => {
+const sendWhatsApp = async (phoneNumber, message, options = {}) => {
   try {
     const config = await getStarsenderConfig();
+    const delay = options.delay !== undefined ? options.delay : config.SEND_DELAY;
     const payload = {
       messageType: 'text',
       to: phoneNumber,
       body: message,
     };
+    if (delay > 0) payload.delay = delay;
 
     const response = await axios.post(config.API_URL, payload, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': config.DEVICE_API_KEY,
       },
-      timeout: 10000,
+      timeout: 15000,
     });
 
-    console.log(`[WHATSAPP] Berhasil kirim ke ${phoneNumber}:`, response.data);
-    return { success: true, data: response.data };
+    console.log(`[WHATSAPP] Berhasil kirim (delay ${delay}s) ke ${phoneNumber}:`, response.data);
+    return { success: true, data: response.data, delay };
   } catch (error) {
     const errMsg = error.response?.data || error.message;
     console.error(`[WHATSAPP] Gagal kirim ke ${phoneNumber}:`, errMsg);
@@ -111,7 +116,7 @@ const sendWhatsAppNotification = async (candidateName) => {
     `Silakan login ke sistem untuk meninjau dan memproses data kandidat tersebut.\n\n` +
     `_Pesan otomatis dari sistem._`;
 
-  const adminResult = await sendWhatsApp(adminPhone, adminMessage);
+  const adminResult = await sendWhatsApp(adminPhone, adminMessage, { delay: 0 });
 
   await saveNotificationLog(
     adminPhone,
@@ -2383,7 +2388,11 @@ const followUpDraft = async (req, res) => {
     );
 
     if (result.success) {
-      res.json({ success: true, message: `Follow up berhasil dikirim ke ${k.nama_romaji}` });
+      res.json({
+        success: true,
+        message: `Follow up berhasil dikirim ke ${k.nama_romaji}`,
+        delay: result.delay || 0,
+      });
     } else {
       res.status(500).json({ success: false, message: 'Gagal mengirim WhatsApp', error: result.error });
     }

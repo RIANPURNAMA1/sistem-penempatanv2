@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS = {
   whatsapp_device_api_key: { value: '', type: 'string', description: 'Device API Key StarSender' },
   whatsapp_account_api_key: { value: '', type: 'string', description: 'Account API Key StarSender' },
   whatsapp_admin_phone: { value: '', type: 'string', description: 'Nomor admin penerima notifikasi WhatsApp' },
+  whatsapp_send_delay: { value: '15', type: 'number', description: 'Delay pengiriman WhatsApp (detik) agar tidak diblokir (anti-ban)' },
 };
 
 const invalidateSettingsCache = async () => {

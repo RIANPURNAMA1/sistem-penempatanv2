@@ -21,7 +21,7 @@ interface SettingRow {
   description?: string
 }
 
-const FIELDS: { key: string; label: string; placeholder: string; help: string; secret?: boolean }[] = [
+const FIELDS: { key: string; label: string; placeholder: string; help: string; secret?: boolean; type?: string }[] = [
   {
     key: 'whatsapp_api_url',
     label: 'URL API',
@@ -47,6 +47,13 @@ const FIELDS: { key: string; label: string; placeholder: string; help: string; s
     label: 'Nomor Admin (Penerima Notifikasi)',
     placeholder: '089662695289',
     help: 'Nomor WhatsApp yang menerima notifikasi formulir baru.',
+  },
+  {
+    key: 'whatsapp_send_delay',
+    label: 'Delay Kirim (detik)',
+    placeholder: '15',
+    help: 'Jeda sebelum pesan terkirim ke kandidat (anti-ban WhatsApp). 0 = langsung kirim.',
+    type: 'number',
   },
 ]
 
@@ -78,7 +85,7 @@ export default function WhatsappGatewayPage() {
       for (const field of FIELDS) {
         await api.put(`/settings/${field.key}`, {
           setting_value: values[field.key] || '',
-          setting_type: 'string',
+          setting_type: field.type || 'string',
         })
       }
       toast({ title: 'Pengaturan WhatsApp Gateway disimpan' })

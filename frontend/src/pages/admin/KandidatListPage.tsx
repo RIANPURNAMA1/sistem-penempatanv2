@@ -157,6 +157,9 @@ export default function KandidatListPage() {
     id: number;
     nama: string;
   } | null>(null);
+  const [followUpStep, setFollowUpStep] = useState<'confirm' | 'typing' | 'delivering' | 'done'>('confirm');
+  const [followUpDelay, setFollowUpDelay] = useState(0);
+  const [followUpCountdown, setFollowUpCountdown] = useState(0);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [deletedData, setDeletedData] = useState<Kandidat[]>([]);
   const [deletedLoading, setDeletedLoading] = useState(false);
@@ -414,18 +417,42 @@ export default function KandidatListPage() {
   };
 
   const handleFollowUp = async (id: number, nama: string) => {
+    setFollowUpStep('confirm')
     setFollowUpConfirm({ id, nama })
   }
 
+  const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
+
   const confirmFollowUp = async () => {
     if (!followUpConfirm) return
-    const { id, nama } = followUpConfirm
-    setFollowUpConfirm(null)
+    const { id } = followUpConfirm
     setFollowUpLoading(id)
+    setFollowUpStep('typing')
+
+    const typingMs = 1800 + Math.floor(Math.random() * 1400)
+    await sleep(typingMs)
+
     try {
       const res = await api.post(`/kandidat/${id}/follow-up-draft`)
-      toast({ title: 'Berhasil!', description: res.data?.message || 'Follow up terkirim', variant: 'success' as any })
+      const delay = Number(res.data?.delay || 0)
+      setFollowUpDelay(delay)
+
+      if (delay > 0) {
+        setFollowUpStep('delivering')
+        setFollowUpCountdown(delay)
+        for (let s = delay; s >= 1; s--) {
+          setFollowUpCountdown(s)
+          await sleep(1000)
+        }
+      }
+
+      setFollowUpStep('done')
+      await sleep(1000)
+      setFollowUpConfirm(null)
+      setFollowUpStep('confirm')
+      toast({ title: 'Berhasil!', description: 'Pesan follow up terkirim', variant: 'success' as any })
     } catch (err: any) {
+      setFollowUpStep('confirm')
       toast({ title: 'Gagal', description: err?.response?.data?.message || 'Terjadi kesalahan', variant: 'destructive' })
     } finally {
       setFollowUpLoading(null)
@@ -1652,37 +1679,92 @@ export default function KandidatListPage() {
         onSuccess={load}
       />
 
-      {/* ── DELETE CONFIRMATION MODAL ── */}
+      {/* ── FOLLOW UP WHATSAPP MODAL ── */}
       {followUpConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-sm mx-4 p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <MessageCircle size={20} className="text-blue-600" />
+            {followUpStep === 'confirm' && (
+              <>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <MessageCircle size={20} className="text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Follow Up WhatsApp</h3>
+                    <p className="text-sm text-gray-500">Kirim pengingat ke kandidat</p>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Kirim WhatsApp follow up ke{" "}
+                  <strong>{followUpConfirm.nama}</strong> untuk melengkapi formulir?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setFollowUpConfirm(null); setFollowUpStep('confirm') }}
+                    className="flex-1 h-10 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={confirmFollowUp}
+                    className="flex-1 h-10 rounded-lg bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    Kirim WA
+                  </button>
+                </div>
+              </>
+            )}
+
+            {followUpStep === 'typing' && (
+              <div className="py-6 flex flex-col items-center text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Loader2 size={22} className="text-blue-600 animate-spin" />
+                </div>
+                <div className="flex items-center gap-1.5 text-sm font-medium text-gray-800">
+                  <span>Mengetik pesan</span>
+                  <span className="flex gap-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-pulse" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-pulse" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-pulse" style={{ animationDelay: '300ms' }} />
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  Mengirim ke <span className="font-medium text-gray-600">{followUpConfirm.nama}</span>…
+                </p>
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Follow Up WhatsApp</h3>
-                <p className="text-sm text-gray-500">Kirim pengingat ke kandidat</p>
+            )}
+
+            {followUpStep === 'delivering' && (
+              <div className="py-6 flex flex-col items-center text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                  <MessageCircle size={22} className="text-amber-600" />
+                </div>
+                <p className="text-sm font-medium text-gray-800">
+                  Pesan dijadwalkan — mengirim dalam {followUpCountdown} detik
+                </p>
+                <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-amber-500 h-2 rounded-full transition-all duration-1000 ease-linear"
+                    style={{ width: `${followUpDelay > 0 ? ((followUpDelay - followUpCountdown) / followUpDelay) * 100 : 100}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  Delay anti-ban agar nomor pengirim tidak diblokir.
+                </p>
               </div>
-            </div>
-            <p className="text-sm text-gray-600">
-              Kirim WhatsApp follow up ke{" "}
-              <strong>{followUpConfirm.nama}</strong> untuk melengkapi formulir?
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setFollowUpConfirm(null)}
-                className="flex-1 h-10 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Batal
-              </button>
-              <button
-                onClick={confirmFollowUp}
-                className="flex-1 h-10 rounded-lg bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                Kirim WA
-              </button>
-            </div>
+            )}
+
+            {followUpStep === 'done' && (
+              <div className="py-6 flex flex-col items-center text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <CheckCircle size={22} className="text-green-600" />
+                </div>
+                <p className="text-sm font-semibold text-gray-900">Pesan terkirim ✅</p>
+                <p className="text-[11px] text-gray-400">
+                  Follow up berhasil dikirim ke <span className="font-medium text-gray-600">{followUpConfirm.nama}</span>.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

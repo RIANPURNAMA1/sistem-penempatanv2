@@ -21,6 +21,7 @@ import {
   Search,
   History,
   KeyRound,
+  MessageCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -87,6 +88,12 @@ const navItems: NavItem[] = [
     label: "API Key",
     href: "/api-key",
     icon: KeyRound,
+    roles: ["admin_penempatan"],
+  },
+  {
+    label: "WhatsApp Gateway",
+    href: "/settings/whatsapp",
+    icon: MessageCircle,
     roles: ["admin_penempatan"],
   },
   {

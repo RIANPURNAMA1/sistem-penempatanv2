@@ -12,6 +12,10 @@ const DEFAULT_SETTINGS = {
   auto_screening_time: { value: '08:00', type: 'string', description: 'Jam screening dijalankan (HH:MM)' },
   auto_screening_range_start: { value: '06:00', type: 'string', description: 'Jam mulai range screening aktif (HH:MM)' },
   auto_screening_range_end: { value: '18:00', type: 'string', description: 'Jam selesai range screening aktif (HH:MM)' },
+  whatsapp_api_url: { value: 'https://api.starsender.online/api/send', type: 'string', description: 'URL API StarSender' },
+  whatsapp_device_api_key: { value: '', type: 'string', description: 'Device API Key StarSender' },
+  whatsapp_account_api_key: { value: '', type: 'string', description: 'Account API Key StarSender' },
+  whatsapp_admin_phone: { value: '', type: 'string', description: 'Nomor admin penerima notifikasi WhatsApp' },
 };
 
 const invalidateSettingsCache = async () => {
@@ -57,12 +61,13 @@ router.put('/:key', authenticate, authorize('admin_penempatan'), async (req, res
 
     const validTypes = ['string', 'number', 'boolean', 'json'];
     const type = validTypes.includes(setting_type) ? setting_type : 'string';
+    const description = (DEFAULT_SETTINGS[req.params.key] && DEFAULT_SETTINGS[req.params.key].description) || null;
 
     await pool.query(`
-      INSERT INTO sys_settings (setting_key, setting_value, setting_type)
-      VALUES (?, ?, ?)
-      ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), setting_type = VALUES(setting_type)
-    `, [req.params.key, String(setting_value), type]);
+      INSERT INTO sys_settings (setting_key, setting_value, setting_type, description)
+      VALUES (?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), setting_type = VALUES(setting_type), description = VALUES(description)
+    `, [req.params.key, String(setting_value), type, description]);
 
     if (req.params.key.startsWith('auto_screening') && refreshScheduler) {
       refreshScheduler();
@@ -94,6 +99,46 @@ router.post('/:key/reset', authenticate, authorize('admin_penempatan'), async (r
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+router.post('/whatsapp/test', authenticate, authorize('admin_penempatan'), async (req, res) => {
+  try {
+    const axios = require('axios');
+    const [rows] = await pool.query(
+      "SELECT setting_key, setting_value FROM sys_settings WHERE setting_key IN (?, ?, ?, ?)",
+      ['whatsapp_api_url', 'whatsapp_device_api_key', 'whatsapp_account_api_key', 'whatsapp_admin_phone']
+    );
+    const map = {};
+    rows.forEach(r => { map[r.setting_key] = r.setting_value; });
+
+    const apiUrl = map.whatsapp_api_url || 'https://api.starsender.online/api/send';
+    const deviceKey = map.whatsapp_device_api_key || process.env.STARSENDER_DEVICE_API_KEY;
+    const adminPhone = map.whatsapp_admin_phone || process.env.STARSENDER_ADMIN_PHONE;
+
+    if (!deviceKey) {
+      return res.status(400).json({ success: false, message: 'Device API Key belum diisi' });
+    }
+    if (!adminPhone) {
+      return res.status(400).json({ success: false, message: 'Nomor admin belum diisi' });
+    }
+
+    const payload = {
+      messageType: 'text',
+      to: adminPhone,
+      body: '*Test Notifikasi WhatsApp* 🎉\n\nKoneksi WhatsApp Gateway berhasil dikonfigurasi.\n\n_Pesan otomatis dari Sistem._',
+    };
+
+    const response = await axios.post(apiUrl, payload, {
+      headers: { 'Content-Type': 'application/json', 'Authorization': deviceKey },
+      timeout: 10000,
+    });
+
+    res.json({ success: true, message: 'Test berhasil dikirim', data: response.data });
+  } catch (err) {
+    const errMsg = err.response?.data || err.message;
+    console.error('[WHATSAPP TEST] Gagal:', errMsg);
+    res.status(500).json({ success: false, message: 'Gagal kirim test', error: errMsg });
   }
 });
 

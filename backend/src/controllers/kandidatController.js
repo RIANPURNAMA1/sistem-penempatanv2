@@ -15,13 +15,33 @@ const invalidateKandidatCache = async (kandidatId) => {
 };
 
 // ============================================================
-// KONFIGURASI STARSENDER
+// KONFIGURASI STARSENDER (dinamis dari sys_settings + env)
 // ============================================================
-const STARSENDER_CONFIG = {
-  API_URL: 'https://api.starsender.online/api/send',
-  DEVICE_API_KEY: '1d58b1c1-4b15-4089-a9be-8f3fd2174651',
-  ACCOUNT_API_KEY: 'f272bd85-1ea1-4bcc-9d88-b585b2bda634',
-  ADMIN_PHONE: '089662695289',
+const STARSENDER_DEFAULTS = {
+  API_URL: process.env.STARSENDER_API_URL || 'https://api.starsender.online/api/send',
+  DEVICE_API_KEY: process.env.STARSENDER_DEVICE_API_KEY || '1d58b1c1-4b15-4089-a9be-8f3fd2174651',
+  ACCOUNT_API_KEY: process.env.STARSENDER_ACCOUNT_API_KEY || 'f272bd85-1ea1-4bcc-9d88-b585b2bda634',
+  ADMIN_PHONE: process.env.STARSENDER_ADMIN_PHONE || '089662695289',
+};
+
+const getStarsenderConfig = async () => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT setting_key, setting_value FROM sys_settings WHERE setting_key IN (?, ?, ?, ?)",
+      ['whatsapp_api_url', 'whatsapp_device_api_key', 'whatsapp_account_api_key', 'whatsapp_admin_phone']
+    );
+    const map = {};
+    rows.forEach(r => { map[r.setting_key] = r.setting_value; });
+    return {
+      API_URL: map.whatsapp_api_url || STARSENDER_DEFAULTS.API_URL,
+      DEVICE_API_KEY: map.whatsapp_device_api_key || STARSENDER_DEFAULTS.DEVICE_API_KEY,
+      ACCOUNT_API_KEY: map.whatsapp_account_api_key || STARSENDER_DEFAULTS.ACCOUNT_API_KEY,
+      ADMIN_PHONE: map.whatsapp_admin_phone || STARSENDER_DEFAULTS.ADMIN_PHONE,
+    };
+  } catch (err) {
+    console.error('[STARSENDER] Gagal membaca konfigurasi dari database, pakai env:', err.message);
+    return { ...STARSENDER_DEFAULTS };
+  }
 };
 
 // ============================================================
@@ -29,16 +49,17 @@ const STARSENDER_CONFIG = {
 // ============================================================
 const sendWhatsApp = async (phoneNumber, message) => {
   try {
+    const config = await getStarsenderConfig();
     const payload = {
       messageType: 'text',
       to: phoneNumber,
       body: message,
     };
 
-    const response = await axios.post(STARSENDER_CONFIG.API_URL, payload, {
+    const response = await axios.post(config.API_URL, payload, {
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': STARSENDER_CONFIG.DEVICE_API_KEY,
+        'Authorization': config.DEVICE_API_KEY,
       },
       timeout: 10000,
     });
@@ -81,7 +102,8 @@ const saveNotificationLog = async (phoneNumber, message, status, errorMessage = 
 // HELPER: Kirim notifikasi + log hasilnya
 // ============================================================
 const sendWhatsAppNotification = async (candidateName) => {
-  const adminPhone = STARSENDER_CONFIG.ADMIN_PHONE;
+  const config = await getStarsenderConfig();
+  const adminPhone = config.ADMIN_PHONE;
 
   const adminMessage =
     `*Notifikasi Formulir Baru* 🗒️\n\n` +

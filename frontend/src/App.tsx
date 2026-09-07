@@ -16,6 +16,7 @@ import KandidatHistoryPage from '@/pages/kandidat/KandidatHistoryPage'
 import DataSistemLamaPage from '@/pages/admin/DataSistemLamaPage'
 import CvPage from '@/pages/admin/CvPage'
 import ApiKeyPage from '@/pages/admin/ApiKeyPage'
+import WhatsappGatewayPage from '@/pages/admin/WhatsappGatewayPage'
 import ProfilPage from '@/pages/kandidat/ProfilPage'
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
 import { useAuthStore } from '@/store/authStore'
@@ -79,6 +80,11 @@ export default function App() {
         <Route path="/api-key" element={
           <ProtectedRoute roles={['admin_penempatan']}>
             <ApiKeyPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/settings/whatsapp" element={
+          <ProtectedRoute roles={['admin_penempatan']}>
+            <WhatsappGatewayPage />
           </ProtectedRoute>
         } />
         <Route path="/cv/:id" element={

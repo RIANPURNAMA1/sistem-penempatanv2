@@ -17,6 +17,7 @@ const DEFAULT_SETTINGS = {
   whatsapp_account_api_key: { value: '', type: 'string', description: 'Account API Key StarSender' },
   whatsapp_admin_phone: { value: '', type: 'string', description: 'Nomor admin penerima notifikasi WhatsApp' },
   whatsapp_send_delay: { value: '15', type: 'number', description: 'Delay pengiriman WhatsApp (detik) agar tidak diblokir (anti-ban)' },
+  whatsapp_login_url: { value: 'https://job.mendunia.id/login', type: 'string', description: 'Link login sistem untuk dimasukkan ke pesan WhatsApp' },
 };
 
 const invalidateSettingsCache = async () => {

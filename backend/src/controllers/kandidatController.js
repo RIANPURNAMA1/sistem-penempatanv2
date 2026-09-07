@@ -23,13 +23,14 @@ const STARSENDER_DEFAULTS = {
   ACCOUNT_API_KEY: process.env.STARSENDER_ACCOUNT_API_KEY || 'f272bd85-1ea1-4bcc-9d88-b585b2bda634',
   ADMIN_PHONE: process.env.STARSENDER_ADMIN_PHONE || '089662695289',
   SEND_DELAY: parseInt(process.env.STARSENDER_DELAY || '15', 10),
+  LOGIN_URL: process.env.FRONTEND_URL || process.env.STARSENDER_LOGIN_URL || 'https://job.mendunia.id/login',
 };
 
 const getStarsenderConfig = async () => {
   try {
     const [rows] = await pool.query(
-      "SELECT setting_key, setting_value FROM sys_settings WHERE setting_key IN (?, ?, ?, ?, ?)",
-      ['whatsapp_api_url', 'whatsapp_device_api_key', 'whatsapp_account_api_key', 'whatsapp_admin_phone', 'whatsapp_send_delay']
+      "SELECT setting_key, setting_value FROM sys_settings WHERE setting_key IN (?, ?, ?, ?, ?, ?)",
+      ['whatsapp_api_url', 'whatsapp_device_api_key', 'whatsapp_account_api_key', 'whatsapp_admin_phone', 'whatsapp_send_delay', 'whatsapp_login_url']
     );
     const map = {};
     rows.forEach(r => { map[r.setting_key] = r.setting_value; });
@@ -40,6 +41,7 @@ const getStarsenderConfig = async () => {
       ACCOUNT_API_KEY: map.whatsapp_account_api_key || STARSENDER_DEFAULTS.ACCOUNT_API_KEY,
       ADMIN_PHONE: map.whatsapp_admin_phone || STARSENDER_DEFAULTS.ADMIN_PHONE,
       SEND_DELAY: dbDelay >= 0 ? dbDelay : STARSENDER_DEFAULTS.SEND_DELAY,
+      LOGIN_URL: map.whatsapp_login_url || STARSENDER_DEFAULTS.LOGIN_URL,
     };
   } catch (err) {
     console.error('[STARSENDER] Gagal membaca konfigurasi dari database, pakai env:', err.message);
@@ -2352,7 +2354,10 @@ const followUpDraft = async (req, res) => {
   const { id } = req.params;
   try {
     const [kandidat] = await pool.query(
-      'SELECT id, nama_romaji, nomor_hp, status_formulir FROM kandidat_profil WHERE id = ?',
+      `SELECT kp.id, kp.nama_romaji, kp.nomor_hp, kp.status_formulir, kp.password_akun, u.email AS user_email
+       FROM kandidat_profil kp
+       LEFT JOIN users u ON u.id = kp.user_id
+       WHERE kp.id = ?`,
       [id]
     );
 
@@ -2370,10 +2375,19 @@ const followUpDraft = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Kandidat belum memiliki nomor HP' });
     }
 
+    const config = await getStarsenderConfig();
+    const loginUrl = config.LOGIN_URL || 'https://job.mendunia.id/login';
+    const userEmail = k.user_email || '-';
+    const userPassword = k.password_akun || '12345678';
+
     const pesanWA =
       `Halo ${k.nama_romaji}, 👋\n\n` +
       `Kami melihat Anda belum menyelesaikan formulir pendaftaran.\n\n` +
-      `Silakan login ke sistem dan lengkapi data Anda agar dapat diproses lebih lanjut.\n\n` +
+      `Silakan lengkapi data Anda melalui link berikut:\n\n` +
+      `🔗 *Link Akses:* ${loginUrl}\n` +
+      `📧 *Email Login:* ${userEmail}\n` +
+      `🔑 *Password:* ${userPassword}\n\n` +
+      `Login lalu pilih menu *Isi Formulir* untuk melanjutkan pendaftaran.\n\n` +
       `Jika ada kendala, hubungi admin kami.\n\n` +
       `Terima kasih.\n\n` +
       `_Pesan otomatis dari Sistem Penempatan Kandidat._`;

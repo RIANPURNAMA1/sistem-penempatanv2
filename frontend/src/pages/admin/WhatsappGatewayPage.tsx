@@ -55,6 +55,12 @@ const FIELDS: { key: string; label: string; placeholder: string; help: string; s
     help: 'Jeda sebelum pesan terkirim ke kandidat (anti-ban WhatsApp). 0 = langsung kirim.',
     type: 'number',
   },
+  {
+    key: 'whatsapp_login_url',
+    label: 'Link Login (URL)',
+    placeholder: 'https://job.mendunia.id/login',
+    help: 'Link login sistem yang disisipkan ke pesan WhatsApp follow up.',
+  },
 ]
 
 export default function WhatsappGatewayPage() {

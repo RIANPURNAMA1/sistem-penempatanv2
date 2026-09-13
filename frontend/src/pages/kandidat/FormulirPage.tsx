@@ -56,6 +56,7 @@ import {
 
 export default function FormulirPage() {
   const [step, setStep] = useState(1);
+  const [maxStep, setMaxStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
@@ -201,6 +202,7 @@ export default function FormulirPage() {
     const newErrors: Record<string, string> = {};
 
     if (stepNum === 1) {
+      if (cabangList.length > 0 && isEmpty(form.cabang_id)) newErrors.cabang_id = "Cabang wajib dipilih";
       if (isEmpty(form.nama_katakana)) newErrors.nama_katakana = "Nama Katakana wajib diisi";
       if (isEmpty(form.nama_romaji)) newErrors.nama_romaji = "Nama Romaji wajib diisi";
       if (isEmpty(form.tempat_lahir)) newErrors.tempat_lahir = "Tempat lahir wajib diisi";
@@ -294,6 +296,26 @@ export default function FormulirPage() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const goToStep = (target: number) => {
+    if (target === step) return;
+    if (target < step) {
+      setStep(target);
+      setErrors({});
+      return;
+    }
+    if (validateStep(step)) {
+      setMaxStep((m) => Math.max(m, target));
+      setStep(target);
+      setErrors({});
+    } else {
+      toast({
+        title: "Lengkapi semua field yang wajib diisi",
+        description: "Field dengan tanda * wajib diisi",
+        variant: "destructive" as any,
+      });
+    }
   };
 
   const addPengalaman = () =>
@@ -469,14 +491,19 @@ export default function FormulirPage() {
         <div className="grid grid-cols-5 gap-1 sm:hidden">
           {STEPS.map((s) => {
             const Icon = s.icon;
+            const locked = s.id > maxStep;
             return (
               <button
                 key={s.id}
-                onClick={() => setStep(s.id)}
+                onClick={() => goToStep(s.id)}
+                disabled={locked}
+                title={locked ? "Lengkapi step sebelumnya terlebih dahulu" : s.label}
                 className={`flex flex-col items-center justify-center gap-0.5 px-1 py-2 rounded-lg transition-all min-w-0 ${
                   step === s.id
                     ? "bg-[#1e3a5f] text-white"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    : locked
+                      ? "text-muted-foreground/40 cursor-not-allowed"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >
                 <Icon size={14} />
@@ -493,14 +520,19 @@ export default function FormulirPage() {
           <div className="flex gap-1 min-w-max pr-4">
             {STEPS.map((s) => {
               const Icon = s.icon;
+              const locked = s.id > maxStep;
               return (
                 <button
                   key={s.id}
-                  onClick={() => setStep(s.id)}
+                  onClick={() => goToStep(s.id)}
+                  disabled={locked}
+                  title={locked ? "Lengkapi step sebelumnya terlebih dahulu" : s.label}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
                     step === s.id
                       ? "bg-[#1e3a5f] text-white"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      : locked
+                        ? "text-muted-foreground/40 cursor-not-allowed"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   }`}
                 >
                   <Icon size={14} />
@@ -656,18 +688,7 @@ export default function FormulirPage() {
             <Button
               size="sm"
               className="text-xs sm:text-sm px-2 sm:px-4"
-              onClick={() => {
-                if (validateStep(step)) {
-                  setStep((s) => Math.min(STEPS.length, s + 1));
-                  setErrors({});
-                } else {
-                  toast({
-                    title: "Lengkapi semua field yang wajib diisi",
-                    description: "Field dengan tanda * wajib diisi",
-                    variant: "destructive" as any,
-                  });
-                }
-              }}
+              onClick={() => goToStep(step + 1)}
             >
               {/* Label pendek di mobile, panjang di sm ke atas */}
               <span className="hidden sm:inline">Lanjut</span>

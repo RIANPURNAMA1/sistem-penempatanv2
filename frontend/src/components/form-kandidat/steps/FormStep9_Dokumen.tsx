@@ -34,7 +34,7 @@ export function FormStep9_Dokumen({
     <div className="space-y-4">
       <p className="form-section-title text-sm sm:text-base">
         <FileText className="inline mr-1 sm:mr-2 h-4 w-4" />
-        UPLOAD DOKUMEN PENDUKUNG <span className="text-red-500">*</span>
+        UPLOAD DOKUMEN PENDUKUNG
       </p>
 
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm text-amber-800 mb-3 sm:mb-4">
@@ -47,7 +47,8 @@ export function FormStep9_Dokumen({
       </div>
 
       <p className="text-xs sm:text-sm text-muted-foreground -mt-2">
-        Format: JPG, PNG, PDF, MP4. Semua dokumen wajib diupload.
+        Format: JPG, PNG, PDF, MP4. Dokumen bertanda <span className="text-red-500">*</span> wajib
+        diupload, sisanya (Sertifikat JFT, Dokumen Lainnya) opsional.
       </p>
 
       {errors.dokumen && (
@@ -89,6 +90,11 @@ export function FormStep9_Dokumen({
                   <span className="text-xs sm:text-sm font-medium leading-tight">
                     {dt.label} {isOptional ? "" : "*"}
                   </span>
+                  {isOptional && (
+                    <span className="text-[9px] sm:text-[10px] text-muted-foreground px-1.5 py-0.5 bg-muted rounded-full ml-1">
+                      Opsional
+                    </span>
+                  )}
                 </div>
                 <span className="text-[10px] sm:text-xs text-muted-foreground shrink-0">
                   Maks 500KB
@@ -99,6 +105,28 @@ export function FormStep9_Dokumen({
                 <p className="text-[10px] sm:text-xs text-muted-foreground mb-2 truncate">
                   {uploaded.nama_file}
                 </p>
+              )}
+
+              {dt.key === "pas_foto" && (
+                <div className="flex items-start gap-2 sm:gap-3 mb-2 sm:mb-3 p-2 bg-slate-50 border border-slate-200 rounded-md">
+                  <img
+                    src="/images/contoh%20pas%20foto.jpg"
+                    alt="Contoh pas foto"
+                    className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 object-cover rounded border border-slate-200"
+                  />
+                  <div className="text-[10px] sm:text-xs text-slate-600 leading-relaxed">
+                    <p className="font-medium text-slate-700 mb-0.5">
+                      Ketentuan Pas Foto:
+                    </p>
+                    <ul className="list-disc pl-3.5 space-y-0.5">
+                      <li>Foto close-up setengah badan</li>
+                      <li>Wajah menghadap depan & jelas</li>
+                      <li>Latar polos (putih / biru muda)</li>
+                      <li>Pencahayaan terang, tanpa aksesoris (kacamata / topi)</li>
+                      <li>Rambut tidak menutupi wajah</li>
+                    </ul>
+                  </div>
+                </div>
               )}
 
               <label className="cursor-pointer">

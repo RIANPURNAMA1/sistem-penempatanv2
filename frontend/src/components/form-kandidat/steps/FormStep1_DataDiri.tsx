@@ -26,7 +26,14 @@ export function FormStep1_DataDiri({ form, set, setSel, errors, cabangList = [] 
       {cabangList.length > 0 && (
         <div className="space-y-1.5">
           <Label className="required">Cabang Mendunia *</Label>
-          <Select value={form.cabang_id || ""} onValueChange={setSel("cabang_id")}>
+          <Select
+            value={
+              form.cabang_id != null && form.cabang_id !== "" && form.cabang_id !== undefined
+                ? String(form.cabang_id)
+                : ""
+            }
+            onValueChange={setSel("cabang_id")}
+          >
             <SelectTrigger error={!!errors.cabang_id}>
               <SelectValue placeholder="Pilih cabang..." />
             </SelectTrigger>
@@ -204,7 +211,7 @@ export function FormStep1_DataDiri({ form, set, setSel, errors, cabangList = [] 
             </SelectContent>
           </Select>
           {errors.golongan_darah && (
-            <p className="text-xs text-red-500">{errors.golong_an_darah}</p>
+            <p className="text-xs text-red-500">{errors.golongan_darah}</p>
           )}
         </div>
         <div className="space-y-1.5">

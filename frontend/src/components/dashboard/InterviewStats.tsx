@@ -19,6 +19,19 @@ interface ByCabangData {
   gagal: number
 }
 
+const STATUS_COLORS: Record<string, string> = {
+  'Job Matching': '#1e3a5f',
+  'Pending': '#94a3b8',
+  'lamar ke perusahaan': '#4a7ab5',
+  'Interview': '#0ea5e9',
+  'Jadwalkan Interview Ulang': '#a8c5f0',
+  'Lulus interview': '#22c55e',
+  'Gagal Interview': '#ef4444',
+  'Pemberkasan': '#f59e0b',
+  'Berangkat': '#10b981',
+  'Ditolak': '#dc2626',
+}
+
 export default function InterviewStats() {
   const [loading, setLoading] = useState(true)
   const [statusData, setStatusData] = useState<StatusData[]>([])
@@ -384,34 +397,119 @@ export default function InterviewStats() {
           </div>
 
           <div className="w-full bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-            <h3 className="text-sm font-semibold text-slate-800 mb-5">Detail Semua Status</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              {statusData.filter(s => s.count > 0).map((s, idx) => {
-                const percent = totalKandidat > 0 ? Math.round((s.count / totalKandidat) * 100) : 0
-                return (
-                  <div 
-                    key={s.status} 
-                    className="relative overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-4 hover:from-slate-100 hover:to-slate-150 transition-all duration-200 group"
-                  >
-                    <div className="absolute top-0 left-0 w-1 h-full bg-slate-500"></div>
-                    <div className="flex items-start justify-between mb-2">
-                      <span className="text-[11px] font-medium text-slate-600 uppercase tracking-wide">{s.status}</span>
-                      <span className="text-[10px] text-slate-400 bg-slate-200 px-2 py-0.5 rounded-full">{percent}%</span>
-                    </div>
-                    <p className="text-2xl font-bold text-slate-800 mb-1">{s.count}</p>
-                    <div className="flex gap-3 text-[11px] text-slate-500">
-                      <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                        L: {s.laki}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-                        P: {s.perempuan}
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-slate-800">
+                Detail Semua Status Progres Kandidat
+              </h3>
+              <span className="text-xs text-slate-500">
+                Total {totalKandidat} kandidat
+              </span>
+            </div>
+            <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-left">
+                    <th className="px-3 py-2.5 font-medium w-10">No</th>
+                    <th className="px-3 py-2.5 font-medium">Status Progres</th>
+                    <th className="px-3 py-2.5 font-medium w-20 text-center">Jumlah</th>
+                    <th className="px-3 py-2.5 font-medium w-20 text-center">Laki-laki</th>
+                    <th className="px-3 py-2.5 font-medium w-20 text-center">Perempuan</th>
+                    <th className="px-3 py-2.5 font-medium w-40">Persentase</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statusData
+                    .map((s, idx) => {
+                      const percent =
+                        totalKandidat > 0
+                          ? Math.round((s.count / totalKandidat) * 100)
+                          : 0
+                      const color = STATUS_COLORS[s.status] || '#64748b'
+                      return (
+                        <tr
+                          key={s.status}
+                          className="border-t hover:bg-slate-50/70 transition-colors"
+                        >
+                          <td className="px-3 py-2.5 tabular-nums text-slate-400">
+                            {idx + 1}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="w-2.5 h-2.5 rounded-full shrink-0"
+                                style={{ backgroundColor: color }}
+                              />
+                              <span className="font-medium text-slate-700">
+                                {s.status}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-center">
+                            <span
+                              className="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full text-xs font-bold text-white"
+                              style={{ backgroundColor: color }}
+                            >
+                              {s.count}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5 text-center">
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-sky-700">
+                              <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                              {s.laki}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5 text-center">
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-pink-700">
+                              <span className="w-1.5 h-1.5 rounded-full bg-pink-500" />
+                              {s.perempuan}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all"
+                                  style={{
+                                    width: `${percent}%`,
+                                    backgroundColor: color,
+                                  }}
+                                />
+                              </div>
+                              <span className="w-10 text-right text-xs tabular-nums text-slate-600 font-medium">
+                                {percent}%
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-slate-50 border-t-2 border-slate-200 font-semibold text-slate-700">
+                    <td className="px-3 py-2.5" />
+                    <td className="px-3 py-2.5">Total</td>
+                    <td className="px-3 py-2.5 text-center tabular-nums">
+                      {statusData.reduce((sum, s) => sum + s.count, 0)}
+                    </td>
+                    <td className="px-3 py-2.5 text-center tabular-nums text-sky-700">
+                      {statusData.reduce((sum, s) => sum + s.laki, 0)}
+                    </td>
+                    <td className="px-3 py-2.5 text-center tabular-nums text-pink-700">
+                      {statusData.reduce((sum, s) => sum + s.perempuan, 0)}
+                    </td>
+                    <td className="px-3 py-2.5 text-right tabular-nums">
+                      {totalKandidat > 0
+                        ? Math.round(
+                            (statusData.reduce((sum, s) => sum + s.count, 0) /
+                              totalKandidat) *
+                              100,
+                          )
+                        : 0}
+                      %
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </div>
         </>

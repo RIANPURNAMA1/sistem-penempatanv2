@@ -275,7 +275,7 @@ export default function KandidatDetailPage() {
   };
 
   return (
-    <div className="page-container max-w-5xl">
+    <div className="page-container max-w-6xl">
       <Header
         data={data}
         navigate={navigate}
@@ -288,7 +288,7 @@ export default function KandidatDetailPage() {
         onShowHistoryModal={() => setShowHistoryModal(true)}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <MainContent
           data={data}
           bool={bool}

@@ -38,6 +38,7 @@ import {
   MessageCircle,
   Sparkles,
   Plus,
+  SlidersHorizontal,
 } from "lucide-react";
 import HistoryModal from "@/components/HistoryModal";
 import TambahKandidatModal from "@/components/admin/TambahKandidatModal";
@@ -132,6 +133,7 @@ export default function KandidatListPage() {
   const [jenjang, setJenjang] = useState("");
   const [statusKeberangkatan, setStatusKeberangkatan] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -657,19 +659,48 @@ export default function KandidatListPage() {
     <div className="page-container">
       {/* ── HEADER ── */}
       <div className="mb-6 space-y-3">
-        {/* Judul + deskripsi */}
-        <div className="space-y-0.5">
-          <h1 className="text-lg xs:text-xl sm:text-2xl font-bold text-foreground leading-tight">
-            Data Kandidat
-          </h1>
-          <p className="text-[11px] xs:text-xs sm:text-sm text-muted-foreground leading-snug">
-            {user?.role === "admin_cabang"
-              ? `Kandidat cabang ${user.nama_cabang}`
-              : "Kelola semua data kandidat"}
-          </p>
+        {/* Judul + deskripsi + tombol Aksi */}
+        <div className="flex flex-row items-start justify-between gap-2">
+          <div className="space-y-0.5">
+            <h1 className="text-lg xs:text-xl sm:text-2xl font-bold text-foreground leading-tight">
+              Data Kandidat
+            </h1>
+            <p className="text-[11px] xs:text-xs sm:text-sm text-muted-foreground leading-snug">
+              {user?.role === "admin_cabang"
+                ? `Kandidat cabang ${user.nama_cabang}`
+                : "Kelola semua data kandidat"}
+            </p>
+          </div>
+
+          {/* Tombol Aksi — toggle tampil/sembunyi tombol aksi lainnya */}
+          <button
+            onClick={() => {
+              setShowActions((v) => !v);
+              if (showActions) setShowFilters(false);
+            }}
+            className={`
+              inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5
+              text-xs font-medium transition-colors shrink-0
+              focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300
+              whitespace-nowrap
+              ${
+                showActions
+                  ? "bg-[#1e3a5f] text-white hover:bg-[#16304d] border-[#1e3a5f]"
+                  : "bg-white hover:bg-gray-50 border-gray-200 text-gray-700"
+              }
+            `}
+          >
+            {showActions ? (
+              <X size={13} className="shrink-0" />
+            ) : (
+              <SlidersHorizontal size={13} className="shrink-0" />
+            )}
+            <span>Aksi</span>
+          </button>
         </div>
 
-        {/* Tombol aksi — selalu row, wrap kalau perlu, tapi tidak pernah stacked full-width */}
+        {/* Tombol aksi — muncul saat tombol Aksi diklik */}
+        {showActions && (
         <div className="flex flex-row flex-wrap gap-2">
           <input
             ref={fileInputRef}
@@ -814,6 +845,7 @@ export default function KandidatListPage() {
             <span>Data Dihapus</span>
           </button>
         </div>
+        )}
       </div>
 
       {/* ── MENU SEMUA / DRAFT ── */}

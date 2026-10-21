@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/components";
 import { InfoRow, SectionTitle } from "@/components/kandidat";
 import { User } from "lucide-react";
+import SubHeading from "./SubHeading";
 
 interface DataDiriCardProps {
   data: any;
@@ -8,21 +9,32 @@ interface DataDiriCardProps {
   getFileUrl: (p: string) => string;
 }
 
-export default function DataDiriCard({ data, formatDate }: DataDiriCardProps) {
+export default function DataDiriCard({
+  data,
+  formatDate,
+  getFileUrl,
+}: DataDiriCardProps) {
+  const fotoUrl = data.pas_foto ? getFileUrl(data.pas_foto) : "";
+
   return (
     <Card>
       <CardContent className="pt-5">
-        <SectionTitle icon={User} title="Data Diri" />
+        <SectionTitle
+          icon={User}
+          title="Data Diri"
+          description="Identitas, kontak, dan fisik kandidat"
+        />
 
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 mt-3 mb-4">
-          {data.pas_foto ? (
+        {/* Foto + ringkasan singkat */}
+        <div className="flex flex-col sm:flex-row items-center gap-4 mb-5">
+          {fotoUrl ? (
             <img
-              src={data.pas_foto}
+              src={fotoUrl}
               alt="Foto"
-              className="w-32 h-32 rounded-xl object-cover"
+              className="w-28 h-28 rounded-2xl object-cover border-2 border-border shadow-sm shrink-0"
             />
           ) : (
-            <div className="w-32 h-32 rounded-xl bg-blue-500 text-white flex items-center justify-center text-3xl font-bold">
+            <div className="w-28 h-28 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center text-3xl font-bold shrink-0">
               {(data.nama_romaji || data.nama || "U")
                 .split(" ")
                 .map((n: string) => n[0])
@@ -32,20 +44,38 @@ export default function DataDiriCard({ data, formatDate }: DataDiriCardProps) {
             </div>
           )}
 
-          <div className="text-center sm:text-left">
-            <p className="text-lg font-semibold">
+          <div className="text-center sm:text-left min-w-0">
+            <p className="text-lg font-bold leading-tight">
               {data.nama_romaji || data.nama || "-"}
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground font-mono">
               {data.nama_katakana || "-"}
             </p>
+            <div className="flex flex-wrap gap-1.5 mt-2 justify-center sm:justify-start">
+              {data.jenis_kelamin && (
+                <span className="px-2.5 py-0.5 rounded-full bg-sky-500 text-white text-xs font-semibold">
+                  {data.jenis_kelamin}
+                </span>
+              )}
+              {data.umur && (
+                <span className="px-2.5 py-0.5 rounded-full bg-slate-600 text-white text-xs font-semibold">
+                  {data.umur} tahun
+                </span>
+              )}
+              {data.golongan_darah && (
+                <span className="px-2.5 py-0.5 rounded-full bg-rose-500 text-white text-xs font-semibold">
+                  Gol. Darah {data.golongan_darah}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="space-y-2">
+        {/* Identitas */}
+        <SubHeading>Identitas</SubHeading>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-3 mb-5">
           <InfoRow label="Nama (Romaji)" value={data.nama_romaji || "-"} />
           <InfoRow label="Nama (Katakana)" value={data.nama_katakana || "-"} />
-
           <InfoRow
             label="Tempat, Tanggal Lahir"
             value={
@@ -54,54 +84,25 @@ export default function DataDiriCard({ data, formatDate }: DataDiriCardProps) {
                 : data.tempat_lahir || "-"
             }
           />
-
-          <InfoRow
-            label="Umur"
-            value={data.umur ? `${data.umur} tahun` : "-"}
-          />
-
           <InfoRow label="Jenis Kelamin" value={data.jenis_kelamin || "-"} />
-          <InfoRow label="Pendidikan" value={data.pendidikan_terakhir || "-"} />
+          <InfoRow label="Agama" value={data.agama || "-"} />
           <InfoRow
             label="Status Pernikahan"
             value={data.status_pernikahan || "-"}
           />
-
           {data.status_pernikahan === "Menikah" && (
             <InfoRow label="Jumlah Anak" value={data.jumlah_anak || "-"} />
           )}
-
-          <InfoRow label="Agama" value={data.agama || "-"} />
-
           <InfoRow
-            label="Tinggi / Berat"
-            value={
-              data.tinggi_badan
-                ? `${data.tinggi_badan} cm / ${data.berat_badan} kg`
-                : "-"
-            }
+            label="Pendidikan Terakhir"
+            value={data.pendidikan_terakhir || "-"}
           />
+        </div>
 
-          <InfoRow label="Golongan Darah" value={data.golongan_darah || "-"} />
-          <InfoRow label="Ukuran Baju" value={data.ukuran_baju || "-"} />
-
-          <InfoRow
-            label="Lingkar Pinggang"
-            value={data.lingkar_pinggang ? `${data.lingkar_pinggang} cm` : "-"}
-          />
-
-          <InfoRow
-            label="Panjang Telapak Kaki"
-            value={
-              data.panjang_telapak_kaki
-                ? `${data.panjang_telapak_kaki} cm`
-                : "-"
-            }
-          />
-
-          <InfoRow label="SIM" value={data.sim_dimiliki || "-"} />
+        {/* Kontak & Alamat */}
+        <SubHeading>Kontak & Alamat</SubHeading>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-3 mb-5">
           <InfoRow label="No. HP" value={data.nomor_hp || "-"} />
-
           <InfoRow
             label="Kontak Orang Tua"
             value={
@@ -110,12 +111,38 @@ export default function DataDiriCard({ data, formatDate }: DataDiriCardProps) {
                 : "-"
             }
           />
-
           <InfoRow
             label="Alamat"
             value={data.alamat_lengkap || "-"}
             multiline
           />
+        </div>
+
+        {/* Ukuran Badan & Fisik */}
+        <SubHeading>Ukuran Badan & Fisik</SubHeading>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-3">
+          <InfoRow
+            label="Tinggi / Berat Badan"
+            value={
+              data.tinggi_badan
+                ? `${data.tinggi_badan} cm / ${data.berat_badan} kg`
+                : "-"
+            }
+          />
+          <InfoRow
+            label="Lingkar Pinggang"
+            value={data.lingkar_pinggang ? `${data.lingkar_pinggang} cm` : "-"}
+          />
+          <InfoRow
+            label="Panjang Telapak Kaki"
+            value={
+              data.panjang_telapak_kaki
+                ? `${data.panjang_telapak_kaki} cm`
+                : "-"
+            }
+          />
+          <InfoRow label="Ukuran Baju" value={data.ukuran_baju || "-"} />
+          <InfoRow label="SIM" value={data.sim_dimiliki || "-"} />
         </div>
       </CardContent>
     </Card>

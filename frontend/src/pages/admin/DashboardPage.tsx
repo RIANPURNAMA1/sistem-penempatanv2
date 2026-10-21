@@ -22,6 +22,7 @@ interface Stats {
   sswByCabang?: any[];
   interviewByCabang?: any[];
   interviewByGender?: any[];
+  allProfiles?: any[];
 }
 
 export default function DashboardPage() {

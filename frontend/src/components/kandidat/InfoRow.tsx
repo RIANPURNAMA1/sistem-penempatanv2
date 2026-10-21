@@ -5,23 +5,31 @@ interface InfoRowProps {
 }
 
 export default function InfoRow({ label, value, multiline }: InfoRowProps) {
-  if (multiline) {
-    return (
-      <div className="py-2 border-b border-border/50 last:border-0">
-        <span className="text-xs text-muted-foreground block mb-1">{label}</span>
-        <span className="text-sm font-medium">
-          {value || <span className="text-muted-foreground font-normal">—</span>}
-        </span>
-      </div>
-    );
-  }
+  const isEmpty =
+    value === null ||
+    value === undefined ||
+    value === "" ||
+    value === "-" ||
+    (typeof value === "string" && value.trim() === "");
 
   return (
-    <div className="flex justify-between items-center py-2 border-b border-border/50 last:border-0">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-right">
-        {value || <span className="text-muted-foreground font-normal">—</span>}
-      </span>
+    <div className="min-w-0">
+      <p className="text-[11px] text-muted-foreground mb-0.5 leading-tight">
+        {label}
+      </p>
+      {isEmpty ? (
+        <p className="text-sm text-muted-foreground/60">—</p>
+      ) : (
+        <p
+          className={`text-sm font-semibold text-foreground break-words ${
+            multiline
+              ? "whitespace-pre-wrap font-medium leading-relaxed"
+              : "leading-snug"
+          }`}
+        >
+          {value}
+        </p>
+      )}
     </div>
   );
 }

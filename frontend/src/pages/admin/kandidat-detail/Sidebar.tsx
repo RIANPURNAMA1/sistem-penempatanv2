@@ -9,7 +9,7 @@ interface SidebarProps {
 
 export default function Sidebar({ data, stCfg, progresCfgItem }: SidebarProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 lg:sticky lg:top-6">
       <StatusCard
         statusFormulir={data.status_formulir}
         statusFormulirLabel={stCfg.label}

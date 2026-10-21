@@ -1333,7 +1333,7 @@ const getStats = async (req, res) => {
 
     const approvedProfilesWhere = whereClause ? whereClause + ' AND kp.status_formulir = ' + pool.escape('approved') : 'WHERE kp.status_formulir = ' + pool.escape('approved');
     const [allProfiles] = await pool.query(
-      `SELECT kp.sertifikat_ssw, kp.jenis_kelamin, kp.status_progres, c.nama_cabang FROM kandidat_profil kp LEFT JOIN cabang c ON kp.cabang_id = c.id ${approvedProfilesWhere}`,
+      `SELECT kp.id, kp.nama_romaji, kp.nama_katakana, kp.umur, kp.sertifikat_ssw, kp.jenis_kelamin, kp.status_progres, TRIM(c.nama_cabang) as nama_cabang FROM kandidat_profil kp LEFT JOIN cabang c ON kp.cabang_id = c.id ${approvedProfilesWhere}`,
       params
     );
 
@@ -1351,12 +1351,16 @@ const getStats = async (req, res) => {
       const perempuan = bySSW.filter(p => p.jenis_kelamin === 'Perempuan').length;
       bySSWGender.push({ ssw, laki, perempuan, total: laki + perempuan });
 
-      const progresCounts = Object.fromEntries(progresList.map(p => [p, 0]));
+      const progresCounts = Object.fromEntries(progresList.map(p => [p, { count: 0, laki: 0, perempuan: 0 }]));
       bySSW.forEach(p => {
         const key = p.status_progres || 'Pending';
-        if (progresCounts[key] !== undefined) progresCounts[key]++;
+        if (progresCounts[key] !== undefined) {
+          progresCounts[key].count++;
+          if (p.jenis_kelamin === 'Laki-laki') progresCounts[key].laki++;
+          else if (p.jenis_kelamin === 'Perempuan') progresCounts[key].perempuan++;
+        }
       });
-      bySSWProgres.push({ ssw, progres: Object.entries(progresCounts).map(([status, count]) => ({ status, count })) });
+      bySSWProgres.push({ ssw, progres: Object.entries(progresCounts).map(([status, v]) => ({ status, count: v.count, laki: v.laki, perempuan: v.perempuan })) });
     });
 
     const [byCabangProgres] = await pool.query(`

@@ -4,6 +4,7 @@ export { default as Sidebar } from "./Sidebar";
 export { default as DataDiriCard } from "./DataDiriCard";
 export { default as KesehatanCard } from "./KesehatanCard";
 export { default as HealthChip } from "./HealthChip";
+export { default as SubHeading } from "./SubHeading";
 export { default as PendidikanCard } from "./PendidikanCard";
 export { default as KeluargaCard } from "./KeluargaCard";
 export { default as PengalamanCard } from "./PengalamanCard";

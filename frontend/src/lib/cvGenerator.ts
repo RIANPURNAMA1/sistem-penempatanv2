@@ -2,6 +2,65 @@ import jsPDF from 'jspdf'
 import * as XLSX from 'xlsx'
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel } from 'docx'
 
+// Render sebuah DOM element (template CV) menjadi gambar lalu tanam ke Excel.
+// Hasil Excel akan tampil persis seperti desain CV di preview.
+export const generateCVExcelFromElement = async (
+  element: HTMLElement,
+  namaKandidat: string,
+) => {
+  const [{ default: html2canvas }, ExcelJS] = await Promise.all([
+    import('html2canvas'),
+    import('exceljs'),
+  ])
+
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: '#ffffff',
+  })
+
+  const base64 = canvas.toDataURL('image/png').split(',')[1]
+
+  const wb = new ExcelJS.Workbook()
+  const ws = wb.addWorksheet('CV', {
+    pageSetup: {
+      orientation: 'portrait',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 1,
+      horizontalCentered: true,
+      paperSize: 9,
+    },
+  })
+
+  // Ukuran gambar dihitung dari dimensi canvas (skala kira-kira ke cm)
+  const imgWidthEmu = canvas.width * 9525
+  const imgHeightEmu = canvas.height * 9525
+
+  const imageId = wb.addImage({ base64, extension: 'png' })
+  ws.addImage(imageId, {
+    tl: { col: 0.1, row: 0.1 },
+    ext: { width: imgWidthEmu, height: imgHeightEmu },
+    editAs: 'oneCell',
+  })
+
+  const buffer = await wb.xlsx.writeBuffer()
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `${namaKandidat || 'kandidat'}_CV.xlsx`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+
+  return `${namaKandidat || 'kandidat'}_CV.xlsx`
+}
+
+
 const formatDate = (date: string) => {
   if (!date) return ''
   const d = new Date(date)

@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/components'
-import { Calendar, DollarSign, FileText, Plane, Briefcase } from 'lucide-react'
+import { Calendar, DollarSign, FileText } from 'lucide-react'
 
 interface ProgresDetailCardProps {
   data: {
@@ -24,15 +24,29 @@ interface ProgresDetailCardProps {
 }
 
 const formatDate = (dateStr: string) => {
-  if (!dateStr) return '-'
+  if (!dateStr) return null
   const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return null
   return date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 const formatRupiah = (value: string) => {
-  if (!value) return '-'
-  return `Rp ${Number(value).toLocaleString('id-ID')}`
+  if (!value) return null
+  const n = Number(value)
+  if (isNaN(n)) return null
+  return `Rp ${n.toLocaleString('id-ID')}`
 }
+
+const Field = ({ label, value }: { label: string; value: string | null }) => (
+  <div>
+    <p className="text-xs text-muted-foreground">{label}</p>
+    {value ? (
+      <p className="font-semibold text-sm mt-0.5">{value}</p>
+    ) : (
+      <p className="text-sm mt-0.5 text-muted-foreground/60">—</p>
+    )}
+  </div>
+)
 
 export default function ProgresDetailCard({ data }: ProgresDetailCardProps) {
   return (
@@ -41,27 +55,26 @@ export default function ProgresDetailCard({ data }: ProgresDetailCardProps) {
       <Card className="border shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Calendar size={16} className="text-blue-600" />
+            <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-blue-100 text-blue-600">
+              <Calendar size={14} />
+            </span>
             Data Interview & Mensetsu
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-            <div>
-              <p className="text-xs text-muted-foreground">TGL Setsumeikai</p>
-              <p className="font-medium">{formatDate(data.tgl_setsumeikai || '')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">TGL Mensetsu 1</p>
-              <p className="font-medium">{formatDate(data.tgl_mensetsu_1 || '')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">TGL Mensetsu 2</p>
-              <p className="font-medium">{formatDate(data.tgl_mensetsu_2 || '')}</p>
-            </div>
+            <Field label="TGL Setsumeikai" value={formatDate(data.tgl_setsumeikai || '')} />
+            <Field label="TGL Mensetsu 1" value={formatDate(data.tgl_mensetsu_1 || '')} />
+            <Field label="TGL Mensetsu 2" value={formatDate(data.tgl_mensetsu_2 || '')} />
             <div className="col-span-2 md:col-span-3">
               <p className="text-xs text-muted-foreground">Catatan Mensetsu</p>
-              <p className="font-medium">{data.catatan_mensetsu || '-'}</p>
+              {data.catatan_mensetsu ? (
+                <p className="font-medium text-sm mt-0.5 leading-relaxed bg-muted/40 rounded-lg px-3 py-2">
+                  {data.catatan_mensetsu}
+                </p>
+              ) : (
+                <p className="text-sm mt-0.5 text-muted-foreground/60">—</p>
+              )}
             </div>
           </div>
         </CardContent>
@@ -71,24 +84,17 @@ export default function ProgresDetailCard({ data }: ProgresDetailCardProps) {
       <Card className="border shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <DollarSign size={16} className="text-green-600" />
+            <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600">
+              <DollarSign size={14} />
+            </span>
             Biaya & Administrasi
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            <div>
-              <p className="text-xs text-muted-foreground">Biaya Pemberkasan</p>
-              <p className="font-medium">{formatRupiah(data.biaya_pemberkasan || '')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">ADM Tahap 1</p>
-              <p className="font-medium">{formatRupiah(data.adm_tahap_1 || '')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">ADM Tahap 2</p>
-              <p className="font-medium">{formatRupiah(data.adm_tahap_2 || '')}</p>
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+            <Field label="Biaya Pemberkasan" value={formatRupiah(data.biaya_pemberkasan || '')} />
+            <Field label="ADM Tahap 1" value={formatRupiah(data.adm_tahap_1 || '')} />
+            <Field label="ADM Tahap 2" value={formatRupiah(data.adm_tahap_2 || '')} />
           </div>
         </CardContent>
       </Card>
@@ -97,52 +103,24 @@ export default function ProgresDetailCard({ data }: ProgresDetailCardProps) {
       <Card className="border shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <FileText size={16} className="text-purple-600" />
+            <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-purple-100 text-purple-600">
+              <FileText size={14} />
+            </span>
             Tracking Dokumen & Proses
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-            <div>
-              <p className="text-xs text-muted-foreground">Dok. Dikirim</p>
-              <p className="font-medium">{formatDate(data.dokumen_dikirim || '')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Terbit Kontrak</p>
-              <p className="font-medium">{formatDate(data.terbit_kontrak || '')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Kontrak ke TSK</p>
-              <p className="font-medium">{formatDate(data.kontrak_dikirim_tsk || '')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Terbit Paspor</p>
-              <p className="font-medium">{formatDate(data.terbit_paspor || '')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Masuk Imigrasi</p>
-              <p className="font-medium">{formatDate(data.masuk_imigrasi || '')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">COE Terbit</p>
-              <p className="font-medium">{formatDate(data.coe_terbit || '')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">E-KTKLN</p>
-              <p className="font-medium">{formatDate(data.ektkln_pembuatan || '')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Dok. Dikirim 2</p>
-              <p className="font-medium">{formatDate(data.dokumen_dikirim_2 || '')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Visa</p>
-              <p className="font-medium">{formatDate(data.visa || '')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Jadwal Penerbangan</p>
-              <p className="font-medium">{formatDate(data.jadwal_penerbitan || '')}</p>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 text-sm">
+            <Field label="Dok. Dikirim" value={formatDate(data.dokumen_dikirim || '')} />
+            <Field label="Terbit Kontrak" value={formatDate(data.terbit_kontrak || '')} />
+            <Field label="Kontrak ke TSK" value={formatDate(data.kontrak_dikirim_tsk || '')} />
+            <Field label="Terbit Paspor" value={formatDate(data.terbit_paspor || '')} />
+            <Field label="Masuk Imigrasi" value={formatDate(data.masuk_imigrasi || '')} />
+            <Field label="COE Terbit" value={formatDate(data.coe_terbit || '')} />
+            <Field label="E-KTKLN" value={formatDate(data.ektkln_pembuatan || '')} />
+            <Field label="Dok. Dikirim 2" value={formatDate(data.dokumen_dikirim_2 || '')} />
+            <Field label="Visa" value={formatDate(data.visa || '')} />
+            <Field label="Jadwal Penerbangan" value={formatDate(data.jadwal_penerbitan || '')} />
           </div>
         </CardContent>
       </Card>

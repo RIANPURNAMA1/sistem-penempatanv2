@@ -12,7 +12,7 @@ const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 // Daftar bidang SSW — sinkron dengan getStats() di kandidatController
 const SSW_LIST = [
   'Pengolahan Makanan', 'Pertanian', 'Gaishoku', 'Kaigo (perawat)',
-  'Building Cleaning', 'Restoran', 'Driver', 'Perhotelah',
+  'Building Cleaning', 'Restoran', 'Driver', 'Perhotelan',
   'Perbaikan dan Perawatan Mobil', 'Konstruksi', 'Perikanan',
 ];
 

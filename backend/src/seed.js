@@ -83,7 +83,7 @@ const ssw_options = [
       "Building Cleaning",
       "Restoran",
       "Driver",
-      "Perhotelah",
+      "Perhotelan",
       "Perikanan",
       "Perbaikan dan Perawatan Mobil",
       "Konstruksi",

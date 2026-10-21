@@ -887,7 +887,7 @@ const getDashboard = async (req, res) => {
 
     const sswList = [
       'Pengolahan Makanan', 'Pertanian', 'Gaishoku', 'Kaigo (perawat)',
-      'Building Cleaning', 'Restoran', 'Driver', 'Perhotelah',
+      'Building Cleaning', 'Restoran', 'Driver', 'Perhotelan',
       'Perbaikan dan Perawatan Mobil', 'Konstruksi', 'Perikanan',
     ];
     const progresList = [

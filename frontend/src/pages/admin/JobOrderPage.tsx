@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, Badge } from '@/components/ui/components'
 import { Input } from '@/components/ui/input'
+import ModalPortal from '@/components/ui/ModalPortal'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from '@/hooks/useToast'
 import api from '@/lib/api'
@@ -17,6 +18,9 @@ const statusConfig: Record<string, { label: string; bg: string; text: string }> 
 
 const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 const ITEMS_PER_PAGE = 10
+
+const normalizeBidangSsw = (value?: string | null) =>
+  value === 'Perhotelah' ? 'Perhotelan' : (value || '')
 
 export default function JobOrderPage() {
   const [data, setData] = useState<any[]>([])
@@ -56,7 +60,6 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
     biaya_awal: '',
     biaya_akhir: '',
     tanggal_cv: '',
-    pic_cv: '',
     tanggal_mensetsu_1: '',
     tanggal_mensetsu_2: '',
     tanggal_mensetsu_3: '',
@@ -119,12 +122,13 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
     const matchSearch = !debouncedSearch || 
       item.nama_kandidat?.toLowerCase().includes(searchLower) ||
       item.nama_perusahaan?.toLowerCase().includes(searchLower) ||
+      item.institusi?.toLowerCase().includes(searchLower) ||
       item.nomor?.toLowerCase().includes(searchLower) ||
-      item.bidang_ssw?.toLowerCase().includes(searchLower)
+      normalizeBidangSsw(item.bidang_ssw).toLowerCase().includes(searchLower)
     
     const matchPerusahaan = !filterPerusahaan || filterPerusahaan === 'all' || item.perusahaan_id?.toString() === filterPerusahaan
     const matchStatus = !filterStatus || filterStatus === 'all' || item.status_kelulusan === filterStatus
-    const matchBidangSsw = !filterBidangSsw || filterBidangSsw === 'all' || item.bidang_ssw?.toLowerCase().includes(filterBidangSsw.toLowerCase())
+    const matchBidangSsw = !filterBidangSsw || filterBidangSsw === 'all' || normalizeBidangSsw(item.bidang_ssw).toLowerCase().includes(filterBidangSsw.toLowerCase())
     
     let matchTanggal = true
     if (filterTanggalAwal && item.tanggal_terbit) {
@@ -137,7 +141,7 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
     return matchSearch && matchPerusahaan && matchStatus && matchBidangSsw && matchTanggal
   })
 
-  const uniqueBidangSsw = [...new Set(data.map(d => d.bidang_ssw).filter(Boolean))].sort()
+  const uniqueBidangSsw = [...new Set(data.map(d => normalizeBidangSsw(d.bidang_ssw)).filter(Boolean))].sort()
 
   const clearAllFilters = () => {
     setFilterPerusahaan('all')
@@ -187,7 +191,6 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
         biaya_awal: form.biaya_awal ? parseFloat(form.biaya_awal) : 0,
         biaya_akhir: form.biaya_akhir ? parseFloat(form.biaya_akhir) : 0,
         tanggal_cv: form.tanggal_cv,
-        pic_cv: form.pic_cv,
         tanggal_mensetsu_1: form.tanggal_mensetsu_1 || null,
         tanggal_mensetsu_2: form.tanggal_mensetsu_2 || null,
         tanggal_mensetsu_3: form.tanggal_mensetsu_3 || null,
@@ -222,13 +225,12 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
       nomor: item.nomor || '',
       tanggal_terbit: item.tanggal_terbit || '',
       detail_job_order: item.detail_job_order || '',
-      bidang_ssw: item.bidang_ssw || '',
+      bidang_ssw: normalizeBidangSsw(item.bidang_ssw),
       nama_grup: item.nama_grup || '',
       link_grup: item.link_grup || '',
       biaya_awal: item.biaya_awal || '',
       biaya_akhir: item.biaya_akhir || '',
       tanggal_cv: item.tanggal_cv || '',
-      pic_cv: item.pic_cv || '',
       tanggal_mensetsu_1: item.tanggal_mensetsu_1 || '',
       tanggal_mensetsu_2: item.tanggal_mensetsu_2 || '',
       tanggal_mensetsu_3: item.tanggal_mensetsu_3 || '',
@@ -268,7 +270,7 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
     setForm({
       kandidat_ids: [], perusahaan_id: '', institusi: '', nomor: '', tanggal_terbit: '',
       detail_job_order: '', bidang_ssw: '', nama_grup: '', link_grup: '',
-      biaya_awal: '', biaya_akhir: '', tanggal_cv: '', pic_cv: '',
+      biaya_awal: '', biaya_akhir: '', tanggal_cv: '',
       tanggal_mensetsu_1: '', tanggal_mensetsu_2: '', tanggal_mensetsu_3: '',
       status_kelulusan: 'Menunggu',
     })
@@ -296,7 +298,7 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
         <div className="relative flex-1 max-w-md">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input 
-            placeholder="Cari nomor, perusahaan, kandidat..." 
+            placeholder="Cari nomor, mitra, perusahaan, kandidat..." 
             className="pl-9 pr-10 bg-white" 
             value={search} 
             onChange={e => handleSearchChange(e.target.value)} 
@@ -354,7 +356,7 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
           <div className="space-y-4">
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex-1 min-w-[160px]">
-                <label className="text-xs text-slate-500 mb-1.5 block font-medium">Perusahaan</label>
+                <label className="text-xs text-slate-500 mb-1.5 block font-medium">Mitra Penempatan</label>
                 <Select value={filterPerusahaan} onValueChange={setFilterPerusahaan}>
                   <SelectTrigger className="h-10 bg-white border-border">
                     <SelectValue placeholder="Pilih..." />
@@ -414,7 +416,7 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
               <span className="text-xs text-slate-500">Filter aktif:</span>
               {filterPerusahaan !== 'all' && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full">
-                  {perusahaans.find(p => String(p.id) === filterPerusahaan)?.nama_perusahaan || 'Perusahaan'}
+                  {perusahaans.find(p => String(p.id) === filterPerusahaan)?.nama_perusahaan || 'Mitra Penempatan'}
                   <button onClick={() => setFilterPerusahaan('all')} className="hover:text-blue-900"><X size={12} /></button>
                 </span>
               )}
@@ -485,12 +487,16 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
                   
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
-                      <span className="text-gray-400">Perusahaan</span>
+                      <span className="text-gray-400">Mitra Penempatan</span>
                       <p className="text-gray-600">{item.nama_perusahaan || '-'}</p>
                     </div>
                     <div>
+                      <span className="text-gray-400">Perusahaan Penempatan</span>
+                      <p className="text-gray-600">{item.institusi || '-'}</p>
+                    </div>
+                    <div>
                       <span className="text-gray-400">Bidang SSW</span>
-                      <p className="text-gray-600">{item.bidang_ssw || '-'}</p>
+                      <p className="text-gray-600">{normalizeBidangSsw(item.bidang_ssw) || '-'}</p>
                     </div>
                     <div className="col-span-2">
                       <span className="text-gray-400">Kandidat</span>
@@ -578,6 +584,7 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">NO</th>
                 <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">NO. JOB ORDER</th>
+                <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">MITRA PENEMPATAN</th>
                 <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">PERUSAHAAN PENEMPATAN</th>
                 <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">KANDIDAT</th>
                 <th className="text-left px-4 py-3 font-medium text-xs text-gray-500">BIDANG SSW</th>
@@ -590,7 +597,7 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
             <tbody className="divide-y-0">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="text-center px-4 py-12">
+                  <td colSpan={10} className="text-center px-4 py-12">
                     <div className="flex items-center justify-center gap-2 text-gray-400">
                       <Loader2 size={20} className="animate-spin" />
                       <span>Memuat data...</span>
@@ -599,7 +606,7 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
                 </tr>
               ) : paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center px-4 py-12">
+                  <td colSpan={10} className="text-center px-4 py-12">
                     <div className="flex flex-col items-center">
                       <FileText size={40} className="text-gray-300 mb-2" />
                       <p className="text-gray-500">Tidak ada data</p>
@@ -624,6 +631,9 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
                         <span className="text-gray-700 text-sm">{item.nama_perusahaan || '-'}</span>
                       </td>
                       <td className="px-4 py-3">
+                        <span className="text-gray-700 text-sm">{item.institusi || '-'}</span>
+                      </td>
+                      <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1 max-w-[180px]">
                           {item.nama_kandidat ? item.nama_kandidat.split(', ').slice(0, 2).map((nama: string, idx: number) => (
                             <span key={idx} className="inline-flex px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
@@ -636,7 +646,7 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-gray-700 text-sm">{item.bidang_ssw || '-'}</span>
+                        <span className="text-gray-700 text-sm">{normalizeBidangSsw(item.bidang_ssw) || '-'}</span>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <span className="text-gray-700 text-sm">
@@ -732,6 +742,7 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
 
       {/* MODAL FORM */}
       {showModal && (
+        <ModalPortal>
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <Card className="w-full max-w-6xl max-h-[95vh] overflow-y-auto shadow-xl">
             <div className="px-4 py-3 flex items-center justify-between sticky top-0 z-10 rounded-t-lg">
@@ -744,7 +755,12 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700">No. Job Order</label>
-                  <Input value={form.nomor} onChange={e => setForm(p => ({ ...p, nomor: e.target.value }))} placeholder="Contoh: JO-2024-001" />
+                  <Input
+                    value={editingId ? form.nomor : ''}
+                    placeholder="Dibuat otomatis"
+                    disabled
+                    className="bg-slate-100 text-slate-500"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -753,9 +769,9 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium text-slate-700">Perusahaan</label>
+                  <label className="text-sm font-medium text-slate-700">Mitra Penempatan</label>
                   <Select value={form.perusahaan_id} onValueChange={v => setForm(p => ({ ...p, perusahaan_id: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Pilih Perusahaan" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Pilih Mitra Penempatan" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Tidak Ada</SelectItem>
                       {perusahaans.map(p => (
@@ -766,11 +782,11 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
                 </div>
 
 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Institusi</label>
+                  <label className="text-sm font-medium text-slate-700">Perusahaan Penempatan</label>
                   <Input 
                     value={form.institusi} 
                     onChange={e => setForm(p => ({ ...p, institusi: e.target.value }))} 
-                    placeholder="Ketik nama institusi..." 
+                    placeholder="Ketik nama perusahaan penempatan..." 
                   />
                 </div>
 
@@ -797,23 +813,18 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Biaya Awal</label>
+                  <label className="text-sm font-medium text-slate-700">Biaya Mitra</label>
                   <Input type="number" value={form.biaya_awal} onChange={e => setForm(p => ({ ...p, biaya_awal: e.target.value }))} placeholder="0" />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Biaya Akhir (Akumulasi)</label>
+                  <label className="text-sm font-medium text-slate-700">Biaya Akhir</label>
                   <Input type="number" value={form.biaya_akhir} onChange={e => setForm(p => ({ ...p, biaya_akhir: e.target.value }))} placeholder="0" />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700">Tanggal CV</label>
                   <Input type="date" value={form.tanggal_cv} onChange={e => setForm(p => ({ ...p, tanggal_cv: e.target.value }))} />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">PIC CV</label>
-                  <Input value={form.pic_cv} onChange={e => setForm(p => ({ ...p, pic_cv: e.target.value }))} placeholder="Nama admin" />
                 </div>
 
                 <div className="space-y-2">
@@ -912,10 +923,12 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
             </CardContent>
           </Card>
         </div>
+        </ModalPortal>
       )}
 
   {/* MODAL DETAIL */}
 {showDetailModal && detailItem && (
+  <ModalPortal>
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
     <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col bg-white">
       {/* Header Modal */}
@@ -940,14 +953,14 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
               </tr>
               {/* Baris 2 */}
               <tr>
-                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Perusahaan Penempatan</td>
+                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Mitra Penempatan</td>
                 <td className="border border-slate-300 px-4 py-3 font-semibold text-slate-800">{detailItem.nama_perusahaan || '-'}</td>
                 <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Bidang SSW</td>
-                <td className="border border-slate-300 px-4 py-3">{detailItem.bidang_ssw || '-'}</td>
+                <td className="border border-slate-300 px-4 py-3">{normalizeBidangSsw(detailItem.bidang_ssw) || '-'}</td>
               </tr>
               {/* Baris 2b - Institusi */}
               <tr>
-                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Perusahaan/Institusi</td>
+                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Perusahaan Penempatan</td>
                 <td className="border border-slate-300 px-4 py-3 font-semibold text-slate-800" colSpan={3}>{detailItem.institusi || '-'}</td>
               </tr>
               {/* Baris 3 */}
@@ -963,7 +976,7 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
               </tr>
               {/* Baris 4 */}
               <tr>
-                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Biaya Awal</td>
+                <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Biaya Mitra</td>
                 <td className="border border-slate-300 px-4 py-3 text-green-600 font-bold">
                   {detailItem.biaya_awal ? `Rp ${Number(detailItem.biaya_awal).toLocaleString('id-ID')}` : '-'}
                 </td>
@@ -992,8 +1005,7 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
                 </td>
                 <td className="border border-slate-300 bg-slate-100 px-4 py-3 font-bold text-slate-700">Data CV</td>
                 <td className="border border-slate-300 px-4 py-3 leading-relaxed">
-                  <div className="flex justify-between border-b border-slate-200 pb-1"><span>Tgl CV:</span> <span className="font-medium">{formatDate(detailItem.tanggal_cv)}</span></div>
-                  <div className="flex justify-between pt-1"><span>PIC:</span> <span className="font-medium">{detailItem.pic_cv || '-'}</span></div>
+                  <div className="flex justify-between"><span>Tgl CV:</span> <span className="font-medium">{formatDate(detailItem.tanggal_cv)}</span></div>
                 </td>
               </tr>
             </tbody>
@@ -1035,6 +1047,7 @@ const [savingKeterangan, setSavingKeterangan] = useState<number | null>(null)
       </div>
     </Card>
   </div>
+  </ModalPortal>
 )}
     </div>
   )

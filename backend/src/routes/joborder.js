@@ -7,6 +7,23 @@ const invalidateJoborderCache = async () => {
   await cache.delByPrefix('joborder');
 };
 
+const generateNomorJobOrder = async (connection, tanggalTerbit) => {
+  const now = new Date();
+  const parsed = tanggalTerbit ? new Date(tanggalTerbit) : now;
+  const year = Number.isNaN(parsed.getTime()) ? now.getFullYear() : parsed.getFullYear();
+  const prefix = `JO-${year}-`;
+
+  const [rows] = await connection.query(
+    `SELECT MAX(CAST(SUBSTRING(nomor, ?) AS UNSIGNED)) AS max_number
+     FROM job_order
+     WHERE nomor LIKE ?`,
+    [prefix.length + 1, `${prefix}%`]
+  );
+
+  const nextNumber = Number(rows[0]?.max_number || 0) + 1;
+  return `${prefix}${String(nextNumber).padStart(3, '0')}`;
+};
+
 // GET all job orders with kandidat and perusahaan data
 router.get('/', async (req, res) => {
   try {
@@ -112,6 +129,10 @@ router.post('/', async (req, res) => {
   try {
     await connection.beginTransaction();
 
+    const nomorFinal = nomor && String(nomor).trim()
+      ? String(nomor).trim()
+      : await generateNomorJobOrder(connection, tanggal_terbit);
+
     const sql = `
       INSERT INTO job_order (
         nomor, perusahaan_id, institusi, tanggal_terbit, detail_job_order,
@@ -122,7 +143,7 @@ router.post('/', async (req, res) => {
     `;
 
     const values = [
-      nomor, perusahaan_id || null, institusi || null, tanggal_terbit, detail_job_order,
+      nomorFinal, perusahaan_id || null, institusi || null, tanggal_terbit, detail_job_order,
       bidang_ssw, nama_grup, link_grup, biaya_awal || 0, biaya_akhir || 0,
       tanggal_cv, pic_cv, tanggal_mensetsu_1 || null, tanggal_mensetsu_2 || null, tanggal_mensetsu_3 || null,
       status_kelulusan || 'Menunggu', req.body.keterangan || null
@@ -178,7 +199,7 @@ router.put('/:id', async (req, res) => {
 
     const sql = `
       UPDATE job_order SET
-        nomor = ?,
+        nomor = COALESCE(?, nomor),
         perusahaan_id = ?,
         institusi = ?,
         tanggal_terbit = ?,
@@ -189,7 +210,7 @@ router.put('/:id', async (req, res) => {
         biaya_awal = ?,
         biaya_akhir = ?,
         tanggal_cv = ?,
-        pic_cv = ?,
+        pic_cv = COALESCE(?, pic_cv),
         tanggal_mensetsu_1 = ?,
         tanggal_mensetsu_2 = ?,
         tanggal_mensetsu_3 = ?,
@@ -199,7 +220,7 @@ router.put('/:id', async (req, res) => {
     `;
 
     const values = [
-      nomor,
+      nomor || null,
       perusahaan_id || null,
       institusi || null,
       tanggal_terbit,
@@ -210,7 +231,7 @@ router.put('/:id', async (req, res) => {
       biaya_awal || 0,
       biaya_akhir || 0,
       tanggal_cv,
-      pic_cv,
+      pic_cv || null,
       tanggal_mensetsu_1 || null,
       tanggal_mensetsu_2 || null,
       tanggal_mensetsu_3 || null,

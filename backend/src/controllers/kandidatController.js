@@ -1337,7 +1337,7 @@ const getStats = async (req, res) => {
       params
     );
 
-    const sswList     = ['Pengolahan Makanan','Pertanian','Gaishoku','Kaigo (perawat)','Building Cleaning','Restoran','Driver','Perhotelah','Perbaikan dan Perawatan Mobil','Konstruksi','Perikanan'];
+    const sswList     = ['Pengolahan Makanan','Pertanian','Gaishoku','Kaigo (perawat)','Building Cleaning','Restoran','Driver','Perhotelan','Perbaikan dan Perawatan Mobil','Konstruksi','Perikanan'];
     const progresList = ['Job Matching','Pending','lamar ke perusahaan','Interview','Jadwalkan Interview Ulang','Lulus interview','Gagal Interview','Pemberkasan','Berangkat','Ditolak'];
     const bySSWGender  = [];
     const bySSWProgres = [];

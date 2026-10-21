@@ -96,7 +96,7 @@ const DOKUMEN_TYPES = [
 
 const SSW_OPTIONS = [
   'Pengolahan Makanan','Pertanian','Gaishoku','Kaigo (perawat)',
-  'Building Cleaning','Restoran','Driver','Perhotelah',
+  'Building Cleaning','Restoran','Driver','Perhotelan',
   'Perikanan','Perbaikan dan perawatan mobil','Konstruksi',
 ]
 

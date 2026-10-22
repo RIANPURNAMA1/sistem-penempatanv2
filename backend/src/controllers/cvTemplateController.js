@@ -264,7 +264,14 @@ const generate = async (req, res) => {
 
     const rawName = kandidat.profil.nama_romaji || kandidat.profil.user_nama || 'CV';
     const safeName = String(rawName).replace(/[^A-Za-z0-9 _.-]+/g, '_').trim() || 'CV';
-    const outName = `CV_${safeName}_${Date.now()}.xlsx`;
+    // Nama file hasil generate: "CV_Nama Kandidat.xlsx" (tanpa angka timestamp).
+    let outName = `CV_${safeName}.xlsx`;
+    // Kalau nama itu sudah dipakai kandidat lain, pakai nama unik supaya file tidak tertimpa.
+    const [pemakai] = await pool.query(
+      'SELECT id FROM cv_generated WHERE file_name = ? AND kandidat_id <> ? LIMIT 1',
+      [outName, kandidatId]
+    );
+    if (pemakai.length > 0) outName = `CV_${safeName}_${Date.now()}.xlsx`;
     const outPath = path.join(GEN_DIR, outName);
     const relOut = relFromRoot(outPath);
 

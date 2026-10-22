@@ -21,6 +21,7 @@ Aplikasi manajemen penempatan kandidat kerja ke Jepang (Program SSW / Tokutei Gi
 - [Formulir Kandidat (9 Step)](#formulir-kandidat-9-step)
 - [API Endpoints](#api-endpoints)
 - [Import & Export Kandidat](#import--export-kandidat)
+- [Generate CV dari Template Excel](#generate-cv-dari-template-excel)
 - [AI Assistant (Groq)](#ai-assistant-groq)
 - [Notifikasi WhatsApp](#notifikasi-whatsapp)
 - [Auto-Screening](#auto-screening)
@@ -59,6 +60,7 @@ Aplikasi manajemen penempatan kandidat kerja ke Jepang (Program SSW / Tokutei Gi
 - Export kandidat ke Excel (.xlsx)
 - Import kandidat dari Excel (.xlsx / .xls)
 - Generate CV dalam format PDF & Excel
+- Generate CV dari template Excel ber-placeholder (lihat [Generate CV dari Template Excel](#generate-cv-dari-template-excel))
 
 ### Lainnya
 - Autentikasi JWT + Google OAuth
@@ -389,6 +391,8 @@ Database `kandidat_db` (MySQL 8, charset `utf8mb4`).
 | `job_order` | Job order dari perusahaan |
 | `job_order_kandidat` | Relasi job order <-> kandidat |
 | `cv_data` | Data CV (100+ kolom, legacy) |
+| `cv_template` | Template CV (.xlsx ber-placeholder) |
+| `cv_generated` | Riwayat CV yang di-generate per kandidat |
 | `pendaftaran_sistem_lama` | Data legacy |
 | `notification_logs` | Log notifikasi WhatsApp |
 | `password_resets` | OTP reset password |
@@ -501,12 +505,12 @@ Pipeline pemberkasan mencatat tanggal untuk setiap tahapan:
 |----------|----------|---------|
 | **1** | Data Diri | Nama (Romaji, Katakana), tempat/tanggal lahir, jenis kelamin, agama, kewarganegaraan, alamat lengkap, kontak (email, telepon), media sosial, cabang |
 | **2** | Kesehatan | Tinggi, berat badan, golongan darah, riwayat penyakit, cacat fisik, operasi, alergi, buta warna, kondisi kesehatan lainnya |
-| **3** | Pendidikan | SD, SMP, SMA/SMK, Perguruan Tinggi (nama sekolah, jurusan, tahun masuk-lulus, gelar, status) |
+| **3** | Pendidikan | SD, SMP, SMA/SMK, Perguruan Tinggi (nama sekolah, jurusan, tahun masuk-lulus, tingkat D3/D4/S1/S2/S3) |
 | **4** | Pengalaman Kerja | Nama perusahaan, posisi, bidang, lama kerja, alasan berhenti (bisa multiple) |
 | **5** | Kemampuan | Level JLPT, JFT Basic, SSW (bidang + sertifikat), level bahasa Jepang (Dasar/Menengah/Lancar), pengalaman kursus |
 | **6** | Keluarga | Ayah, Ibu, saudara kandung, pasangan, anak (nama, usia, pekerjaan, penghasilan) |
 | **7** | Informasi Jepang | Riwayat ke Jepang, alasan ingin ke Jepang, kenalan/keluarga di Jepang |
-| **8** | Motivasi | Tujuan, alasan memilih program, rencana setelah kembali, preferensi bidang, lokasi kerja, gaji harapan |
+| **8** | Motivasi | Tujuan, alasan, cita-cita setelah pulang, rencana pengiriman uang, kelebihan/kekurangan, **promosi diri (自己PR)**, **catatan tambahan (備考)**, hobby, keahlian, kesediaan kerja |
 | **9** | Dokumen | Upload KTP, KK, Ijazah (SD-SMA/PT), Pas Foto, Video perkenalan, Sertifikat (JLPT, JFT, SSW, Keahlian), dokumen pendukung lainnya |
 
 ---
@@ -532,7 +536,7 @@ Pipeline pemberkasan mencatat tanggal untuk setiap tahapan:
    - **Step 5 - Kemampuan**: Level JLPT/JFT/SSW, sertifikat yang dimiliki
    - **Step 6 - Keluarga**: Data orang tua, saudara, pasangan, anak
    - **Step 7 - Informasi Jepang**: Riwayat ke Jepang, kenalan di Jepang
-   - **Step 8 - Motivasi**: Tujuan, alasan, rencana, preferensi kerja
+   - **Step 8 - Motivasi**: Tujuan, alasan, cita-cita, rencana pengiriman uang, kelebihan/kekurangan, promosi diri (自己PR), catatan tambahan (備考), hobby, keahlian, kesediaan kerja
    - **Step 9 - Dokumen**: Upload dokumen yang diminta
 3. Setiap step dapat disimpan sebagai **draft** terlebih dahulu
 4. Setelah semua step selesai, klik **Submit** untuk mengirim formulir ke admin
@@ -694,6 +698,15 @@ Pipeline pemberkasan mencatat tanggal untuk setiap tahapan:
 2. Gunakan filter yang diinginkan (jika ingin mengexport data tertentu)
 3. Klik tombol **Export**
 4. File `.xlsx` akan otomatis terunduh
+
+#### Upload Template CV & Generate CV
+
+1. Buka menu **Template CV**
+2. Klik **Upload**, pilih file `.xlsx` yang sudah berisi placeholder (mis. `{nama_romaji}`), isi nama template
+3. Setelah upload, cek daftar placeholder yang terdeteksi (ikon mata). Template pertama otomatis menjadi **aktif**
+4. Buka menu **Kandidat** → pilih kandidat → klik **Generate CV**
+5. Pilih template → **Pratinjau** untuk melihat isian yang dipakai → **Generate & Download**
+6. Hasil `.xlsx` tersimpan di riwayat generate dan bisa diunduh ulang kapan saja
 
 #### AI Assistant
 
@@ -920,6 +933,151 @@ Sistem dapat menghasilkan CV kandidat dalam format:
 
 ---
 
+## Generate CV dari Template Excel
+
+Selain generate CV manual, sistem dapat mengisi **template Excel (.xlsx) ber-placeholder** dengan data
+kandidat yang sudah ada di sistem (berbeda dari `generate-cv-exels`, di sini **hanya template** yang
+diupload — data peserta diambil langsung dari `kandidat_profil`).
+
+### Alur
+
+1. **Upload template** (menu **Template CV**): file `.xlsx` maksimal 10 MB. Placeholder ditulis di
+   dalam sel dengan pola `{nama_placeholder}` (huruf kecil + underscore).
+2. **Placeholder terdeteksi otomatis** saat upload: daftar placeholder, sel letaknya, grup berulang,
+   dan pilihan dropdown (dari data validation template). Placeholder yang tidak dikenal ditandai.
+3. **Generate** dari halaman detail kandidat (tombol **Generate CV**): pilih template → bahasa isi CV →
+   **Muat Pratinjau** → **koreksi isian bila perlu** → Generate & Download. Tombol aktif memakai template
+   berstatus *aktif*.
+4. **Riwayat** hasil generate tersimpan per kandidat dan bisa diunduh ulang.
+
+#### Pratinjau yang bisa diedit (override admin)
+
+Pratinjau menampilkan seluruh placeholder sebagai **form isian** (bukan daftar read-only). Admin boleh
+mengoreksi nilai sebelum CV dibuat:
+
+- Nilai yang dikoreksi ditandai **"diubah"** (baris berbiruan biru) dan dikirim ke server saat generate
+  → dipakai apa adanya pada file CV (tidak diterjemahkan ulang).
+- Tombol **Simpan ke kandidat** menyimpan koreksi ke `kandidat_terjemahan` → dipakai lagi di generate berikutnya.
+- Indikator ringkas: jumlah terisi / kosong / tidak cocok dengan pilihan template / dikoreksi admin.
+- Field bertanda **"tidak cocok"** berarti nilainya tidak ada di data validation template → sel akan
+  dikosongkan (bisa diperbaiki admin di kolomnya).
+
+Parameter API: `POST /api/cv-template/generate/preview/:kandidatId` dan `POST /api/cv-template/generate/:kandidatId`
+menerima `{ cv_template_id, bahasa, overrides: { key: nilai } }`.
+
+### Nilai turunan & aturan
+
+- `tanggal_lahir` → `29/03/2007` · `tanggal_lahir_jp` → `年2007 月03 日29`
+- `usia` dihitung dari tanggal lahir (Asia/Jakarta); bila tidak ada, pakai kolom `umur`
+- `nomor_hp` → `(+62)87856863800` (huruf/panjang tak wajar → sel dikosongkan + peringatan)
+- Boolean → `Ya` / `Tidak` · Uang → ` ¥2.500.000` · Penghasilan keluarga tanpa nilai → `なし`
+- **Dropdown**: nilai harus salah satu pilihan data validation template. Pencocokan didukung untuk
+  beberapa gaya penulisan pilihan:
+  - `Indonesia（日本語）` — contoh `Belum Menikah（未婚）`
+  - `日本語（Indonesia）` — contoh `無 Single`, `男 Laki-laki`
+  - `日本語` saja — contoh `islam lam`
+
+  Nilai profil dibandingkan dengan semua varian di atas memakai kamus sinonim
+  (`Islam` → `islam lam`, `Perempuan` → `女`, `Tidak` → `無`, `Ayah` → `父 (AYAH)`,
+  `SMA/SMK` → `職業高校(SMK)`, `Perguruan Tinggi` → `大学(UNIV)`, dst).
+  Tidak cocok → sel dikosongkan + peringatan + usulan pilihan terdekat
+- **Foto**: sel berisi `{foto}` dikosongkan, foto pas foto kandidat ditempel di tengah area merge (rasio 3:4)
+- **Tanpa data**: sel dikosongkan (tidak pernah menulis `{nama}` atau `null`), dilaporkan sebagai peringatan
+- Warna, merge, lebar kolom, dropdown, dan komentar template tidak diubah — hanya isi sel
+
+### Placeholder grup (berulang)
+
+| Prefix | Isi | Jumlah |
+|--------|-----|--------|
+| `pendidikan_{1..5}_*` | jenjang, nama_sekolah, jurusan, mulai, selesai, periode | 5 |
+| `kerja_{1..5}_*` | perusahaan, posisi, deskripsi, mulai, selesai, periode | 5 |
+| `keluarga_{1..8}_*` | hubungan, nama, usia, pekerjaan, penghasilan | 8 |
+
+Contoh: `{pendidikan_1_nama_sekolah}`, `{kerja_1_perusahaan}`, `{keluarga_2_nama}`.
+
+### Sumber data
+
+- **Profil** — `kandidat_profil` (identitas, fisik, kontak, kesehatan, pendidikan terakhir, Jepang, motivasi, promosi diri, catatan tambahan)
+- **User** — nama akun & email kandidat
+- **Anak** — `kandidat_pendidikan`, `kandidat_pengalaman_kerja`, `kandidat_keluarga`
+- **Dokumen** — `kandidat_dokumen` (jenis `pas_foto` untuk foto utama)
+- **Cabang** — `cabang.nama_cabang`
+
+Katalog lengkap placeholder (102 entitas) tersedia di **Daftar Placeholder** pada halaman Template CV,
+dan template contoh bisa diunduh dari tombol **Template Contoh**.
+
+### Bahasa isian CV
+
+Saat generate, admin memilih bahasa isian CV:
+
+| Opsi | Perilaku |
+|------|----------|
+| **Bahasa Jepang (日本語)** | Nilai profil diterjemahkan ke bahasa Jepang sebelum ditulis (agama → `イスラーム教`, jenis kelamin → `女`, status nikah → `未婚`/`既婚`, Ya/Tidak → `有`/`無`, jenjang → `大学`, bidang SSW → `農業`, dll) |
+| **Bahasa Indonesia** | Nilai profil tetap bahasa Indonesia (cocok untuk template ber-label Indonesia) |
+| **Otomatis** | Nilai apa adanya; pencocokan dropdown mencari pilihan terdekat di template |
+
+Teks bebas (tujuan, alasan, kelebihan, promosi diri) mengikuti bahasa yang ditulis kandidat — di form
+kandidat field tersebut diminta ditulis dalam bahasa Jepang. Bahasa yang dipakai dicatat di riwayat
+generate (`bahasa` pada tabel `cv_generated`).
+
+Kamus terjemahan: `backend/src/config/cvLanguages.js` · mesin terjemahan: `backend/src/services/cvTranslator.js`
+
+#### Teks bebas (tujuan, alasan, kelebihan, keahlian, promosi diri, dll)
+Nilai terstruktur otomatis diterjemahkan, tetapi **teks bebas tidak bisa diterjemahkan kamus** — karena itu
+ada **ruang terjemahan per kandidat**:
+
+| Cara | Keterangan |
+|------|------------|
+| **Otomatis (AI)** | Tombol "Terjemahkan otomatis (AI)" memakai Groq, hasil disimpan agar tidak dipanggil berulang |
+| **Manual** | Admin/kolaborator menulis versi Jepangnya di modal **Kelola Terjemahan** (2 kolom: Indonesia ⇄ 日本語) |
+
+**Cara memasang API key Groq** (2 cara, didokumentasikan juga di halaman **AI (Groq)**):
+
+1. **Dari UI** (disarankan): menu **AI (Groq)** → `/settings/ai` → tempel `gsk_...` → Simpan → Test Koneksi.
+   Key disimpan di `sys_settings` (`groq_api_key`), dibaca hanya oleh Admin Penempatan, dan ditampilkan
+   tersamar (`gsk_du••••••7890`) saat dibaca lewat API.
+2. **Dari `.env`**: `backend/.env` → `GROQ_API_KEY=gsk_...` (opsional `GROQ_MODEL=llama-3.1-8b-instant`),
+   lalu restart backend.
+
+Urutan pembacaan: **database (UI) → `GROQ_API_KEY` di `.env`**. Tanpa key, penerjemahan AI dilewati
+(terjemahan manual tetap dipakai) dan sistem tetap berjalan normal.
+
+Terjemahan disimpan di tabel `kandidat_terjemahan` (kandidat + field + bahasa) → dipakai otomatis saat
+generate CV. Field yang belum diterjemahkan **masih memakai bahasa asli** dan dilaporkan sebagai
+peringatan pada hasil generate, jadi tidak ada data yang hilang diam-diam.
+
+Endpoint: `GET /api/cv-template/terjemahan/:kandidatId` · `PUT` (simpan manual) ·
+`POST /api/cv-template/terjemahan/:kandidatId/auto` (AI).
+
+#### Sakelar bahasa di halaman detail kandidat
+
+Tombol **Indonesia / 日本語** pada header detail kandidat menampilkan seluruh data profil dalam bahasa
+Jepang (nilai terstruktur dari kamus + teks bebas dari terjemahan tersimpan). Field yang belum
+diterjemahkan tetap menampilkan bahasa asli.
+
+### Endpoint
+
+| **Method** | **Endpoint** | **Deskripsi** | **Akses** |
+|------------|-------------|---------------|-----------|
+| `GET` | `/api/cv-template` | Daftar template | Admin |
+| `GET` | `/api/cv-template/catalog` | Katalog placeholder yang tersedia | Admin |
+| `GET` | `/api/cv-template/sample-template` | Unduh template contoh (.xlsx) | Admin |
+| `POST` | `/api/cv-template/upload` | Upload template (.xlsx) | Admin |
+| `GET` | `/api/cv-template/:id` | Detail template | Admin |
+| `GET` | `/api/cv-template/:id/placeholders` | Placeholder terdeteksi | Admin |
+| `GET` | `/api/cv-template/:id/download` | Unduh template asli | Admin |
+| `PUT` | `/api/cv-template/:id/aktifkan` | Jadikan template aktif | Admin |
+| `DELETE` | `/api/cv-template/:id` | Hapus template (+ berkasnya) | Admin |
+| `POST` | `/api/cv-template/generate/preview/:kandidatId` | Pratinjau nilai yang akan diisikan | Admin |
+| `POST` | `/api/cv-template/generate/:kandidatId` | Generate CV (.xlsx) | Admin |
+| `GET` | `/api/cv-template/generate/history/:kandidatId` | Riwayat hasil generate | Admin |
+| `GET` | `/api/cv-template/generated/download/:id` | Unduh hasil generate | Admin |
+
+> Berkas template disimpan di `backend/uploads/cv-templates/`, hasil generate di `backend/uploads/cv-generated/`
+> (disajikan sebagai statis lewat `/uploads`). Tabel: `cv_template`, `cv_generated`.
+
+---
+
 ## AI Assistant (Groq)
 
 Sistem dilengkapi **AI Assistant** terintegrasi dengan **Groq API** menggunakan model **LLaMA 3.1-8B**.
@@ -1070,3 +1228,148 @@ docker-compose exec backend npm run db:seed:admin
 ---
 
 > **Catatan:** Sistem ini dikembangkan untuk program penempatan kerja ke Jepang (SSW / Tokutei Gino) dan dirancang untuk digunakan oleh LPK / perusahaan penempatan tenaga kerja Indonesia.
+
+
+coba buat gini pada sistem-penempatanv2 itu coba buatkan fitur generate cv seperti sistem generate-cv-exels gtu nah buatkan di sistem penempatan gtu nah kalo untuk generate-cv-exels itukan itumah uploads cv terus uploads data nah klo di sistem-penempatanv2 itu cukup uploads template cv nya saja yang sudah ada placholder nya dan ada isian variable nya nah terus datanya itu kan sudah ada di sistem-penempatanv2 itu jadi cukup generate saja nah datanya di detail kandidat ini http://localhost:5175/kandidat/473Yashinta 1234
+ヤシンタ
+Disetujui
+Job Matching
+yashinta814@gmail.com
+Kendal Sukses Mendunia
+Lihat CV
+Edit
+Verifikasi
+Progres
+Riwayat
+Data Diri
+Identitas, kontak, dan fisik kandidat
+
+Foto
+Yashinta 1234
+
+ヤシンタ
+
+Perempuan
+19 tahun
+Gol. Darah Tidak Tahu
+Identitas
+
+Nama (Romaji)
+
+Yashinta 1234
+
+Nama (Katakana)
+
+ヤシンタ
+
+Tempat, Tanggal Lahir
+
+Semarang, 29 Maret 2007
+
+Jenis Kelamin
+
+Perempuan
+
+Agama
+
+Islam
+
+Status Pernikahan
+
+Belum Menikah
+
+Pendidikan Terakhir
+
+SMA/SMK
+
+Kontak & Alamat
+
+No. HP
+
+ 87856863800‬
+
+Kontak Orang Tua
+
+Janadi (+62 831-8946-8873)
+
+Alamat
+
+Kab.Kendal, Kec.Boja,Desa.Trisobo rt.08/02
+
+Ukuran Badan & Fisik
+
+Tinggi / Berat Badan
+
+151 cm / 40 kg
+
+Lingkar Pinggang
+
+72.0 cm
+
+Panjang Telapak Kaki
+
+23.5 cm
+
+Ukuran Baju
+
+M
+
+SIM
+
+—
+
+Kondisi Fisik & Kesehatan
+Ringkasan kesehatan dalam sekali lihat
+
+Vaksin: Ya
+Berkacamata: Tidak
+Lensa Kontak: Tidak
+Buta Warna: Tidak
+Bertato: Tidak
+Merokok: Tidak
+Minum Alkohol: Tidak
+Riwayat Medis
+
+Penglihatan
+
+Kanan: normal , Kiri: normal
+
+Kondisi Kesehatan
+
+Sehat
+
+Riwayat Penyakit
+
+Tidak ada
+
+Riwayat Pendidikan
+4 jenjang tercatat
+
+SD
+SDN Weding 03
+
+SD
+Jurusan
+
+—
+
+Periode
+
+Juli 2013 - Juni 2019
+
+SMP
+MTS 14 Kaligading
+
+SMP
+Jurusan
+
+—
+
+Periode
+
+Juli 2019 - Juni 2022
+
+SMA
+Taman Siswa
+
+SMA/SMK  jadi tinggal masukin saja ke template cv nya saja gtu coba implementasikan 

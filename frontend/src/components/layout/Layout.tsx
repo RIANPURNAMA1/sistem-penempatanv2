@@ -12,6 +12,7 @@ import {
   X,
   ChevronRight,
   FileText,
+  FileSpreadsheet,
   User,
   Settings,
   Briefcase,
@@ -22,6 +23,7 @@ import {
   History,
   KeyRound,
   MessageCircle,
+  Bot,
 } from "lucide-react";
 import {
   Dialog,
@@ -79,9 +81,21 @@ const navItems: NavItem[] = [
     roles: ["admin_penempatan"],
   },
   {
+    label: "Template CV",
+    href: "/cv-template",
+    icon: FileSpreadsheet,
+    roles: ["admin_penempatan", "admin_cabang"],
+  },
+  {
     label: "Data Sistem Lama",
     href: "/data-sistem-lama",
     icon: Database,
+    roles: ["admin_penempatan"],
+  },
+  {
+    label: "AI (Groq)",
+    href: "/settings/ai",
+    icon: Bot,
     roles: ["admin_penempatan"],
   },
   {

@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+require('./services/exceljsPatch');
 const { getRedis } = require('./config/redis');
 
 const app = express();
@@ -15,7 +16,20 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ✅ BENAR — naik satu level ke backend/uploads/
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+// Berkas hasil generate/template dipaksa diunduh (bukan dibuka di tab baru).
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, '..', 'uploads'), {
+    setHeaders: (res, filePath) => {
+      if (/cv-generated|cv-templates/.test(filePath)) {
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename="${path.basename(filePath).replace(/[^\w.\- ]+/g, '_')}"`
+        );
+      }
+    },
+  })
+);
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/cabang', require('./routes/cabang'));
@@ -26,6 +40,7 @@ app.use('/api/joborder', require('./routes/joborder'));
 app.use('/api/pendaftaran', require('./routes/pendaftaran'));
 app.use('/api/history', require('./routes/history'));
 app.use('/api/cv', require('./routes/cv'));
+app.use('/api/cv-template', require('./routes/cvTemplate'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/institusi', require('./routes/institusi'));
@@ -41,7 +56,7 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5005;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`✅ Server berjalan di port ${PORT}`);
   console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
   const redis = getRedis();
@@ -54,4 +69,20 @@ app.listen(PORT, () => {
   } else {
     console.log('ℹ️  Redis tidak dikonfigurasi (REDIS_URL kosong)');
   }
+});
+
+// Pesan jelas ketika port sudah dipakai (mis. server lama masih jalan).
+server.on('error', (err) => {
+  if (err && err.code === 'EADDRINUSE') {
+    console.error('');
+    console.error(`❌ Port ${PORT} sedang dipakai proses lain.`);
+    console.error('   Cari PID-nya lalu hentikan:');
+    console.error(`     netstat -ano | findstr :${PORT}`);
+    console.error(`     taskkill /PID <pid> /F`);
+    console.error('   (Windows)   ·   kill <pid>   (macOS/Linux)');
+    console.error('');
+    process.exit(1);
+  }
+  console.error(err);
+  process.exit(1);
 });

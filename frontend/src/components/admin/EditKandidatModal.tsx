@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label, Textarea, Separator } from '@/components/ui/components'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { STATUS_PERNIKAHAN, JENJANG_PENDIDIKAN } from '@/components/form-kandidat/constants'
 import { toast } from '@/hooks/useToast'
 import api from '@/lib/api'
 import {
@@ -377,15 +378,16 @@ export default function EditKandidatModal({
                       <Select value={form.status_pernikahan || ''} onValueChange={v => updateField('status_pernikahan', v)}>
                         <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Menikah">Menikah</SelectItem>
-                          <SelectItem value="Belum Menikah">Belum Menikah</SelectItem>
+                          {STATUS_PERNIKAHAN.map(s => (
+                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
-                    {form.status_pernikahan === 'Menikah' && (
+                    {(form.status_pernikahan === 'Menikah' || form.status_pernikahan === 'Cerai') && (
                       <div className="space-y-1.5">
                         <Label>Jumlah Anak</Label>
-                        <Input type="number" value={form.jumlah_anak || 0} onChange={e => updateField('jumlah_anak', e.target.value)} />
+                        <Input type="number" min={0} value={form.jumlah_anak || 0} onChange={e => updateField('jumlah_anak', e.target.value)} />
                       </div>
                     )}
                     <div className="space-y-1.5">
@@ -452,7 +454,7 @@ export default function EditKandidatModal({
                       <Select value={form.pendidikan_terakhir || ''} onValueChange={v => updateField('pendidikan_terakhir', v)}>
                         <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
                         <SelectContent>
-                          {['SD','SMP','SMA/SMK','Perguruan Tinggi'].map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                          {JENJANG_PENDIDIKAN.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -898,6 +900,16 @@ export default function EditKandidatModal({
                     <div className="space-y-1.5">
                       <Label>Keahlian</Label>
                       <Textarea value={form.keahlian || ''} onChange={e => updateField('keahlian', e.target.value)} rows={2} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Promosi Diri (自己PR)</Label>
+                      <Textarea value={form.promosi_diri || ''} onChange={e => updateField('promosi_diri', e.target.value)} rows={3}
+                        placeholder="Dipakai pada template CV SSW (kolom Promosi Diri / 自己PR)" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Catatan Tambahan (備考)</Label>
+                      <Textarea value={form.catatan_tambahan || ''} onChange={e => updateField('catatan_tambahan', e.target.value)} rows={2}
+                        placeholder="Catatan lain pada CV (備考)" />
                     </div>
                   </div>
                   <Separator />

@@ -19,7 +19,7 @@ export default function JepangCard({ data, bool }: JepangCardProps) {
         />
 
         <SubHeading>Kemampuan Bahasa</SubHeading>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-3 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mb-5">
           <InfoRow label="Level JLPT" value={data.level_jlpt || "-"} />
           <InfoRow label="Level JFT" value={data.level_jft || "-"} />
           <InfoRow
@@ -33,7 +33,7 @@ export default function JepangCard({ data, bool }: JepangCardProps) {
         </div>
 
         <SubHeading>Koneksi di Jepang</SubHeading>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-3 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mb-5">
           <InfoRow
             label="Pernah ke Jepang"
             value={bool(data.pernah_ke_jepang)}
@@ -65,7 +65,7 @@ export default function JepangCard({ data, bool }: JepangCardProps) {
         </div>
 
         <SubHeading>SSW & Prometric</SubHeading>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
           <InfoRow label="Bidang SSW" value={data.sertifikat_ssw || "-"} />
           <InfoRow label="ID Prometric" value={data.id_prometric || "-"} />
           <InfoRow

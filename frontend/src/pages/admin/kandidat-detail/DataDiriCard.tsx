@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/components";
 import { InfoRow, SectionTitle } from "@/components/kandidat";
+import { labelStatusPernikahan } from "@/components/form-kandidat/constants";
 import { User } from "lucide-react";
 import SubHeading from "./SubHeading";
 
@@ -73,7 +74,7 @@ export default function DataDiriCard({
 
         {/* Identitas */}
         <SubHeading>Identitas</SubHeading>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-3 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mb-5">
           <InfoRow label="Nama (Romaji)" value={data.nama_romaji || "-"} />
           <InfoRow label="Nama (Katakana)" value={data.nama_katakana || "-"} />
           <InfoRow
@@ -88,9 +89,9 @@ export default function DataDiriCard({
           <InfoRow label="Agama" value={data.agama || "-"} />
           <InfoRow
             label="Status Pernikahan"
-            value={data.status_pernikahan || "-"}
+            value={labelStatusPernikahan(data.status_pernikahan)}
           />
-          {data.status_pernikahan === "Menikah" && (
+          {(data.status_pernikahan === "Menikah" || data.status_pernikahan === "Cerai") && (
             <InfoRow label="Jumlah Anak" value={data.jumlah_anak || "-"} />
           )}
           <InfoRow
@@ -101,7 +102,7 @@ export default function DataDiriCard({
 
         {/* Kontak & Alamat */}
         <SubHeading>Kontak & Alamat</SubHeading>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-3 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 mb-5">
           <InfoRow label="No. HP" value={data.nomor_hp || "-"} />
           <InfoRow
             label="Kontak Orang Tua"
@@ -120,7 +121,7 @@ export default function DataDiriCard({
 
         {/* Ukuran Badan & Fisik */}
         <SubHeading>Ukuran Badan & Fisik</SubHeading>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
           <InfoRow
             label="Tinggi / Berat Badan"
             value={

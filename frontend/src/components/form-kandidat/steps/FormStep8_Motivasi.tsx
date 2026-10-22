@@ -7,7 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Target } from "lucide-react";
+import { Target, Info } from "lucide-react";
+import { CONTOH_MOTIVASI } from "../constants";
 import { BoolSelect } from "../BoolSelect";
 
 interface FormStep8Props {
@@ -25,6 +26,15 @@ export function FormStep8_Motivasi({ form, setBool, set, setSel, errors }: FormS
         <Target className="inline mr-2 h-4 w-4" />
         MOTIVASI, TUJUAN & POIN PENDUKUNG
       </p>
+      <div className="rounded-lg border border-[#1e3a5f]/20 bg-[#1e3a5f]/5 px-3 py-2.5 flex items-start gap-2">
+        <Info size={14} className="text-[#1e3a5f] shrink-0 mt-0.5" />
+        <p className="text-[11px] text-gray-600 leading-relaxed">
+          <strong>Semua isian pada langkah ini wajib ditulis dalam bahasa Jepang
+          (日本語で記入)</strong> karena akan dicantumkan pada CV yang dikirim ke perusahaan di
+          Jepang. Gunakan contoh-contoh di bawah sebagai panduan. Tulis dalam bentuk
+          <em> ます/たい </em> (polite) dan Hindari gunakan placeholder.
+        </p>
+      </div>
       <div className="grid grid-cols-1 gap-4">
         <div className="space-y-1.5">
           <Label className="required">Tujuan ke Jepang *</Label>
@@ -32,9 +42,12 @@ export function FormStep8_Motivasi({ form, setBool, set, setSel, errors }: FormS
             value={form.tujuan_ke_jepang || ""}
             onChange={set("tujuan_ke_jepang")}
             rows={3}
-            placeholder="Tuliskan tujuan Anda pergi ke Jepang..."
+            placeholder={`例：${CONTOH_MOTIVASI.tujuan_ke_jepang}`}
             className={errors.tujuan_ke_jepang ? "border-red-500" : ""}
           />
+          <p className="text-[11px] text-muted-foreground">
+            Contoh: 「{CONTOH_MOTIVASI.tujuan_ke_jepang}」
+          </p>
           {errors.tujuan_ke_jepang && (
             <p className="text-xs text-red-500">{errors.tujuan_ke_jepang}</p>
           )}
@@ -45,8 +58,12 @@ export function FormStep8_Motivasi({ form, setBool, set, setSel, errors }: FormS
             value={form.alasan_ke_jepang || ""}
             onChange={set("alasan_ke_jepang")}
             rows={3}
+            placeholder={`例：${CONTOH_MOTIVASI.alasan_ke_jepang}`}
             className={errors.alasan_ke_jepang ? "border-red-500" : ""}
           />
+          <p className="text-[11px] text-muted-foreground">
+            Contoh: 「{CONTOH_MOTIVASI.alasan_ke_jepang}」
+          </p>
           {errors.alasan_ke_jepang && (
             <p className="text-xs text-red-500">{errors.alasan_ke_jepang}</p>
           )}
@@ -57,8 +74,12 @@ export function FormStep8_Motivasi({ form, setBool, set, setSel, errors }: FormS
             value={form.cita_cita_setelah_jepang || ""}
             onChange={set("cita_cita_setelah_jepang")}
             rows={3}
+            placeholder={`例：${CONTOH_MOTIVASI.cita_cita_setelah_jepang}`}
             className={errors.cita_cita_setelah_jepang ? "border-red-500" : ""}
           />
+          <p className="text-[11px] text-muted-foreground">
+            Contoh: 「{CONTOH_MOTIVASI.cita_cita_setelah_jepang}」
+          </p>
           {errors.cita_cita_setelah_jepang && (
             <p className="text-xs text-red-500">
               {errors.cita_cita_setelah_jepang}
@@ -84,8 +105,12 @@ export function FormStep8_Motivasi({ form, setBool, set, setSel, errors }: FormS
             value={form.kelebihan_diri || ""}
             onChange={set("kelebihan_diri")}
             rows={3}
+            placeholder={`例：${CONTOH_MOTIVASI.kelebihan_diri}`}
             className={errors.kelebihan_diri ? "border-red-500" : ""}
           />
+          <p className="text-[11px] text-muted-foreground">
+            Contoh: 「{CONTOH_MOTIVASI.kelebihan_diri}」
+          </p>
           {errors.kelebihan_diri && (
             <p className="text-xs text-red-500">{errors.kelebihan_diri}</p>
           )}
@@ -96,21 +121,15 @@ export function FormStep8_Motivasi({ form, setBool, set, setSel, errors }: FormS
             value={form.kekurangan_diri || ""}
             onChange={set("kekurangan_diri")}
             rows={3}
+            placeholder={`例：${CONTOH_MOTIVASI.kekurangan_diri}`}
             className={errors.kekurangan_diri ? "border-red-500" : ""}
           />
+          <p className="text-[11px] text-muted-foreground">
+            Contoh: 「{CONTOH_MOTIVASI.kekurangan_diri}」
+          </p>
           {errors.kekurangan_diri && (
             <p className="text-xs text-red-500">{errors.kekurangan_diri}</p>
           )}
-        </div>
-        <div className="space-y-1.5">
-          <Label className="required">Hobi *</Label>
-          <Textarea
-            value={form.hobi || ""}
-            onChange={set("hobi")}
-            rows={2}
-            className={errors.hobi ? "border-red-500" : ""}
-          />
-          {errors.hobi && <p className="text-xs text-red-500">{errors.hobi}</p>}
         </div>
         <div className="space-y-1.5">
           <Label className="required">Keahlian *</Label>
@@ -118,10 +137,46 @@ export function FormStep8_Motivasi({ form, setBool, set, setSel, errors }: FormS
             value={form.keahlian || ""}
             onChange={set("keahlian")}
             rows={2}
+            placeholder={`例：${CONTOH_MOTIVASI.keahlian}`}
             className={errors.keahlian ? "border-red-500" : ""}
           />
+          <p className="text-[11px] text-muted-foreground">
+            Contoh: 「{CONTOH_MOTIVASI.keahlian}」
+          </p>
           {errors.keahlian && (
             <p className="text-xs text-red-500">{errors.keahlian}</p>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <Label>Promosi Diri (自己PR)</Label>
+          <Textarea
+            value={form.promosi_diri || ""}
+            onChange={set("promosi_diri")}
+            rows={3}
+            placeholder={`例：${CONTOH_MOTIVASI.promosi_diri}`}
+            className={errors.promosi_diri ? "border-red-500" : ""}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Contoh: 「{CONTOH_MOTIVASI.promosi_diri}」
+          </p>
+          {errors.promosi_diri && (
+            <p className="text-xs text-red-500">{errors.promosi_diri}</p>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <Label>Catatan Tambahan (備考)</Label>
+          <Textarea
+            value={form.catatan_tambahan || ""}
+            onChange={set("catatan_tambahan")}
+            rows={2}
+            placeholder={`例：${CONTOH_MOTIVASI.catatan_tambahan}`}
+            className={errors.catatan_tambahan ? "border-red-500" : ""}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Contoh: 「{CONTOH_MOTIVASI.catatan_tambahan}」
+          </p>
+          {errors.catatan_tambahan && (
+            <p className="text-xs text-red-500">{errors.catatan_tambahan}</p>
           )}
         </div>
       </div>

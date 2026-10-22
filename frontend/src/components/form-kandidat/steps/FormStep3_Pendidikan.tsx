@@ -1,15 +1,15 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/components";
 import {
-Select,
-SelectContent,
-SelectItem,
-SelectTrigger,
-SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { GraduationCap } from "lucide-react";
 import { YearMonthPicker } from "../YearMonthPicker";
-import { jenjangWajib } from "../constants";
+import { jenjangWajib, JENJANG_PENDIDIKAN, TINGKAT_PT } from "../constants";
 
 interface FormStep3Props {
 form: any;
@@ -20,7 +20,6 @@ errors: Record<string, string>;
 export function FormStep3_Pendidikan({ form, setPendidikan, errors }: FormStep3Props) {
 return ( <div className="space-y-6">
 
-```
   {/* TITLE */}
   <p className="form-section-title flex items-center gap-2 text-sm sm:text-base">
     <GraduationCap className="h-4 w-4" />
@@ -29,23 +28,32 @@ return ( <div className="space-y-6">
 
   {/* PENDIDIKAN TERAKHIR */}
   <div className="border border-border rounded-lg p-4 space-y-3 bg-muted/30">
-    <p className="font-semibold text-sm text-muted-foreground">
-      Pendidikan Terakhir
-    </p>
+    <div className="flex items-center justify-between gap-2 flex-wrap">
+      <p className="font-semibold text-sm text-muted-foreground">
+        Pendidikan Terakhir
+      </p>
+      <span className="text-[11px] text-muted-foreground">
+        Terisi otomatis dari riwayat pendidikan, bisa diubah manual
+      </span>
+    </div>
     <Select
       value={form.pendidikan_terakhir || ""}
       onValueChange={(v) => form.setPendidikanTerakhir?.(v)}
     >
-      <SelectTrigger className="w-full">
+      <SelectTrigger className="w-full" error={!!errors.pendidikan_terakhir}>
         <SelectValue placeholder="Pilih pendidikan terakhir..." />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="SD">SD</SelectItem>
-        <SelectItem value="SMP">SMP</SelectItem>
-        <SelectItem value="SMA/SMK">SMA/SMK</SelectItem>
-        <SelectItem value="Perguruan Tinggi">Perguruan Tinggi</SelectItem>
+        {JENJANG_PENDIDIKAN.map((j) => (
+          <SelectItem key={j} value={j}>
+            {j}
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
+    {errors.pendidikan_terakhir && (
+      <p className="text-xs text-red-500">{errors.pendidikan_terakhir}</p>
+    )}
   </div>
 
   {/* LIST PENDIDIKAN */}
@@ -65,13 +73,16 @@ return ( <div className="space-y-6">
           {/* NAMA SEKOLAH */}
           <div className="col-span-1 md:col-span-2 space-y-1.5 w-full">
             <Label className={wajib ? "required" : ""}>
-              Nama Sekolah / Universitas {wajib && "*"}
+              {p.jenjang === "Perguruan Tinggi" ? "Nama Universitas / Politeknik" : "Nama Sekolah"}
+              {wajib && " *"}
             </Label>
             <Input
               className="w-full"
               value={p.nama_sekolah || ""}
               onChange={(e) => setPendidikan(i, "nama_sekolah", e.target.value)}
-              placeholder={`Nama ${p.jenjang}`}
+              placeholder={
+                p.jenjang === "Perguruan Tinggi" ? "Universitas / Politeknik" : `Nama ${p.jenjang}`
+              }
             />
             {errors[`pendidikan_${i}_nama_sekolah`] && (
               <p className="text-xs text-red-500">
@@ -90,6 +101,31 @@ return ( <div className="space-y-6">
                 onChange={(e) => setPendidikan(i, "jurusan", e.target.value)}
                 placeholder="Jurusan / Prodi"
               />
+            </div>
+          )}
+
+          {/* TINGKAT PERGURUAN TINGGI (D3/D4/S1/S2/S3) */}
+          {p.jenjang === "Perguruan Tinggi" && (
+            <div className="col-span-1 md:col-span-2 space-y-1.5 w-full">
+              <Label>Tingkat Pendidikan</Label>
+              <Select
+                value={p.jenjang_detail || ""}
+                onValueChange={(v) => setPendidikan(i, "jenjang_detail", v)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Pilih tingkat (D3/D4/S1/S2/S3)..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {TINGKAT_PT.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Dipakai untuk mengisi kolom jenjang pada CV (contoh: S1 → 大学(UNIV), D3 → ディプロマ３).
+              </p>
             </div>
           )}
 

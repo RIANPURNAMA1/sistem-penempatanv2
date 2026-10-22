@@ -15,8 +15,10 @@ import KandidatDashboardPage from '@/pages/kandidat/KandidatDashboardPage'
 import KandidatHistoryPage from '@/pages/kandidat/KandidatHistoryPage'
 import DataSistemLamaPage from '@/pages/admin/DataSistemLamaPage'
 import CvPage from '@/pages/admin/CvPage'
+import CvTemplatePage from '@/pages/admin/CvTemplatePage'
 import ApiKeyPage from '@/pages/admin/ApiKeyPage'
 import WhatsappGatewayPage from '@/pages/admin/WhatsappGatewayPage'
+import AiSettingsPage from '@/pages/admin/AiSettingsPage'
 import ProfilPage from '@/pages/kandidat/ProfilPage'
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
 import { useAuthStore } from '@/store/authStore'
@@ -90,6 +92,16 @@ export default function App() {
         <Route path="/cv/:id" element={
           <ProtectedRoute roles={['admin_penempatan', 'admin_cabang']}>
             <CvPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/settings/ai" element={
+          <ProtectedRoute roles={['admin_penempatan']}>
+            <AiSettingsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/cv-template" element={
+          <ProtectedRoute roles={['admin_penempatan', 'admin_cabang']}>
+            <CvTemplatePage />
           </ProtectedRoute>
         } />
 

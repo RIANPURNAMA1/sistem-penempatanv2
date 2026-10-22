@@ -8,6 +8,8 @@ import {
   History,
   Mail,
   MapPin,
+  FileSpreadsheet,
+  Languages,
 } from "lucide-react";
 
 interface HeaderProps {
@@ -16,10 +18,13 @@ interface HeaderProps {
   stCfg: any;
   progresCfgItem: any;
   onShowCVPreview: () => void;
+  onShowGenerateCV?: () => void;
   onShowEditModal: () => void;
   onShowVerifikasiModal: () => void;
   onShowProgresModal: () => void;
   onShowHistoryModal: () => void;
+  onToggleBahasa?: () => void;
+  bahasaTampil?: "id" | "ja";
 }
 
 export default function Header({
@@ -28,10 +33,13 @@ export default function Header({
   stCfg,
   progresCfgItem,
   onShowCVPreview,
+  onShowGenerateCV,
   onShowEditModal,
   onShowVerifikasiModal,
   onShowProgresModal,
   onShowHistoryModal,
+  onToggleBahasa,
+  bahasaTampil = "id",
 }: HeaderProps) {
   return (
     <div className="mb-6">
@@ -84,6 +92,15 @@ export default function Header({
         <Button variant="default" size="sm" onClick={onShowCVPreview}>
           <FileText size={14} className="mr-1" /> Lihat CV
         </Button>
+        <Button variant="outline" size="sm" onClick={onShowGenerateCV}>
+          <FileSpreadsheet size={14} className="mr-1" /> Generate CV
+        </Button>
+        {onToggleBahasa && (
+          <Button variant="outline" size="sm" onClick={onToggleBahasa}>
+            <Languages size={14} className="mr-1" />
+            {bahasaTampil === "ja" ? "日本語" : "Indonesia"}
+          </Button>
+        )}
         <Button variant="outline" size="sm" onClick={onShowEditModal}>
           <Save size={14} className="mr-1" /> Edit
         </Button>

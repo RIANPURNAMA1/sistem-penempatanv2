@@ -19,7 +19,6 @@ removePengalaman,
 }: FormStep4Props) {
 return ( <div className="space-y-5">
 
-```
   {/* HEADER */}
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
     <p className="form-section-title flex items-center gap-2 text-sm sm:text-base mb-0 border-0 pb-0">

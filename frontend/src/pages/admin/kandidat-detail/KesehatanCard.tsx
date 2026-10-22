@@ -29,7 +29,7 @@ export default function KesehatanCard({ data }: KesehatanCardProps) {
         </div>
 
         <SubHeading>Riwayat Medis</SubHeading>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
           <InfoRow
             label="Penglihatan"
             value={

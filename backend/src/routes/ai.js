@@ -488,11 +488,11 @@ const chatWithGroq = async (message, dbStats, kandidatData = null) => {
     const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Authorization': `Bearer ${await require('../services/aiClient').ambilKunci()}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model      : 'llama-3.1-8b-instant',
+        model      : await require('../services/aiClient').ambilModel(),
         messages   : [
           { role: 'system', content: systemPrompt },
           { role: 'user',   content: message },

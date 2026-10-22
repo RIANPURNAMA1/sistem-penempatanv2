@@ -43,7 +43,7 @@ export default function PengalamanCard({ data }: PengalamanCardProps) {
                   <p className="text-xs text-muted-foreground mb-2">
                     {p.posisi || "-"}
                   </p>
-                  <div className="grid grid-cols-2 gap-x-5 gap-y-2.5">
+                  <div className="grid grid-cols-2 gap-2.5">
                     <InfoRow
                       label="Periode"
                       value={

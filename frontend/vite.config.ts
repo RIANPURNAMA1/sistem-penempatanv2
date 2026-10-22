@@ -18,6 +18,11 @@ export default defineConfig(({ mode }) => {
     base: isProduction && !isLocalhost ? '/' : './',
     server: {
       port: 5175,
+      // Abaikan folder unggahan backend: penulisan file di sana tidak boleh
+      // memicu full-reload halaman saat CV digenerate.
+      watch: {
+        ignored: ['**/backend/uploads/**', '**/uploads/**'],
+      },
       proxy: (isProduction || !isLocalhost) && apiUrl ? undefined : {   
         '/api': {
           target: 'http://localhost:5005',

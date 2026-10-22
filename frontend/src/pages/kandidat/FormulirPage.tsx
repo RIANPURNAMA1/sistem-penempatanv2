@@ -54,6 +54,50 @@ import {
   FormStep9_Dokumen,
 } from "@/components/form-kandidat";
 
+/**
+ * Hitung umur (tahun) dari tanggal lahir "YYYY-MM-DD".
+ * Menghitung dengan tanggal lokal agar tidak bergeser karena zona waktu.
+ */
+function hitungUmur(tanggalLahir?: string | null): number | "" {
+  if (!tanggalLahir) return "";
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(String(tanggalLahir).trim());
+  if (!m) return "";
+  const tahun = +m[1];
+  const bulan = +m[2];
+  const hari = +m[3];
+  if (!tahun || !bulan || !hari) return "";
+  const now = new Date();
+  let umur = now.getFullYear() - tahun;
+  const bulanNow = now.getMonth() + 1;
+  if (bulanNow < bulan || (bulanNow === bulan && now.getDate() < hari)) umur -= 1;
+  return umur >= 0 && umur < 130 ? umur : "";
+}
+
+/**
+ * Pendidikan terakhir = jenjang tertinggi yang datanya sudah diisi.
+ * Dipakai supaya field "Pendidikan Terakhir" tidak diisi manual (selalu sinkron
+ * dengan riwayat pendidikan).
+ */
+function hitungPendidikanTerakhir(pendidikan: any[]): string {
+  const urut = ["SD", "SMP", "SMA/SMK", "D3", "D4", "S1", "S2", "S3"];
+  let hasil = "";
+  (pendidikan || []).forEach((p: any) => {
+    if (!p) return;
+    const terisi =
+      (p.nama_sekolah && String(p.nama_sekolah).trim()) ||
+      p.tahun_lulus ||
+      p.tahun_masuk;
+    if (!terisi) return;
+    // Untuk perguruan tinggi, jenjang = tingkat (D3/D4/S1/S2/S3) bila dipilih.
+    const jenjang =
+      p.jenjang === "Perguruan Tinggi" && p.jenjang_detail
+        ? p.jenjang_detail
+        : p.jenjang;
+    if (urut.indexOf(jenjang) > urut.indexOf(hasil)) hasil = jenjang;
+  });
+  return hasil;
+}
+
 export default function FormulirPage() {
   const [step, setStep] = useState(1);
   const [maxStep, setMaxStep] = useState(1);
@@ -67,6 +111,8 @@ export default function FormulirPage() {
     { id: null, nama_file: "", file: null },
   ]);
   const [cabangList, setCabangList] = useState<{ id: number; nama_cabang: string }[]>([]);
+  // true = kandidat memilih sendiri "Pendidikan Terakhir" (tidak lagi dioverwrite otomatis)
+  const [pendidikanTerakhirManual, setPendidikanTerakhirManual] = useState(false);
   const [form, setForm] = useState<any>({
     pendidikan_terakhir: "",
     pendidikan: defaultPendidikan,
@@ -101,6 +147,8 @@ export default function FormulirPage() {
       setForm((p: any) => ({
         ...p,
         ...d,
+        // Umur selalu mengikuti tanggal lahir (data lama bisa jadi tidak sinkron).
+        umur: hitungUmur(d.tanggal_lahir) || d.umur || "",
         pernah_ke_jepang: convertBool(d.pernah_ke_jepang),
         keluarga_di_jepang: convertBool(d.keluarga_di_jepang),
         kenalan_di_jepang: convertBool(d.kenalan_di_jepang),
@@ -115,6 +163,10 @@ export default function FormulirPage() {
         bersedia_lembur: convertBool(d.bersedia_lembur),
         bersedia_hari_libur: convertBool(d.bersedia_hari_libur),
         pendidikan: d.pendidikan?.length ? d.pendidikan : p.pendidikan,
+        pendidikan_terakhir:
+          hitungPendidikanTerakhir(d.pendidikan?.length ? d.pendidikan : p.pendidikan) ||
+          d.pendidikan_terakhir ||
+          "",
         pengalaman: d.pengalaman?.length ? d.pengalaman : p.pengalaman,
         keluarga: d.keluarga?.length ? d.keluarga : p.keluarga,
         sertifikat_ssw: d.sertifikat_ssw
@@ -137,7 +189,13 @@ export default function FormulirPage() {
   const set =
     (key: string) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setForm((p: any) => ({ ...p, [key]: e.target.value }));
+      const value = e.target.value;
+      setForm((p: any) => ({
+        ...p,
+        [key]: value,
+        // Umur dihitung otomatis dari tanggal lahir ( Asia/Jakarta ).
+        ...(key === "tanggal_lahir" ? { umur: hitungUmur(value) } : {}),
+      }));
       setTouched((t: any) => ({ ...t, [key]: true }));
       if (errors[key])
         setErrors((er: any) => {
@@ -167,11 +225,31 @@ export default function FormulirPage() {
       });
   };
 
+  /** Pilih "Pendidikan Terakhir" secara manual (menonaktifkan auto-isi). */
+  const setPendidikanTerakhir = (v: string) => {
+    setPendidikanTerakhirManual(true);
+    setForm((p: any) => ({ ...p, pendidikan_terakhir: v }));
+    setTouched((t: any) => ({ ...t, pendidikan_terakhir: true }));
+    if (errors.pendidikan_terakhir)
+      setErrors((er: any) => {
+        const n = { ...er };
+        delete n.pendidikan_terakhir;
+        return n;
+      });
+  };
+
   const setPendidikan = (i: number, key: string, v: string) => {
     setForm((p: any) => {
       const arr = [...p.pendidikan];
       arr[i] = { ...arr[i], [key]: v };
-      return { ...p, pendidikan: arr };
+      const turunan = hitungPendidikanTerakhir(arr);
+      return {
+        ...p,
+        pendidikan: arr,
+        // Pendidikan terakhir mengikuti jenjang tertinggi yang sudah diisi,
+        // kecuali kandidat sudah memilih sendiri secara manual.
+        ...(turunan && !pendidikanTerakhirManual ? { pendidikan_terakhir: turunan } : {}),
+      };
     });
     setTouched((t: any) => ({ ...t, [`pendidikan_${i}_${key}`]: true }));
     if (errors[`pendidikan_${i}_${key}`])
@@ -207,7 +285,7 @@ export default function FormulirPage() {
       if (isEmpty(form.nama_romaji)) newErrors.nama_romaji = "Nama Romaji wajib diisi";
       if (isEmpty(form.tempat_lahir)) newErrors.tempat_lahir = "Tempat lahir wajib diisi";
       if (isEmpty(form.tanggal_lahir)) newErrors.tanggal_lahir = "Tanggal lahir wajib diisi";
-      if (isEmpty(form.umur)) newErrors.umur = "Umur wajib diisi";
+      if (isEmpty(form.umur)) newErrors.umur = "Umur otomatis dari tanggal lahir — lengkapi tanggal lahir dulu";
       if (isEmpty(form.jenis_kelamin)) newErrors.jenis_kelamin = "Jenis kelamin wajib dipilih";
       if (isEmpty(form.status_pernikahan)) newErrors.status_pernikahan = "Status pernikahan wajib dipilih";
       if (isEmpty(form.agama)) newErrors.agama = "Agama wajib dipilih";
@@ -573,8 +651,7 @@ export default function FormulirPage() {
             <FormStep3_Pendidikan
               form={{
                 ...form,
-                setPendidikanTerakhir: (v: string) =>
-                  setForm((p: any) => ({ ...p, pendidikan_terakhir: v })),
+                setPendidikanTerakhir,
               }}
               setPendidikan={setPendidikan}
               errors={errors}

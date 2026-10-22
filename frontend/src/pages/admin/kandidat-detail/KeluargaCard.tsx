@@ -54,7 +54,7 @@ export default function KeluargaCard({ data }: KeluargaCardProps) {
                     </p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                <div className="grid grid-cols-2 gap-2.5">
                   <InfoRow
                     label="Usia"
                     value={k.usia ? `${k.usia} tahun` : "-"}

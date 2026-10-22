@@ -525,7 +525,7 @@ const updateMyProfile = async (req, res) => {
       'level_jlpt','level_jft','sertifikat_ssw','lama_belajar_jepang','level_bahasa_jepang',
       'id_prometric','password_prometric',
       'tujuan_ke_jepang','alasan_ke_jepang','cita_cita_setelah_jepang','rencana_pengiriman_uang',
-      'kelebihan_diri','kekurangan_diri','hobi','keahlian','bersedia_shift','bersedia_lembur',
+      'kelebihan_diri','kekurangan_diri','promosi_diri','catatan_tambahan','hobi','keahlian','bersedia_shift','bersedia_lembur',
       'bersedia_hari_libur','lama_tinggal_jepang','lama_kerja_perusahaan','rencana_pulang',
       'sumber_biaya','biaya_disiapkan','status_formulir',
     ];
@@ -573,11 +573,12 @@ const updateMyProfile = async (req, res) => {
         if (p.nama_sekolah || p.jenjang) {
           await conn.query(
             `INSERT INTO kandidat_pendidikan 
-            (kandidat_id, jenjang, nama_sekolah, bulan_masuk, tahun_masuk, bulan_lulus, tahun_lulus, jurusan)
-            VALUES (?,?,?,?,?,?,?,?)`,
+            (kandidat_id, jenjang, jenjang_detail, nama_sekolah, bulan_masuk, tahun_masuk, bulan_lulus, tahun_lulus, jurusan)
+            VALUES (?,?,?,?,?,?,?,?,?)`,
             [
               kandidatId,
               p.jenjang || null,
+              p.jenjang_detail || null,
               p.nama_sekolah || null,
               p.bulan_masuk || null,
               toNull(p.tahun_masuk),
@@ -1885,7 +1886,8 @@ const createKandidatByAdmin = async (req, res) => {
       'sertifikat_ssw', 'lama_belajar_jepang', 'level_bahasa_jepang', 'id_prometric',
       'password_prometric', 'tujuan_ke_jepang', 'alasan_ke_jepang',
       'cita_cita_setelah_jepang', 'rencana_pengiriman_uang', 'kelebihan_diri',
-      'kekurangan_diri', 'hobi', 'keahlian', 'bersedia_shift', 'bersedia_lembur',
+      'kekurangan_diri', 'promosi_diri', 'catatan_tambahan', 'hobi', 'keahlian',
+      'bersedia_shift', 'bersedia_lembur',
       'bersedia_hari_libur', 'lama_tinggal_jepang', 'lama_kerja_perusahaan',
       'rencana_pulang', 'sumber_biaya', 'biaya_disiapkan',
     ];
@@ -1923,11 +1925,12 @@ const createKandidatByAdmin = async (req, res) => {
         if (p.nama_sekolah || p.jenjang) {
           await conn.query(
             `INSERT INTO kandidat_pendidikan
-             (kandidat_id, jenjang, nama_sekolah, bulan_masuk, tahun_masuk, bulan_lulus, tahun_lulus, jurusan)
-             VALUES (?,?,?,?,?,?,?,?)`,
+             (kandidat_id, jenjang, jenjang_detail, nama_sekolah, bulan_masuk, tahun_masuk, bulan_lulus, tahun_lulus, jurusan)
+             VALUES (?,?,?,?,?,?,?,?,?)`,
             [
               kandidatId,
               p.jenjang || null,
+              p.jenjang_detail || null,
               p.nama_sekolah || null,
               p.bulan_masuk || null,
               toNull2(p.tahun_masuk),
@@ -2035,7 +2038,7 @@ const updateProfileByAdmin = async (req, res) => {
       'intensitas_alkohol','pendidikan_terakhir',
       'level_jlpt','level_jft','lama_belajar_jepang','level_bahasa_jepang',
       'pernah_ke_jepang','keluarga_di_jepang','tujuan_ke_jepang','alasan_ke_jepang',
-      'cita_cita_setelah_jepang','rencana_pengiriman_uang','kelebihan_diri','kekurangan_diri',
+      'cita_cita_setelah_jepang','rencana_pengiriman_uang',      'kelebihan_diri','kekurangan_diri','promosi_diri','catatan_tambahan',
       'hobi','keahlian','bersedia_shift','bersedia_lembur','bersedia_hari_libur',
       'lama_tinggal_jepang','lama_kerja_perusahaan','rencana_pulang','sumber_biaya','biaya_disiapkan',
       'password_akun',
@@ -2081,11 +2084,12 @@ const updateProfileByAdmin = async (req, res) => {
         if (p.nama_sekolah || p.jenjang) {
           await conn.query(
             `INSERT INTO kandidat_pendidikan 
-            (kandidat_id, jenjang, nama_sekolah, bulan_masuk, tahun_masuk, bulan_lulus, tahun_lulus, jurusan)
-            VALUES (?,?,?,?,?,?,?,?)`,
+            (kandidat_id, jenjang, jenjang_detail, nama_sekolah, bulan_masuk, tahun_masuk, bulan_lulus, tahun_lulus, jurusan)
+            VALUES (?,?,?,?,?,?,?,?,?)`,
             [
               kandidatId,
               p.jenjang || null,
+              p.jenjang_detail || null,
               p.nama_sekolah || null,
               p.bulan_masuk || null,
               toNull(p.tahun_masuk),

@@ -39,8 +39,11 @@ export default function PendidikanCard({ data }: PendidikanCardProps) {
                     {p.nama_sekolah || "-"}
                   </p>
                   {p.jenjang && <Badge variant="info">{p.jenjang}</Badge>}
+                  {p.jenjang_detail && (
+                    <Badge variant="default">{p.jenjang_detail}</Badge>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 gap-x-5 gap-y-2.5">
+                <div className="grid grid-cols-2 gap-2.5">
                   <InfoRow label="Jurusan" value={p.jurusan || "-"} />
                   <InfoRow
                     label="Periode"

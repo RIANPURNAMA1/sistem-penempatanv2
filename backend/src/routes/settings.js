@@ -18,10 +18,13 @@ const DEFAULT_SETTINGS = {
   whatsapp_admin_phone: { value: '', type: 'string', description: 'Nomor admin penerima notifikasi WhatsApp' },
   whatsapp_send_delay: { value: '15', type: 'number', description: 'Delay pengiriman WhatsApp (detik) agar tidak diblokir (anti-ban)' },
   whatsapp_login_url: { value: 'https://job.mendunia.id/login', type: 'string', description: 'Link login sistem untuk dimasukkan ke pesan WhatsApp' },
+  groq_api_key: { value: '', type: 'string', description: 'API Key Groq (untuk penerjemahan otomatis CV & AI Assistant)' },
+  groq_model: { value: 'qwen/qwen3.8-27b', type: 'string', description: 'Model Groq yang dipakai untuk penerjemahan/AI' },
 };
 
 const invalidateSettingsCache = async () => {
   await cache.delByPrefix('settings');
+  await cache.del('settings:ai:groq_api_key');
 };
 
 router.get('/', async (req, res) => {
@@ -38,14 +41,45 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Key yang bersifat rahasia: hanya admin penempatan yang boleh membaca (dan dimasking).
+const SENSITIVE_KEYS = ['groq_api_key'];
+const maskValue = (v) => {
+  const s = String(v || '');
+  if (!s) return '';
+  if (s.length <= 10) return '•'.repeat(s.length);
+  return `${s.slice(0, 6)}••••••${s.slice(-4)}`;
+};
+
 router.get('/:key', async (req, res) => {
   try {
+    const sensitive = SENSITIVE_KEYS.includes(req.params.key);
+    if (sensitive) {
+      // Wajib login admin penempatan untuk membaca key API.
+      const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+      if (!token) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+      const { verify } = require('jsonwebtoken');
+      let decoded;
+      try {
+        decoded = verify(token, process.env.JWT_SECRET || 'secret');
+      } catch (e) {
+        return res.status(401).json({ success: false, message: 'Token tidak valid' });
+      }
+      const [users] = await pool.query('SELECT role FROM users WHERE id = ?', [decoded.id]);
+      if (!users.length || users[0].role !== 'admin_penempatan') {
+        return res.status(403).json({ success: false, message: 'Akses ditolak' });
+      }
+    }
+
     const [rows] = await pool.query('SELECT * FROM sys_settings WHERE setting_key = ?', [req.params.key]);
     if (!rows.length) {
       const def = DEFAULT_SETTINGS[req.params.key];
       return res.json({ success: true, data: def ? { setting_key: req.params.key, setting_value: def.value, setting_type: def.type, description: def.description } : null });
     }
-    res.json({ success: true, data: rows[0] });
+    const data = { ...rows[0] };
+    if (sensitive) data.setting_value = maskValue(data.setting_value);
+    res.json({ success: true, data });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -80,6 +114,39 @@ router.put('/:key', authenticate, authorize('admin_penempatan'), async (req, res
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+router.post('/ai/test', authenticate, authorize('admin_penempatan'), async (req, res) => {
+  try {
+    const ai = require('../services/aiClient');
+    const kunci = await ai.ambilKunci();
+    if (!kunci) {
+      return res.status(400).json({
+        success: false,
+        message:
+          'API key belum diatur. Isi di halaman "AI (Groq)" atau GROQ_API_KEY di backend/.env.',
+      });
+    }
+    const hasil = await ai.terjemahkan({
+      teks: 'Saya ingin bekerja di Jepang.',
+      ke: 'ja',
+      konteks: 'Test koneksi',
+    });
+    if (!hasil) {
+      return res.status(502).json({
+        success: false,
+        message: 'Groq tidak merespons. Periksa API key dan koneksi internet server.',
+      });
+    }
+    res.json({
+      success: true,
+      message: 'Koneksi AI berhasil',
+      data: { model: await ai.ambilModel(), contoh: hasil },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message || 'Server error' });
   }
 });
 

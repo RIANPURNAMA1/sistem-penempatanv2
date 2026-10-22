@@ -12,6 +12,7 @@ import {
 import KandidatCVPreview from "@/components/KandidatCVPreview";
 import HistoryModal from "@/components/HistoryModal";
 import EditKandidatModal from "@/components/admin/EditKandidatModal";
+import GenerateCVModal from "./kandidat-detail/GenerateCVModal";
 import {
   VerifikasiModal,
   ProgresModal,
@@ -143,6 +144,9 @@ export default function KandidatDetailPage() {
   const [showProgresModal, setShowProgresModal] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [showCVPreview, setShowCVPreview] = useState(false);
+  const [showGenerateCV, setShowGenerateCV] = useState(false);
+  const [bahasaTampil, setBahasaTampil] = useState<"id" | "ja">("id");
+  const [dataAsli, setDataAsli] = useState<any>(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
@@ -170,6 +174,7 @@ export default function KandidatDetailPage() {
       .get(`/kandidat/${id}`)
       .then((r) => {
         const d = r.data.data;
+        setDataAsli(d);
         setData(d);
         setNewStatus(d.status_formulir);
         setCatatanAdmin(d.catatan_admin || "");
@@ -274,6 +279,33 @@ export default function KandidatDetailPage() {
     variant: "secondary",
   };
 
+  /** Ambil terjemahan (teks + nilai terstruktur) lalu terapkan ke tampilan. */
+  const loadTerjemahan = async (lang: "id" | "ja") => {
+    if (!dataAsli) return;
+    if (lang === "id") {
+      setData(dataAsli);
+      return;
+    }
+    try {
+      const res = await api.get(`/cv-template/terjemahan/${id}`, { params: { bahasa: lang } });
+      const d = res.data?.data || {};
+      const gabung: any = { ...(d.nilai || {}) };
+      (d.fields || []).forEach((f: any) => {
+        if (f.terjemahan) gabung[f.key] = f.terjemahan;
+      });
+      setData({ ...dataAsli, ...gabung });
+      toast({ title: "Tampilan data dalam bahasa Jepang", description: "Field yang belum diterjemahkan tetap bahasa asli." });
+    } catch (e: any) {
+      toast({ title: e.response?.data?.message || "Gagal memuat terjemahan", variant: "destructive" });
+    }
+  };
+
+  const toggleBahasa = () => {
+    const next = bahasaTampil === "id" ? "ja" : "id";
+    setBahasaTampil(next);
+    loadTerjemahan(next);
+  };
+
   return (
     <div className="page-container max-w-6xl">
       <Header
@@ -282,10 +314,13 @@ export default function KandidatDetailPage() {
         stCfg={stCfg}
         progresCfgItem={progresCfgItem}
         onShowCVPreview={() => setShowCVPreview(true)}
+        onShowGenerateCV={() => setShowGenerateCV(true)}
         onShowEditModal={() => setShowEditModal(true)}
         onShowVerifikasiModal={() => setShowVerifikasiModal(true)}
         onShowProgresModal={() => setShowProgresModal(true)}
         onShowHistoryModal={() => setShowHistoryModal(true)}
+        onToggleBahasa={toggleBahasa}
+        bahasaTampil={bahasaTampil}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
@@ -346,6 +381,13 @@ export default function KandidatDetailPage() {
         onSuccess={() => {
           api.get(`/kandidat/${id}`).then((r) => setData(r.data.data));
         }}
+      />
+
+      <GenerateCVModal
+        open={showGenerateCV}
+        onOpenChange={setShowGenerateCV}
+        kandidatId={Number(id)}
+        kandidatName={data?.nama_romaji || data?.nama}
       />
     </div>
   );

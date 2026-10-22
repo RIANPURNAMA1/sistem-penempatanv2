@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { User } from "lucide-react";
+import { STATUS_PERNIKAHAN, AGAMA_OPTIONS } from "../constants";
 
 interface FormStep1Props {
   form: any;
@@ -96,14 +97,18 @@ export function FormStep1_DataDiri({ form, set, setSel, errors, cabangList = [] 
           )}
         </div>
         <div className="space-y-1.5">
-          <Label className="required">Umur *</Label>
+          <Label className="required">Umur (tahun) *</Label>
           <Input
             type="number"
-            value={form.umur || ""}
-            onChange={set("umur")}
-            placeholder="25"
+            value={form.umur ?? ""}
+            readOnly
+            placeholder="Otomatis dari tanggal lahir"
+            className="bg-muted/40 text-muted-foreground"
             error={!!errors.umur}
           />
+          <p className="text-[11px] text-muted-foreground">
+            Diisi otomatis dari tanggal lahir. Ubah tanggal lahir bila kurang tepat.
+          </p>
           {errors.umur && <p className="text-xs text-red-500">{errors.umur}</p>}
         </div>
         <div className="space-y-1.5">
@@ -131,21 +136,26 @@ export function FormStep1_DataDiri({ form, set, setSel, errors, cabangList = [] 
               <SelectValue placeholder="Pilih..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Menikah">Menikah</SelectItem>
-              <SelectItem value="Belum Menikah">Belum Menikah</SelectItem>
+              {STATUS_PERNIKAHAN.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           {errors.status_pernikahan && (
             <p className="text-xs text-red-500">{errors.status_pernikahan}</p>
           )}
         </div>
-        {form.status_pernikahan === "Menikah" && (
+        {(form.status_pernikahan === "Menikah" || form.status_pernikahan === "Cerai") && (
           <div className="space-y-1.5">
             <Label>Jumlah Anak</Label>
             <Input
               type="number"
+              min={0}
               value={form.jumlah_anak || 0}
               onChange={set("jumlah_anak")}
+              placeholder="0"
             />
           </div>
         )}
@@ -156,13 +166,11 @@ export function FormStep1_DataDiri({ form, set, setSel, errors, cabangList = [] 
               <SelectValue placeholder="Pilih..." />
             </SelectTrigger>
             <SelectContent>
-              {["Islam", "Kristen", "Katolik", "Hindu", "Buddha", "Konghucu", "Lainnya"].map(
-                (a) => (
-                  <SelectItem key={a} value={a}>
-                    {a}
-                  </SelectItem>
-                ),
-              )}
+              {AGAMA_OPTIONS.map((a) => (
+                <SelectItem key={a} value={a}>
+                  {a}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           {errors.agama && <p className="text-xs text-red-500">{errors.agama}</p>}

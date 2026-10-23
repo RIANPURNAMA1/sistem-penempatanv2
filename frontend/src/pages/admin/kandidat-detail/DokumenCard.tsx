@@ -168,6 +168,10 @@ export default function DokumenCard({ data, getFileUrl }: DokumenCardProps) {
               kk: "Kartu Keluarga",
               ktp: "KTP",
               ijazah: "Ijazah",
+              ijazah_sd: "Ijazah SD",
+              ijazah_smp: "Ijazah SMP",
+              ijazah_sma: "Ijazah SMA/SMK",
+              ijazah_pt: "Ijazah Perguruan Tinggi",
               akte: "Akte Kelahiran",
               lainnya: "Lainnya",
             };

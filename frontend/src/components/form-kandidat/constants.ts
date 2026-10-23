@@ -35,7 +35,6 @@ export const dokumenTypes = [
   { key: "foto_full_body", label: "Foto Full Body" },
   { key: "kk", label: "Kartu Keluarga (KK)" },
   { key: "ktp", label: "KTP" },
-  { key: "ijazah", label: "Ijazah" },
   { key: "akte", label: "Akte Kelahiran" },
   { key: "lainnya", label: "Dokumen Lainnya", optional: true },
 ];
@@ -60,7 +59,6 @@ export const REQUIRED_DOCS = [
   "foto_full_body",
   "kk",
   "ktp",
-  "ijazah",
   "akte",
 ];
 
@@ -99,6 +97,31 @@ export const defaultKeluarga = [
 export const jenjangWajib = ["SD", "SMP"];
 
 /**
+ * Jenis dokumen ijazah per jenjang pendidikan.
+ * Dipakai untuk upload ijazah pada langkah Pendidikan (mengikuti SIM-MENDUNIA).
+ */
+export const IJAZAH_JENJANG: Record<string, string> = {
+  SD: "ijazah_sd",
+  SMP: "ijazah_smp",
+  "SMA/SMK": "ijazah_sma",
+  "Perguruan Tinggi": "ijazah_pt",
+};
+
+export const getIjazahJenis = (jenjang: string): string | undefined =>
+  IJAZAH_JENJANG[jenjang];
+
+/** Label upload ijazah per jenjang (mis. "Ijazah SD"). */
+export const labelIjazah = (jenjang: string): string => {
+  const label: Record<string, string> = {
+    SD: "Ijazah SD",
+    SMP: "Ijazah SMP",
+    "SMA/SMK": "Ijazah SMA/SMK",
+    "Perguruan Tinggi": "Ijazah Perguruan Tinggi",
+  };
+  return label[jenjang] || `Ijazah ${jenjang}`;
+};
+
+/**
  * Pilihan status pernikahan (dipakai di formulir kandidat & edit admin).
  * `value` = nilai yang disimpan di database, `label` = teks formal di form.
  * Label memuat istilah Jepang sesuai template CV SSW.
@@ -127,20 +150,67 @@ export const AGAMA_OPTIONS = [
   "Lainnya",
 ];
 
-/** Jenjang pendidikan terakhir (ringkasan profil + filter matching). */
+/**
+ * Pilihan pendidikan terakhir — disamakan dengan formulir SIM-MENDUNIA.
+ * Nilai ini yang disimpan pada kolom `pendidikan_terakhir`.
+ */
 export const JENJANG_PENDIDIKAN = [
-  "SD",
-  "SMP",
-  "SMA/SMK",
-  "D3",
-  "D4",
-  "S1",
-  "S2",
-  "S3",
+  "SD / Sederajat",
+  "SMP / Sederajat",
+  "SMA / SMK / MA / Sederajat",
+  "Paket A / B / C",
+  "Diploma I / II / III / IV (D1–D4)",
+  "Sarjana (S1)",
+  "Magister (S2)",
+  "Doktor (S3)",
 ];
 
 /** Tingkat perguruan tinggi (isi baris "Perguruan Tinggi" pada riwayat pendidikan). */
 export const TINGKAT_PT = ["D3", "D4", "S1", "S2", "S3"];
+
+/**
+ * Pemetaan jenjang riwayat pendidikan (nilai internal) ke label
+ * "Pendidikan Terakhir" yang dipakai pada formulir.
+ */
+export const PENDIDIKAN_TERAKHIR_LABEL: Record<string, string> = {
+  SD: "SD / Sederajat",
+  SMP: "SMP / Sederajat",
+  "SMA/SMK": "SMA / SMK / MA / Sederajat",
+  D1: "Diploma I / II / III / IV (D1–D4)",
+  D2: "Diploma I / II / III / IV (D1–D4)",
+  D3: "Diploma I / II / III / IV (D1–D4)",
+  D4: "Diploma I / II / III / IV (D1–D4)",
+  S1: "Sarjana (S1)",
+  S2: "Magister (S2)",
+  S3: "Doktor (S3)",
+  "Perguruan Tinggi": "Diploma I / II / III / IV (D1–D4)",
+};
+
+/** Label "Pendidikan Terakhir" dari jenjang (dan tingkat PT bila ada). */
+export const labelPendidikanTerakhir = (
+  jenjang: string,
+  detail?: string | null,
+): string => {
+  if (jenjang === "Perguruan Tinggi") {
+    return (
+      PENDIDIKAN_TERAKHIR_LABEL[detail || ""] ||
+      PENDIDIKAN_TERAKHIR_LABEL["Perguruan Tinggi"]
+    );
+  }
+  return PENDIDIKAN_TERAKHIR_LABEL[jenjang] || "";
+};
+
+/**
+ * Normalisasi nilai lama pendidikan terakhir (mis. "S1", "SMA/SMK")
+ * agar cocok dengan pilihan pada formulir.
+ */
+export const normalizePendidikanTerakhir = (
+  value?: string | null,
+): string => {
+  if (!value) return "";
+  const v = String(value).trim();
+  return PENDIDIKAN_TERAKHIR_LABEL[v] || v;
+};
 
 /**
  * Contoh isi bahasa Jepang untuk field motivasi (dipakai di form kandidat
@@ -157,6 +227,7 @@ export const CONTOH_MOTIVASI: Record<string, string> = {
   kelebihan_diri: "責任感が強く、チームワークを大切にする性格です。",
   kekurangan_diri: "自分の意見をうまく伝えられないことがあります。",
   keahlian: "野菜栽培と収穫、トラック運転、清掃作業",
+  hobi: "読書、ジョギング、料理",
   promosi_diri:
     "農作業に熱意と責任をもって取り組み、個々の作物の生育を丁寧に確認します。",
   catatan_tambahan:

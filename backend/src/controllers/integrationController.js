@@ -47,7 +47,8 @@ const PROFIL_FIELDS = [
   'lama_belajar_jepang', 'level_bahasa_jepang', 'id_prometric', 'password_prometric',
   'tujuan_ke_jepang', 'alasan_ke_jepang', 'cita_cita_setelah_jepang',
   'rencana_pengiriman_uang', 'kelebihan_diri', 'kekurangan_diri', 'hobi',
-  'keahlian', 'bersedia_shift', 'bersedia_lembur', 'bersedia_hari_libur',
+  'keahlian', 'promosi_diri', 'catatan_tambahan',
+  'bersedia_shift', 'bersedia_lembur', 'bersedia_hari_libur',
   'lama_tinggal_jepang', 'lama_kerja_perusahaan', 'rencana_pulang',
   'sumber_biaya', 'biaya_disiapkan', 'status_formulir', 'status_progres',
 ];

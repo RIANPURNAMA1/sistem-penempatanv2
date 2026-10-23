@@ -37,6 +37,10 @@ import {
   REQUIRED_DOCS,
   defaultPendidikan,
   defaultKeluarga,
+  getIjazahJenis,
+  labelIjazah,
+  labelPendidikanTerakhir,
+  normalizePendidikanTerakhir,
   statusBadge,
 } from "@/components/form-kandidat/constants";
 
@@ -79,7 +83,17 @@ function hitungUmur(tanggalLahir?: string | null): number | "" {
  * dengan riwayat pendidikan).
  */
 function hitungPendidikanTerakhir(pendidikan: any[]): string {
-  const urut = ["SD", "SMP", "SMA/SMK", "D3", "D4", "S1", "S2", "S3"];
+  const urut = [
+    "SD",
+    "SMP",
+    "SMA/SMK",
+    "Perguruan Tinggi",
+    "D3",
+    "D4",
+    "S1",
+    "S2",
+    "S3",
+  ];
   let hasil = "";
   (pendidikan || []).forEach((p: any) => {
     if (!p) return;
@@ -95,7 +109,7 @@ function hitungPendidikanTerakhir(pendidikan: any[]): string {
         : p.jenjang;
     if (urut.indexOf(jenjang) > urut.indexOf(hasil)) hasil = jenjang;
   });
-  return hasil;
+  return hasil ? labelPendidikanTerakhir(hasil) : "";
 }
 
 export default function FormulirPage() {
@@ -165,7 +179,7 @@ export default function FormulirPage() {
         pendidikan: d.pendidikan?.length ? d.pendidikan : p.pendidikan,
         pendidikan_terakhir:
           hitungPendidikanTerakhir(d.pendidikan?.length ? d.pendidikan : p.pendidikan) ||
-          d.pendidikan_terakhir ||
+          normalizePendidikanTerakhir(d.pendidikan_terakhir) ||
           "",
         pengalaman: d.pengalaman?.length ? d.pengalaman : p.pengalaman,
         keluarga: d.keluarga?.length ? d.keluarga : p.keluarga,
@@ -322,6 +336,8 @@ export default function FormulirPage() {
     }
 
     if (stepNum === 3) {
+      if (isEmpty(form.pendidikan_terakhir))
+        newErrors.pendidikan_terakhir = "Pendidikan terakhir wajib dipilih";
       const jenjangWajib = ["SD", "SMP"];
       form.pendidikan.forEach((p: any, i: number) => {
         if (jenjangWajib.includes(p.jenjang)) {
@@ -330,6 +346,10 @@ export default function FormulirPage() {
           if (isEmpty(p.tahun_masuk)) newErrors[`pendidikan_${i}_tahun_masuk`] = "Tahun masuk wajib dipilih";
           if (isEmpty(p.bulan_lulus)) newErrors[`pendidikan_${i}_bulan_lulus`] = "Bulan lulus wajib dipilih";
           if (isEmpty(p.tahun_lulus)) newErrors[`pendidikan_${i}_tahun_lulus`] = "Tahun lulus wajib dipilih";
+          const jenisIjazah = getIjazahJenis(p.jenjang);
+          if (jenisIjazah && !form.dokumen?.some((d: any) => d.jenis_dokumen === jenisIjazah)) {
+            newErrors[`pendidikan_${i}_ijazah`] = `${labelIjazah(p.jenjang)} wajib diupload.`;
+          }
         }
       });
     }
@@ -655,6 +675,9 @@ export default function FormulirPage() {
               }}
               setPendidikan={setPendidikan}
               errors={errors}
+              uploadingKey={uploadingKey}
+              isSubmitted={isSubmitted}
+              handleUpload={handleUpload}
             />
           )}
 

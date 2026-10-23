@@ -148,6 +148,22 @@ export function FormStep8_Motivasi({ form, setBool, set, setSel, errors }: FormS
           )}
         </div>
         <div className="space-y-1.5">
+          <Label className="required">Hobi *</Label>
+          <Textarea
+            value={form.hobi || ""}
+            onChange={set("hobi")}
+            rows={2}
+            placeholder={`例：${CONTOH_MOTIVASI.hobi}`}
+            className={errors.hobi ? "border-red-500" : ""}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Contoh: 「{CONTOH_MOTIVASI.hobi}」
+          </p>
+          {errors.hobi && (
+            <p className="text-xs text-red-500">{errors.hobi}</p>
+          )}
+        </div>
+        <div className="space-y-1.5">
           <Label>Promosi Diri (自己PR)</Label>
           <Textarea
             value={form.promosi_diri || ""}

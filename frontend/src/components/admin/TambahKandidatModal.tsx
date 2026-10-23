@@ -20,7 +20,14 @@ import {
   X,
 } from "lucide-react";
 
-import { STEPS, defaultPendidikan, defaultKeluarga, REQUIRED_DOCS } from "@/components/form-kandidat/constants";
+import {
+  STEPS,
+  defaultPendidikan,
+  defaultKeluarga,
+  REQUIRED_DOCS,
+  getIjazahJenis,
+  labelIjazah,
+} from "@/components/form-kandidat/constants";
 
 import {
   FormStep1_DataDiri,
@@ -292,6 +299,8 @@ export default function TambahKandidatModal({
     }
 
     if (stepNum === 3) {
+      if (isEmpty(form.pendidikan_terakhir))
+        newErrors.pendidikan_terakhir = "Pendidikan terakhir wajib dipilih";
       const jenjangWajib = ["SD", "SMP"];
       form.pendidikan.forEach((p: any, i: number) => {
         if (jenjangWajib.includes(p.jenjang)) {
@@ -300,6 +309,10 @@ export default function TambahKandidatModal({
           if (isEmpty(p.tahun_masuk)) newErrors[`pendidikan_${i}_tahun_masuk`] = "Tahun masuk wajib dipilih";
           if (isEmpty(p.bulan_lulus)) newErrors[`pendidikan_${i}_bulan_lulus`] = "Bulan lulus wajib dipilih";
           if (isEmpty(p.tahun_lulus)) newErrors[`pendidikan_${i}_tahun_lulus`] = "Tahun lulus wajib dipilih";
+          const jenisIjazah = getIjazahJenis(p.jenjang);
+          if (jenisIjazah && !form.dokumen?.some((d: any) => d.jenis_dokumen === jenisIjazah)) {
+            newErrors[`pendidikan_${i}_ijazah`] = `${labelIjazah(p.jenjang)} wajib diupload.`;
+          }
         }
       });
     }
@@ -653,6 +666,9 @@ export default function TambahKandidatModal({
                   }}
                   setPendidikan={setPendidikan}
                   errors={errors}
+                  uploadingKey={null}
+                  isSubmitted={false}
+                  handleUpload={handleUpload}
                 />
               )}
               {step === 4 && (

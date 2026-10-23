@@ -9,15 +9,31 @@ import {
 } from "@/components/ui/select";
 import { GraduationCap } from "lucide-react";
 import { YearMonthPicker } from "../YearMonthPicker";
-import { jenjangWajib, JENJANG_PENDIDIKAN, TINGKAT_PT } from "../constants";
+import { IjazahUpload } from "../IjazahUpload";
+import {
+  getIjazahJenis,
+  labelIjazah,
+  jenjangWajib,
+  JENJANG_PENDIDIKAN,
+} from "../constants";
 
 interface FormStep3Props {
-form: any;
-setPendidikan: (i: number, key: string, v: string) => void;
-errors: Record<string, string>;
+  form: any;
+  setPendidikan: (i: number, key: string, v: string) => void;
+  errors: Record<string, string>;
+  uploadingKey?: string | null;
+  isSubmitted?: boolean;
+  handleUpload?: (jenis: string, file: File, sswIndex?: number) => void;
 }
 
-export function FormStep3_Pendidikan({ form, setPendidikan, errors }: FormStep3Props) {
+export function FormStep3_Pendidikan({
+  form,
+  setPendidikan,
+  errors,
+  uploadingKey = null,
+  isSubmitted = false,
+  handleUpload,
+}: FormStep3Props) {
 return ( <div className="space-y-6">
 
   {/* TITLE */}
@@ -27,15 +43,8 @@ return ( <div className="space-y-6">
   </p>
 
   {/* PENDIDIKAN TERAKHIR */}
-  <div className="border border-border rounded-lg p-4 space-y-3 bg-muted/30">
-    <div className="flex items-center justify-between gap-2 flex-wrap">
-      <p className="font-semibold text-sm text-muted-foreground">
-        Pendidikan Terakhir
-      </p>
-      <span className="text-[11px] text-muted-foreground">
-        Terisi otomatis dari riwayat pendidikan, bisa diubah manual
-      </span>
-    </div>
+  <div className="max-w-sm space-y-1.5">
+    <Label className="required">Pendidikan Terakhir</Label>
     <Select
       value={form.pendidikan_terakhir || ""}
       onValueChange={(v) => form.setPendidikanTerakhir?.(v)}
@@ -64,7 +73,7 @@ return ( <div className="space-y-6">
       <div key={i} className="border border-border rounded-lg p-4 space-y-4">
 
         <p className="font-semibold text-sm text-muted-foreground">
-          {p.jenjang} {wajib && <span className="text-red-500">*</span>}
+          {p.jenjang}
         </p>
 
         {/* GRID RESPONSIVE */}
@@ -73,16 +82,13 @@ return ( <div className="space-y-6">
           {/* NAMA SEKOLAH */}
           <div className="col-span-1 md:col-span-2 space-y-1.5 w-full">
             <Label className={wajib ? "required" : ""}>
-              {p.jenjang === "Perguruan Tinggi" ? "Nama Universitas / Politeknik" : "Nama Sekolah"}
-              {wajib && " *"}
+              Nama Sekolah / Universitas
             </Label>
             <Input
               className="w-full"
               value={p.nama_sekolah || ""}
               onChange={(e) => setPendidikan(i, "nama_sekolah", e.target.value)}
-              placeholder={
-                p.jenjang === "Perguruan Tinggi" ? "Universitas / Politeknik" : `Nama ${p.jenjang}`
-              }
+              placeholder={p.jenjang}
             />
             {errors[`pendidikan_${i}_nama_sekolah`] && (
               <p className="text-xs text-red-500">
@@ -104,35 +110,10 @@ return ( <div className="space-y-6">
             </div>
           )}
 
-          {/* TINGKAT PERGURUAN TINGGI (D3/D4/S1/S2/S3) */}
-          {p.jenjang === "Perguruan Tinggi" && (
-            <div className="col-span-1 md:col-span-2 space-y-1.5 w-full">
-              <Label>Tingkat Pendidikan</Label>
-              <Select
-                value={p.jenjang_detail || ""}
-                onValueChange={(v) => setPendidikan(i, "jenjang_detail", v)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pilih tingkat (D3/D4/S1/S2/S3)..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {TINGKAT_PT.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-[11px] text-muted-foreground">
-                Dipakai untuk mengisi kolom jenjang pada CV (contoh: S1 → 大学(UNIV), D3 → ディプロマ３).
-              </p>
-            </div>
-          )}
-
           {/* MASUK */}
           <div className="space-y-1.5 w-full">
             <Label className={wajib ? "required" : ""}>
-              Bulan & Tahun Masuk {wajib && "*"}
+              Bulan & Tahun Masuk
             </Label>
             <div className="w-full">
               <YearMonthPicker
@@ -157,7 +138,7 @@ return ( <div className="space-y-6">
           {/* LULUS */}
           <div className="space-y-1.5 w-full">
             <Label className={wajib ? "required" : ""}>
-              Bulan & Tahun Lulus {wajib && "*"}
+              Bulan & Tahun Lulus
             </Label>
             <div className="w-full">
               <YearMonthPicker
@@ -179,6 +160,28 @@ return ( <div className="space-y-6">
               </p>
             )}
           </div>
+
+          {/* IJAZAH */}
+          {(() => {
+            const jenis = getIjazahJenis(p.jenjang);
+            if (!jenis) return null;
+
+            const uploaded = form.dokumen?.find(
+              (d: any) => d.jenis_dokumen === jenis,
+            );
+
+            return (
+              <IjazahUpload
+                label={labelIjazah(p.jenjang)}
+                required={wajib}
+                fileName={uploaded?.nama_file}
+                uploading={uploadingKey === jenis}
+                disabled={isSubmitted || !handleUpload}
+                error={errors[`pendidikan_${i}_ijazah`]}
+                onUpload={(file) => handleUpload?.(jenis, file)}
+              />
+            );
+          })()}
 
         </div>
       </div>

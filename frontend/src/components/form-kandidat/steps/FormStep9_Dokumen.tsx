@@ -256,9 +256,9 @@ export function FormStep9_Dokumen({
                   }`}
                 >
                   {uploaded ? (
-                    <CheckCircle size={16} sm:size={20} className="text-emerald-500" />
+                    <CheckCircle className="size-4 sm:size-5 text-emerald-500" />
                   ) : (
-                    <FileText size={16} sm:size={20} className="text-muted-foreground" />
+                    <FileText className="size-4 sm:size-5 text-muted-foreground" />
                   )}
                 </div>
 

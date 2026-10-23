@@ -590,7 +590,11 @@ Mengganti dokumen dengan jenis yang sama (file lama otomatis dihapus dari DB).
 | `foto_full_body`   | Ya |
 | `kk`               | Ya |
 | `ktp`              | Ya |
-| `ijazah`           | Ya |
+| `ijazah_sd`        | Ya |
+| `ijazah_smp`       | Ya |
+| `ijazah_sma`       | Tidak |
+| `ijazah_pt`        | Tidak |
+| `ijazah`           | Tidak (jenis lama, dipertahankan untuk kompatibilitas) |
 | `akte`             | Ya |
 | `lainnya`          | Tidak |
 | `ssw_1`, `ssw_2`, ... | Tidak (Sertifikat SSW, bisa banyak) |

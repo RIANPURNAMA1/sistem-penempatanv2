@@ -1,5 +1,6 @@
 export { BoolSelect } from "./BoolSelect";
 export { YearMonthPicker } from "./YearMonthPicker";
+export { IjazahUpload } from "./IjazahUpload";
 
 export { FormStep1_DataDiri } from "./steps/FormStep1_DataDiri";
 export { FormStep2_Kesehatan } from "./steps/FormStep2_Kesehatan";

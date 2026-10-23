@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label, Textarea, Separator } from '@/components/ui/components'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { STATUS_PERNIKAHAN, JENJANG_PENDIDIKAN } from '@/components/form-kandidat/constants'
+import { STATUS_PERNIKAHAN, JENJANG_PENDIDIKAN, getIjazahJenis, labelIjazah, normalizePendidikanTerakhir } from '@/components/form-kandidat/constants'
+import { IjazahUpload } from '@/components/form-kandidat'
 import { toast } from '@/hooks/useToast'
 import api from '@/lib/api'
 import {
@@ -90,7 +91,6 @@ const DOKUMEN_TYPES = [
   { key: 'foto_full_body',  label: 'Foto Full Body' },
   { key: 'kk',              label: 'Kartu Keluarga (KK)' },
   { key: 'ktp',             label: 'KTP' },
-  { key: 'ijazah',          label: 'Ijazah' },
   { key: 'akte',            label: 'Akte Kelahiran' },
   { key: 'lainnya',         label: 'Dokumen Lainnya',      optional: true },
 ]
@@ -126,6 +126,7 @@ export default function EditKandidatModal({
             { jenjang: 'SMA/SMK',         nama_sekolah: '', bulan_masuk: '', tahun_masuk: '', bulan_lulus: '', tahun_lulus: '', jurusan: '' },
             { jenjang: 'Perguruan Tinggi', nama_sekolah: '', bulan_masuk: '', tahun_masuk: '', bulan_lulus: '', tahun_lulus: '', jurusan: '' },
           ],
+          pendidikan_terakhir: normalizePendidikanTerakhir(d.pendidikan_terakhir),
           pengalaman: d.pengalaman || [],
           keluarga: d.keluarga?.length ? d.keluarga : [
             { hubungan: 'Ayah', nama: '', usia: '', pekerjaan: '', penghasilan: '' },
@@ -592,6 +593,21 @@ export default function EditKandidatModal({
                           />
                         </div>
                       </div>
+                      {(() => {
+                        const jenis = getIjazahJenis(p.jenjang)
+                        if (!jenis) return null
+                        const uploaded = form.dokumen?.find((d: any) => d.jenis_dokumen === jenis)
+                        return (
+                          <IjazahUpload
+                            label={labelIjazah(p.jenjang)}
+                            required={['SD', 'SMP'].includes(p.jenjang)}
+                            fileName={uploaded?.nama_file}
+                            uploading={uploading === jenis}
+                            disabled={uploading !== null}
+                            onUpload={(file) => handleUploadDokumen(jenis, file)}
+                          />
+                        )
+                      })()}
                     </div>
                   ))}
                 </div>

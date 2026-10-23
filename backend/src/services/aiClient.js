@@ -80,7 +80,12 @@ async function terjemahkan({ teks, ke = 'ja', konteks = '' } = {}) {
     '- Jangan menambah, mengurangi, atau mengubah fakta; hanya terjemahkan.',
     '- Jika teks berupa daftar bullet, pertahankan format baris/poinnya.',
     '- Jawab HANYA dengan hasil terjemahan, tanpa penjelasan tambahan.',
+    '- Jangan menyalin atau menyertakan nama/label field ke dalam hasil terjemahan.',
   ].join('\n');
+
+  const userContent = konteks
+    ? `${konteks}\n\nTerjemahkan HANYA teks di bawah ini. Jangan sertakan label field, tanda kutip, atau penjelasan:\n${teks}`
+    : `Terjemahkan HANYA teks di bawah ini. Jangan sertakan label atau penjelasan:\n${teks}`;
 
   try {
     const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
@@ -93,10 +98,7 @@ async function terjemahkan({ teks, ke = 'ja', konteks = '' } = {}) {
         model,
         messages: [
           { role: 'system', content: systemPrompt },
-          {
-            role: 'user',
-            content: konteks ? `${konteks}\n\n${teks}` : String(teks),
-          },
+          { role: 'user', content: userContent },
         ],
         temperature: 0.2,
         max_tokens: 900,

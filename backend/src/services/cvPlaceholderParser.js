@@ -1,6 +1,6 @@
 const ExcelJS = require('exceljs');
 require('./exceljsPatch');
-const { CATALOG, resolveGroupKey, GROUP_FIELDS } = require('../config/cvFields');
+const { CATALOG, resolveGroupKey, resolveDocumentKey, GROUP_FIELDS } = require('../config/cvFields');
 
 const PLACEHOLDER_RE = /\{([a-z0-9_]+)\}/g;
 // Pola longgar: menangkap placeholder apa pun (mis. {Nama Romaji}) supaya upload
@@ -107,7 +107,12 @@ async function detectPlaceholders(filePath) {
 
         matches.forEach((m) => {
           const name = m[1];
-          const meta = CATALOG[name] || null;
+          const docInfo = resolveDocumentKey(name);
+          const meta =
+            CATALOG[name] ||
+            (docInfo
+              ? { label: docInfo.label, type: 'document', source: 'document', format: null }
+              : null);
           const groupInfo = resolveGroupKey(name);
 
           if (groupInfo) {

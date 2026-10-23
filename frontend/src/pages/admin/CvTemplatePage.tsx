@@ -201,7 +201,6 @@ export default function CvTemplatePage() {
 
   const openCatalog = async () => {
     setCatalogOpen(true)
-    if (catalog.length) return
     try {
       const r = await api.get("/cv-template/catalog")
       setCatalog(r.data?.data || [])

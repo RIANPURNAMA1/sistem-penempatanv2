@@ -2,7 +2,7 @@ const ExcelJS = require('exceljs');
 require('./exceljsPatch');
 const fs = require('fs');
 const path = require('path');
-const { CATALOG, resolveGroupKey } = require('../config/cvFields');
+const { CATALOG, resolveGroupKey, resolveDocumentKey } = require('../config/cvFields');
 const fmt = require('./cvFormatter');
 const { translateValue } = require('./cvTranslator');
 const { cellText, dropdownOptionsFromCell, PLACEHOLDER_RE, ANY_PLACEHOLDER_RE } = require('./cvPlaceholderParser');
@@ -10,12 +10,89 @@ const { cellText, dropdownOptionsFromCell, PLACEHOLDER_RE, ANY_PLACEHOLDER_RE } 
 const UPLOAD_ROOT = path.join(__dirname, '..', '..', 'uploads');
 const EMU_PER_PIXEL = 9525;
 const PHOTO_RATIO = 3 / 4; // lebar:tinggi
+const DOCUMENT_WIDTH_PX = 360;
+const DOCUMENT_MIN_HEIGHT_PX = 180;
+const DOCUMENT_MAX_HEIGHT_PX = 520;
+const MAX_ROW_HEIGHT_PT = 409;
 
 /* ------------------------------------------------------------------ *
  * Helper
  * ------------------------------------------------------------------ */
 
 const isEmpty = (v) => v === undefined || v === null || (typeof v === 'string' && v.trim() === '');
+
+/** Dokumen upload yang bisa ditempel sebagai gambar (bukan PDF). */
+function isImageDocument(doc) {
+  if (!doc || typeof doc !== 'object') return false;
+  const mime = String(doc.mime_type || '').toLowerCase();
+  if (mime.startsWith('image/')) return true;
+  return /\.(jpe?g|png|gif|webp|bmp)$/i.test(String(doc.path_file || doc.nama_file || ''));
+}
+
+/** Teks pengganti untuk dokumen non-gambar (PDF/lainnya). */
+function documentText(doc) {
+  if (!doc || typeof doc !== 'object') return null;
+  return doc.nama_file || doc.path_file || doc.jenis_dokumen || null;
+}
+
+/** Baca ukuran asli gambar (PNG/JPEG/GIF/WEBP) dari header berkas. */
+function readImageSize(filePath) {
+  try {
+    const buf = fs.readFileSync(filePath);
+    if (buf.length < 24) return null;
+
+    // PNG
+    if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+      return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+    }
+
+    // GIF
+    if (buf.slice(0, 3).toString('ascii') === 'GIF') {
+      return { width: buf.readUInt16LE(6), height: buf.readUInt16LE(8) };
+    }
+
+    // JPEG
+    if (buf[0] === 0xff && buf[1] === 0xd8) {
+      let off = 2;
+      while (off + 9 < buf.length) {
+        if (buf[off] !== 0xff) {
+          off++;
+          continue;
+        }
+        const marker = buf[off + 1];
+        if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+          off += 2;
+          continue;
+        }
+        if (marker === 0xd9 || marker === 0xda) break;
+        const len = buf.readUInt16BE(off + 2);
+        if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+          return { width: buf.readUInt16BE(off + 7), height: buf.readUInt16BE(off + 5) };
+        }
+        if (len < 2) break;
+        off += 2 + len;
+      }
+    }
+
+    // WEBP
+    if (buf.slice(0, 4).toString('ascii') === 'RIFF' && buf.slice(8, 12).toString('ascii') === 'WEBP') {
+      const type = buf.slice(12, 16).toString('ascii');
+      if (type === 'VP8 ') {
+        return { width: buf.readUInt16LE(26) & 0x3fff, height: buf.readUInt16LE(28) & 0x3fff };
+      }
+      if (type === 'VP8L') {
+        const b = buf.readUInt32LE(21);
+        return { width: (b & 0x3fff) + 1, height: ((b >> 14) & 0x3fff) + 1 };
+      }
+      if (type === 'VP8X') {
+        return { width: 1 + buf.readUIntLE(24, 3), height: 1 + buf.readUIntLE(27, 3) };
+      }
+    }
+  } catch (e) {
+    /* ukuran tidak terbaca, pakai ukuran area sel */
+  }
+  return null;
+}
 
 /** Ambil nilai mentah dari map data profil (mendukung alias grup). */
 function resolveRaw(prof, key) {
@@ -35,6 +112,8 @@ function resolveRaw(prof, key) {
 function resolveValue(prof, key, lang, fixedKeys) {
   const result = resolveValueRaw(prof, key);
   if (result.value === null || result.value === undefined) return result;
+  // Dokumen upload berupa objek berkas — tidak diterjemahkan.
+  if (resolveDocumentKey(key)) return result;
   // Nilai yang sudah dioverride admin dipakai apa adanya (tidak diterjemahkan lagi).
   if (fixedKeys && fixedKeys.has(key)) return { value: result.value, warning: result.warning };
   return { value: translateValue(key, result.value, lang), warning: result.warning };
@@ -50,6 +129,12 @@ function resolveValueRaw(prof, key) {
   const type = (group && group.type) || (meta && meta.type) || 'text';
 
   const raw = resolveRaw(prof, key);
+
+  // --- Dokumen upload: nilai berupa objek { path_file, mime_type, ... } ---
+  if (resolveDocumentKey(key)) {
+    if (!raw || typeof raw !== 'object') return { value: null, warning: null };
+    return { value: raw, warning: null };
+  }
 
   // --- Nilai turunan (dihitung dari kolom lain, tidak butuh nilai mentah) ---
   if (key === 'tanggal_lahir_jp') {
@@ -228,11 +313,23 @@ function findPhotoFile(foto) {
 }
 
 /**
- * Tempel foto (rasio 3:4) di dalam area sel, mengikuti area merge bila ada.
+ * Tempel gambar di dalam area sel, mengikuti area merge bila ada.
+ * Foto memakai rasio 3:4; dokumen mengikuti rasio asli agar tampil besar.
+ * @param {{preserveAspect?:boolean,padding?:number}} [opts]
  */
-async function placePhoto(wb, worksheet, cell, photoPath, warnings) {
+async function placePhoto(wb, worksheet, cell, photoPath, warnings, opts) {
   try {
-    const ext = photoPath.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
+    const opt = opts || {};
+    const lower = photoPath.toLowerCase();
+    const ext = lower.endsWith('.png')
+      ? 'png'
+      : lower.endsWith('.gif')
+        ? 'gif'
+        : lower.endsWith('.webp')
+          ? 'webp'
+          : lower.endsWith('.bmp')
+            ? 'bmp'
+            : 'jpeg';
     const imageId = wb.addImage({ filename: photoPath, extension: ext });
 
     const merge = findMerge(worksheet, cell.address);
@@ -246,21 +343,55 @@ async function placePhoto(wb, worksheet, cell, photoPath, warnings) {
     let areaH = 0;
     for (let r = r1; r <= r2; r++) areaH += rowPx(worksheet, r);
 
-    const pad = 3;
+    const pad = opt.padding == null ? 3 : opt.padding;
     const availW = Math.max(10, areaW - pad * 2);
     const availH = Math.max(10, areaH - pad * 2);
-    let w = Math.floor(Math.min(availW, availH * PHOTO_RATIO));
-    let h = Math.floor(w / PHOTO_RATIO);
-    if (h > availH) {
-      h = availH;
-      w = Math.floor(h * PHOTO_RATIO);
+    let w;
+    let h;
+
+    const natural = opt.preserveAspect ? readImageSize(photoPath) : null;
+    let exceedsArea = false;
+    if (natural && natural.width > 0 && natural.height > 0) {
+      // Dokumen: rasio asli dipertahankan.
+      const fitScale = Math.min(availW / natural.width, availH / natural.height);
+      if (merge) {
+        // Sel yang sudah di-merge: isi seluruh area merge.
+        w = Math.floor(natural.width * fitScale);
+        h = Math.floor(natural.height * fitScale);
+      } else {
+        // Sel tunggal: beri ukuran besar minimal agar dokumen terbaca,
+        // lalu tinggikan baris supaya tidak menimpa baris berikutnya.
+        let scale = Math.max(DOCUMENT_WIDTH_PX / natural.width, fitScale);
+        if (natural.height * scale < DOCUMENT_MIN_HEIGHT_PX) {
+          scale = DOCUMENT_MIN_HEIGHT_PX / natural.height;
+        }
+        if (natural.height * scale > DOCUMENT_MAX_HEIGHT_PX) {
+          scale = DOCUMENT_MAX_HEIGHT_PX / natural.height;
+        }
+        w = Math.floor(natural.width * scale);
+        h = Math.floor(natural.height * scale);
+        exceedsArea = w > availW || h > availH;
+
+        const neededPt = Math.ceil((h + pad * 2) * (72 / 96));
+        const currentPt = worksheet.getRow(r1).height || 0;
+        if (neededPt > currentPt) {
+          worksheet.getRow(r1).height = Math.min(MAX_ROW_HEIGHT_PT, neededPt);
+        }
+      }
+    } else {
+      w = Math.floor(Math.min(availW, availH * PHOTO_RATIO));
+      h = Math.floor(w / PHOTO_RATIO);
+      if (h > availH) {
+        h = availH;
+        w = Math.floor(h * PHOTO_RATIO);
+      }
     }
     w = Math.max(10, w);
     h = Math.max(10, h);
 
-    // Posisi tengah di dalam area (EMU), dihitung dari offset kolom/baris.
-    const dxPx = pad + Math.floor((availW - w) / 2);
-    const dyPx = pad + Math.floor((availH - h) / 2);
+    // Posisi tengah di dalam area; gambar besar di sel tunggal mulai dari kiri atas.
+    const dxPx = exceedsArea ? pad : pad + Math.floor((availW - w) / 2);
+    const dyPx = exceedsArea ? pad : pad + Math.floor((availH - h) / 2);
 
     let col = c1;
     let offXPx = dxPx;
@@ -365,6 +496,22 @@ async function renderTemplate(templatePath, kandidatFull, outPath, options) {
           return;
         }
 
+        // --- Dokumen upload: sel berisi tepat satu placeholder + gambar ---
+        const soleMatch = /^\s*\{([^{}\n]+)\}\s*$/.exec(text);
+        if (soleMatch && resolveDocumentKey(soleMatch[1])) {
+          const doc = resolveRaw(prof, soleMatch[1]);
+          if (isImageDocument(doc)) {
+            cell.value = '';
+            photoCells.push({
+              sheet: worksheet.name,
+              address: cell.address,
+              doc,
+              key: soleMatch[1],
+            });
+            return;
+          }
+        }
+
         const options = dropdownOptionsFromCell(cell, worksheet);
         let out = text;
         const names = Array.from(new Set(Array.from(text.matchAll(ANY_PLACEHOLDER_RE)).map((m) => m[1])));
@@ -374,7 +521,11 @@ async function renderTemplate(templatePath, kandidatFull, outPath, options) {
           if (warning) warnings.push(`{${name}}: ${warning}`);
 
           let finalValue = value;
-          if (finalValue !== null && finalValue !== undefined && options && options.length) {
+          const isDoc = !!resolveDocumentKey(name);
+          if (isDoc) {
+            // Dokumen non-gambar (mis. PDF) ditulis sebagai nama berkas.
+            finalValue = documentText(finalValue);
+          } else if (finalValue !== null && finalValue !== undefined && options && options.length) {
             const dr = applyDropdown(name, finalValue, options);
             if (dr.warning) warnings.push(dr.warning);
             finalValue = dr.value;
@@ -408,28 +559,32 @@ async function renderTemplate(templatePath, kandidatFull, outPath, options) {
     });
   });
 
-  // --- Tempel foto di sel {foto} ---
-  if (photoCells.length) {
-    const photoPath = findPhotoFile(kandidatFull.foto);
+  // --- Tempel foto/dokumen gambar ke sel placeholder ---
+  for (const target of photoCells) {
+    const doc = target.doc || kandidatFull.foto;
+    const photoPath = findPhotoFile(doc);
+
     if (!photoPath) {
-      const info = kandidatFull.foto
-        ? ` Dokumen ${kandidatFull.foto.jenis_dokumen || 'foto'} tercatat di database tetapi berkasnya tidak ada di server (${kandidatFull.foto.path_file || '?'}) — upload ulang fotonya.`
+      const info = doc
+        ? ` Dokumen ${doc.jenis_dokumen || target.key || 'foto'} tercatat di database tetapi berkasnya tidak ada di server (${doc.path_file || '?'}) — upload ulang berkasnya.`
         : ' Dokumen pas_foto / foto_full_body tidak ditemukan.';
-      warnings.push(`Foto belum tersedia untuk kandidat ini.${info}`);
-    } else {
-      for (const target of photoCells) {
-        const sheet = wb.getWorksheet(target.sheet);
-        if (!sheet) continue;
-        let cell;
-        try {
-          cell = sheet.getCell(target.address);
-        } catch (e) {
-          continue;
-        }
-        if (!cell) continue;
-        await placePhoto(wb, sheet, cell, photoPath, warnings);
-      }
+      warnings.push(`Berkas belum tersedia untuk kandidat ini.${info}`);
+      continue;
     }
+
+    const sheet = wb.getWorksheet(target.sheet);
+    if (!sheet) continue;
+    let cell;
+    try {
+      cell = sheet.getCell(target.address);
+    } catch (e) {
+      continue;
+    }
+    if (!cell) continue;
+    await placePhoto(wb, sheet, cell, photoPath, warnings, {
+      preserveAspect: !!target.doc,
+      padding: target.doc ? 1 : 3,
+    });
   }
 
   // --- Nama sheet & metadata ---
@@ -481,13 +636,18 @@ function previewValues(kandidatFull, keys, optionsMap, lang, fixedKeys) {
   const opts = optionsMap || {};
   const out = [];
   list.forEach((key) => {
+    const docInfo = resolveDocumentKey(key);
     const { value } = resolveValue(prof, key, lang, fixedKeys);
-    const meta = CATALOG[key] || null;
+    const meta = CATALOG[key] || (docInfo ? { label: docInfo.label, type: 'document', source: 'document' } : null);
     const options = opts[key];
-    let shown = value === null || value === undefined ? '' : String(value);
+    const isDoc = !!docInfo;
+    const docValue = isDoc ? documentText(value) : null;
+    const finalValue = isDoc ? docValue : value;
+    let shown =
+      finalValue === null || finalValue === undefined ? '' : String(finalValue);
     let mismatch = false;
 
-    if (options && options.length && shown !== '') {
+    if (!isDoc && options && options.length && shown !== '') {
       const r = fmt.matchDropdown(options, shown);
       if (r.value === null) {
         mismatch = true;
@@ -502,9 +662,9 @@ function previewValues(kandidatFull, keys, optionsMap, lang, fixedKeys) {
       type: meta ? meta.type : 'text',
       known: !!meta,
       value: shown,
-      raw: value === null || value === undefined ? '' : String(value),
-      hasValue: value !== null && value !== undefined && value !== '',
-      dropdown: options && options.length ? options : null,
+      raw: finalValue === null || finalValue === undefined ? '' : String(finalValue),
+      hasValue: finalValue !== null && finalValue !== undefined && finalValue !== '',
+      dropdown: !isDoc && options && options.length ? options : null,
       mismatch,
     });
   });

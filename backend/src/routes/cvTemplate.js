@@ -40,6 +40,7 @@ router.get('/generate/history/:kandidatId', cvTemplateController.history);
 router.get('/generated/download/:id', cvTemplateController.downloadGenerated);
 router.post('/upload', upload.single('template'), cvTemplateController.upload);
 router.post('/generate/preview/:kandidatId', cvTemplateController.preview);
+router.post('/generate/batch', cvTemplateController.generateBatch);
 router.post('/generate/:kandidatId', cvTemplateController.generate);
 
 router.get('/', cvTemplateController.getAll);

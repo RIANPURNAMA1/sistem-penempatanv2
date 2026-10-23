@@ -135,8 +135,6 @@ const FIELD_BEBAS = [
   { key: 'catatan_tambahan', label: 'Catatan Tambahan (備考)' },
   { key: 'kerabat_alamat', label: 'Alamat Kerabat di Jepang' },
   { key: 'kenalan_jepang_detail', label: 'Detail Kenalan di Jepang' },
-  { key: 'riwayat_penyakit', label: 'Riwayat Penyakit' },
-  { key: 'kondisi_kesehatan', label: 'Kondisi Kesehatan' },
 ];
 
 const FIELD_BEBAS_KEYS = FIELD_BEBAS.map((f) => f.key);
@@ -184,24 +182,36 @@ async function siapkanTerjemahan(kandidatFull, bahasa) {
     return { map: {}, warning: null, belum: [], fixed: new Set() };
   }
 
-  const tersimpan = await ambilTerjemahan(kandidatId, bahasa);
+  // Field statis + field grup bebas (mis. kerja_1_deskripsi)
+  const target = FIELD_BEBAS.map((f) => ({ key: f.key, label: f.label }));
+  Object.keys(prof).forEach((k) => {
+    if (/^kerja_\d+_deskripsi$/.test(k)) target.push({ key: k, label: 'Deskripsi Pekerjaan' });
+  });
+  const targetKeys = new Set(target.map((f) => f.key));
+
+  // Terjemahan tersimpan hanya dipakai bila field-nya masih termasuk target.
+  // Ini mencegah terjemahan lama (mis. field yang sudah tidak diterjemahkan
+  // via AI) menimpa nilai asli profil.
+  const semuaTersimpan = await ambilTerjemahan(kandidatId, bahasa);
+  const tersimpan = {};
+  Object.keys(semuaTersimpan).forEach((key) => {
+    if (targetKeys.has(key)) tersimpan[key] = semuaTersimpan[key];
+  });
+
   const map = {};
   const fixed = new Set();
   const belum = [];
   const ai = require('./aiClient');
   let gagalAi = false;
 
-  // 1) Terjemahan tersimpan (manual/AI) dipakai untuk semua key.
+  // 1) Terjemahan tersimpan (manual/AI) dipakai untuk field target.
   Object.keys(tersimpan).forEach((key) => {
     map[key] = tersimpan[key].teks;
     fixed.add(key);
   });
 
-  // Field statis + field grup bebas (mis. kerja_1_deskripsi)
-  const target = FIELD_BEBAS.map((f) => ({ key: f.key, label: f.label }));
-  Object.keys(prof).forEach((k) => {
-    if (/^kerja_\d+_deskripsi$/.test(k)) target.push({ key: k, label: 'Deskripsi Pekerjaan' });
-  });
+  // Data profil sudah berbahasa Indonesia; tidak perlu AI saat target "id".
+  const perluAi = bahasa !== 'id';
 
   for (const field of target) {
     const asal = prof[field.key];
@@ -210,7 +220,7 @@ async function siapkanTerjemahan(kandidatFull, bahasa) {
 
     belum.push(field.key);
 
-    if (await ai.tersedia()) {
+    if (perluAi && (await ai.tersedia())) {
       const hasil = await ai.terjemahkan({
         teks: asal,
         ke: bahasa,

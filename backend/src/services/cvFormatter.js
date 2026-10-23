@@ -271,6 +271,8 @@ const VALUE_SYNONYMS = {
   '\u96e2\u5a5a': ['\u96e2\u5a5a', '\u7121', 'cerai'],
   '\u6709': ['\u6709', 'ya', 'ada', 'pernah', 'sudah punya'],
   '\u7121': ['\u7121', 'tidak', 'tidak ada', 'belum', 'belum pernah', 'belum punya'],
+  '\u306a\u3057': ['\u306a\u3057', '\u7121', 'tidak', 'tidak ada'],
+  '\u3042\u308a': ['\u3042\u308a', '\u6709', 'ada', 'ya'],
   '\u7537': ['\u7537', 'laki-laki'],
   '\u5973': ['\u5973', 'perempuan'],
   '\u4e0d\u660e': ['\u4e0d\u660e', 'tidak tahu'],

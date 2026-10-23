@@ -77,6 +77,30 @@ async function getKandidatFull(kandidatId) {
 
   const data = { ...profil };
 
+  // ---- Dokumen upload -> placeholder {dokumen_<jenis_dokumen>} ----
+  // Jenis dokumen pertama (paling baru) dipakai bila ada duplikat.
+  const dokumenMap = {};
+  dokumenRows.forEach((row) => {
+    const jenis = String(row.jenis_dokumen || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '_');
+    if (!jenis || dokumenMap[jenis]) return;
+    const doc = {
+      id: row.id,
+      jenis_dokumen: jenis,
+      nama_file: row.nama_file || null,
+      path_file: row.path_file || null,
+      mime_type: row.mime_type || null,
+    };
+    dokumenMap[jenis] = doc;
+    data[`dokumen_${jenis}`] = doc;
+  });
+  // Sertifikat SSW pertama juga bisa dipakai lewat placeholder generik.
+  if (!data.dokumen_sertifikat_ssw && data.dokumen_ssw_1) {
+    data.dokumen_sertifikat_ssw = data.dokumen_ssw_1;
+  }
+
   // ---- Alias umum yang sering dipakai di template ----
   data.nama = profil.nama_romaji || profil.user_nama || null;
   data.email = profil.email_kontak || profil.user_email || null;

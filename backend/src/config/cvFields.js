@@ -134,6 +134,82 @@ const COMPUTED_FIELDS = [
   ['foto', 'Foto', 'photo', null, []],
 ];
 
+/**
+ * Placeholder dokumen hasil upload (tabel kandidat_dokumen).
+ *
+ * Ditulis {dokumen_<jenis_dokumen>}, mis. {dokumen_ktp}, {dokumen_ijazah_sd},
+ * {dokumen_ssw_1}, {dokumen_keahlian_sertifikat_1}. Bila sel hanya berisi
+ * placeholder ini dan berkasnya gambar, gambar ditempel ke sel (seperti {foto}).
+ * Untuk PDF / file non-gambar, nama file ditulis sebagai teks.
+ */
+const DOCUMENT_TYPES = [
+  ['pas_foto', 'Pas Foto'],
+  ['foto_full_body', 'Foto Full Body'],
+  ['ktp', 'KTP'],
+  ['kk', 'Kartu Keluarga'],
+  ['ijazah', 'Ijazah'],
+  ['ijazah_sd', 'Ijazah SD'],
+  ['ijazah_smp', 'Ijazah SMP'],
+  ['ijazah_sma', 'Ijazah SMA/SMK'],
+  ['ijazah_pt', 'Ijazah Perguruan Tinggi'],
+  ['akte', 'Akte Kelahiran'],
+  ['sertifikat_jft', 'Sertifikat JFT'],
+  ['sertifikat_ssw', 'Sertifikat SSW'],
+  ['lainnya', 'Dokumen Lainnya'],
+];
+
+const DOCUMENT_NUMBERED = [
+  ['ssw', 'Sertifikat SSW', 10],
+  ['keahlian_sertifikat', 'Sertifikat Keahlian', 10],
+  ['paklaring', 'Paklaring', 10],
+];
+
+function documentLabel(jenis) {
+  const found = DOCUMENT_TYPES.find(([key]) => key === jenis);
+  if (found) return found[1];
+  return String(jenis || '')
+    .split('_')
+    .filter(Boolean)
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join(' ');
+}
+
+/** Semua placeholder dokumen yang ditampilkan di daftar referensi. */
+function documentFields() {
+  const out = [];
+  DOCUMENT_TYPES.forEach(([jenis, label]) => {
+    out.push([`dokumen_${jenis}`, `Dokumen: ${label}`, jenis]);
+  });
+  DOCUMENT_NUMBERED.forEach(([prefix, label, max]) => {
+    for (let i = 1; i <= max; i++) {
+      out.push([`dokumen_${prefix}_${i}`, `Dokumen: ${label} ${i}`, `${prefix}_${i}`]);
+    }
+  });
+  return out;
+}
+
+const DOCUMENT_FIELDS = documentFields();
+
+/**
+ * Kenali placeholder dokumen dinamis (termasuk jenis yang tidak ada di daftar).
+ * @returns {{key:string,jenis:string,label:string,type:string,source:string}|null}
+ */
+const RESERVED_DOCUMENT_KEYS = new Set(['dokumen_dikirim', 'dokumen_dikirim_2']);
+
+function resolveDocumentKey(key) {
+  if (RESERVED_DOCUMENT_KEYS.has(key)) return null;
+  const m = /^dokumen_([a-z0-9]+(?:_[a-z0-9]+)*)$/.exec(String(key || ''));
+  if (!m) return null;
+  const jenis = m[1];
+  return {
+    key,
+    jenis,
+    label: `Dokumen: ${documentLabel(jenis)}`,
+    type: 'document',
+    source: 'document',
+  };
+}
+
 /** Field grup berulang: prefix placeholder -> kolom pada tabel anak. */
 const GROUP_FIELDS = {
   pendidikan: {
@@ -225,6 +301,18 @@ function buildCatalog() {
       source: 'computed',
       column: null,
       aliases: aliases || [],
+    });
+  });
+
+  DOCUMENT_FIELDS.forEach(([key, label, jenis]) => {
+    put(key, {
+      label,
+      type: 'document',
+      format: null,
+      source: 'document',
+      column: null,
+      jenis_dokumen: jenis,
+      aliases: [],
     });
   });
 
@@ -350,9 +438,12 @@ function catalogList() {
 module.exports = {
   CATALOG,
   GROUP_FIELDS,
+  DOCUMENT_FIELDS,
+  DOCUMENT_TYPES,
   MONTHS_ID,
   BULAN_TO_NUM,
   resolveGroupKey,
+  resolveDocumentKey,
   groupKeys,
   catalogList,
 };

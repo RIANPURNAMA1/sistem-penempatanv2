@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import HistoryModal from "@/components/HistoryModal";
 import TambahKandidatModal from "@/components/admin/TambahKandidatModal";
+import GenerateBatchCVModal from "@/components/admin/GenerateBatchCVModal";
 import * as XLSX from "xlsx";
 
 interface Kandidat {
@@ -146,6 +147,8 @@ export default function KandidatListPage() {
     nama: string;
   } | null>(null);
   const [showTambah, setShowTambah] = useState(false);
+  const [showBatchCV, setShowBatchCV] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [screeningLoading, setScreeningLoading] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const [followUpLoading, setFollowUpLoading] = useState<number | null>(null);
@@ -654,6 +657,30 @@ export default function KandidatListPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
+
+  const toggleSelect = (id: number) =>
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+
+  const allPageSelected =
+    paginatedData.length > 0 &&
+    paginatedData.every((k) => selectedIds.includes(k.id));
+
+  const toggleSelectPage = () =>
+    setSelectedIds((prev) => {
+      if (allPageSelected) {
+        return prev.filter((id) => !paginatedData.some((k) => k.id === id));
+      }
+      const tambahan = paginatedData
+        .map((k) => k.id)
+        .filter((id) => !prev.includes(id));
+      return [...prev, ...tambahan];
+    });
+
+  const selectedNames = data
+    .filter((k) => selectedIds.includes(k.id))
+    .map((k) => k.nama_romaji || k.nama || "-");
 
   return (
     <div className="page-container">
@@ -1194,6 +1221,29 @@ export default function KandidatListPage() {
         </div>
       )}
 
+      {/* ── BAR PILIHAN (GENERATE CV MASSAL) ── */}
+      {selectedIds.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#1e3a5f]/20 bg-[#1e3a5f]/5 px-3 py-2">
+          <span className="text-xs font-medium text-[#1e3a5f]">
+            {selectedIds.length} kandidat dipilih
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedIds([])}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <X size={13} /> Batal
+            </button>
+            <button
+              onClick={() => setShowBatchCV(true)}
+              className="inline-flex items-center gap-1 rounded-md border border-[#1e3a5f] bg-[#1e3a5f] px-2.5 py-1.5 text-xs font-medium text-white hover:bg-[#16304d]"
+            >
+              <FileSpreadsheet size={13} /> Generate CV Massal
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── TABLE WRAPPER ── */}
       <div className="border-0">
         <div className="px-4 py-3 flex items-center justify-between">
@@ -1242,6 +1292,13 @@ export default function KandidatListPage() {
                   {/* Header kartu */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 xs:gap-3 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(item.id)}
+                        onChange={() => toggleSelect(item.id)}
+                        className="h-4 w-4 shrink-0 accent-[#1e3a5f] cursor-pointer"
+                        aria-label={`Pilih ${item.nama_romaji || item.nama || "-"}`}
+                      />
                       {item.pas_foto ? (
                         <img
                           src={item.pas_foto}
@@ -1401,6 +1458,15 @@ export default function KandidatListPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-100 border-b">
               <tr>
+                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 w-8">
+                  <input
+                    type="checkbox"
+                    checked={allPageSelected}
+                    onChange={toggleSelectPage}
+                    className="h-4 w-4 accent-[#1e3a5f] cursor-pointer"
+                    aria-label="Pilih semua kandidat di halaman ini"
+                  />
+                </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
                   NO
                 </th>
@@ -1433,13 +1499,13 @@ export default function KandidatListPage() {
             <tbody className="">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center">
+                  <td colSpan={10} className="py-8 text-center">
                     <Loader2 className="animate-spin mx-auto" />
                   </td>
                 </tr>
               ) : paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-gray-500">
+                  <td colSpan={10} className="py-8 text-center text-gray-500">
                     Tidak ada data
                   </td>
                 </tr>
@@ -1455,6 +1521,15 @@ export default function KandidatListPage() {
 
                   return (
                     <tr key={item.id} className="hover:bg-gray-50 border-b border-gray-300">
+                      <td className="px-3 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(item.id)}
+                          onChange={() => toggleSelect(item.id)}
+                          className="h-4 w-4 accent-[#1e3a5f] cursor-pointer"
+                          aria-label={`Pilih ${item.nama_romaji || item.nama || "-"}`}
+                        />
+                      </td>
                       <td className="px-3 py-2 text-gray-400 text-xs">
                         {globalIndex}
                       </td>
@@ -1709,6 +1784,15 @@ export default function KandidatListPage() {
         open={showTambah}
         onOpenChange={setShowTambah}
         onSuccess={load}
+      />
+
+      {/* ── GENERATE CV MASSAL MODAL ── */}
+      <GenerateBatchCVModal
+        open={showBatchCV}
+        onOpenChange={setShowBatchCV}
+        kandidatIds={selectedIds}
+        kandidatNames={selectedNames}
+        onSuccess={() => setSelectedIds([])}
       />
 
       {/* ── FOLLOW UP WHATSAPP MODAL ── */}

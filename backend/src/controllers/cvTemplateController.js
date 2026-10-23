@@ -226,6 +226,89 @@ const downloadTemplate = async (req, res) => {
   }
 };
 
+/** Resolve template dari id yang dipilih, atau pakai template aktif terakhir. */
+const resolveTemplate = async (tplId) => {
+  let tpl = null;
+  if (tplId) tpl = await getTemplateById(tplId);
+  if (!tpl) {
+    const [rows] = await pool.query(
+      'SELECT * FROM cv_template WHERE is_active = 1 ORDER BY id DESC LIMIT 1'
+    );
+    if (rows.length) tpl = rows[0];
+  }
+  return tpl;
+};
+
+/**
+ * Generate satu CV kandidat memakai template tertentu.
+ * Dipakai oleh generate satuan maupun generate massal (batch).
+ */
+const generateForKandidat = async ({ kandidatId, tpl, bahasa, overrides, createdBy }) => {
+  const kandidat = await getKandidatFull(kandidatId);
+  if (!kandidat) {
+    const err = new Error('Kandidat tidak ditemukan');
+    err.status = 404;
+    throw err;
+  }
+
+  // Terjemahkan isian teks bebas ke bahasa CV yang dipilih.
+  const terjemahan = await siapkanTerjemahan(kandidat, bahasa);
+  terapkanTerjemahan(kandidat.profil, terjemahan.map);
+  // Nilai yang dikoreksi admin di pratinjau dipakai apa adanya.
+  const fixedKeys = new Set([...(terjemahan.fixed || []), ...terapkanOverride(kandidat.profil, overrides)]);
+
+  const tplPath = path.resolve(ROOT, tpl.path_file);
+  if (!fs.existsSync(tplPath)) {
+    const err = new Error('File template tidak ditemukan di server.');
+    err.status = 400;
+    throw err;
+  }
+
+  const rawName = kandidat.profil.nama_romaji || kandidat.profil.user_nama || 'CV';
+  const safeName = String(rawName).replace(/[^A-Za-z0-9 _.-]+/g, '_').trim() || 'CV';
+  // Nama file hasil generate: "CV_Nama Kandidat.xlsx" (tanpa angka timestamp).
+  let outName = `CV_${safeName}.xlsx`;
+  // Kalau nama itu sudah dipakai kandidat lain, pakai nama unik supaya file tidak tertimpa.
+  const [pemakai] = await pool.query(
+    'SELECT id FROM cv_generated WHERE file_name = ? AND kandidat_id <> ? LIMIT 1',
+    [outName, kandidatId]
+  );
+  if (pemakai.length > 0) outName = `CV_${safeName}_${Date.now()}.xlsx`;
+  const outPath = path.join(GEN_DIR, outName);
+  const relOut = relFromRoot(outPath);
+
+  const result = await renderTemplate(tplPath, kandidat, outPath, { bahasa, fixedKeys });
+  if (terjemahan.warning) {
+    result.warnings = [terjemahan.warning, ...(result.warnings || [])];
+  }
+
+  const [insert] = await pool.query(
+    `INSERT INTO cv_generated (kandidat_id, cv_template_id, file_name, path_file, warnings, bahasa, created_by)
+     VALUES (?,?,?,?,?,?,?)`,
+    [
+      kandidatId,
+      tpl.id,
+      outName,
+      relOut,
+      JSON.stringify(result.warnings || []),
+      bahasa,
+      createdBy || null,
+    ]
+  );
+
+  return {
+    id: insert.insertId,
+    kandidat_id: Number(kandidatId),
+    nama: rawName,
+    file_name: outName,
+    path_file: relOut,
+    outPath,
+    warnings: result.warnings || [],
+    missing: result.missing || [],
+    filled: result.filled || 0,
+  };
+};
+
 const generate = async (req, res) => {
   try {
     const kandidatId = req.params.kandidatId || req.params.id;
@@ -233,14 +316,7 @@ const generate = async (req, res) => {
     const bahasa = normalisasiBahasa(req.body.bahasa || req.query.bahasa);
     const overrides = (req.body.overrides && typeof req.body.overrides === 'object') ? req.body.overrides : {};
 
-    let tpl = null;
-    if (tplId) tpl = await getTemplateById(tplId);
-    if (!tpl) {
-      const [rows] = await pool.query(
-        'SELECT * FROM cv_template WHERE is_active = 1 ORDER BY id DESC LIMIT 1'
-      );
-      if (rows.length) tpl = rows[0];
-    }
+    const tpl = await resolveTemplate(tplId);
     if (!tpl) {
       return res.status(400).json({
         success: false,
@@ -248,73 +324,145 @@ const generate = async (req, res) => {
       });
     }
 
-    const kandidat = await getKandidatFull(kandidatId);
-    if (!kandidat) return res.status(404).json({ success: false, message: 'Kandidat tidak ditemukan' });
+    const hasil = await generateForKandidat({
+      kandidatId,
+      tpl,
+      bahasa,
+      overrides,
+      createdBy: req.user ? req.user.id : null,
+    });
 
-    // Terjemahkan isian teks bebas ke bahasa CV yang dipilih.
-    const terjemahan = await siapkanTerjemahan(kandidat, bahasa);
-    terapkanTerjemahan(kandidat.profil, terjemahan.map);
-    // Nilai yang dikoreksi admin di pratinjau dipakai apa adanya.
-    const fixedKeys = new Set([...(terjemahan.fixed || []), ...terapkanOverride(kandidat.profil, overrides)]);
+    res.json({
+      success: true,
+      message: 'CV berhasil digenerate',
+      data: {
+        id: hasil.id,
+        cv_template_id: tpl.id,
+        template_nama: tpl.nama_template,
+        kandidat_id: hasil.kandidat_id,
+        bahasa,
+        bahasa_label: labelBahasa(bahasa),
+        file_name: hasil.file_name,
+        path_file: hasil.path_file,
+        download_url: `/uploads/cv-generated/${hasil.file_name}`,
+        warnings: hasil.warnings,
+        missing: hasil.missing,
+        filled: hasil.filled,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(err.status || 500).json({ success: false, message: err.message || 'Server error' });
+  }
+};
+
+/**
+ * Generate CV untuk banyak kandidat sekaligus dengan satu template yang sama.
+ * Hasilnya dikemas dalam satu file ZIP (berisi .xlsx per kandidat + _ringkasan.txt).
+ * Body: { cv_template_id?, bahasa?, kandidat_ids: number[] }
+ */
+const generateBatch = async (req, res) => {
+  const archiver = require('archiver');
+  try {
+    const body = req.body || {};
+    const tplId = body.cv_template_id || req.query.cv_template_id;
+    const bahasa = normalisasiBahasa(body.bahasa || req.query.bahasa);
+    const createdBy = req.user ? req.user.id : null;
+
+    let ids = body.kandidat_ids || body.ids || [];
+    if (!Array.isArray(ids)) ids = [ids];
+    ids = [...new Set(ids.map(Number).filter((n) => Number.isInteger(n) && n > 0))];
+    if (!ids.length) {
+      return res.status(400).json({ success: false, message: 'Pilih minimal satu kandidat.' });
+    }
+    if (ids.length > 200) {
+      return res.status(400).json({ success: false, message: 'Maksimal 200 kandidat sekali generate.' });
+    }
+
+    const tpl = await resolveTemplate(tplId);
+    if (!tpl) {
+      return res.status(400).json({
+        success: false,
+        message: 'Belum ada template CV. Upload template CV terlebih dahulu.',
+      });
+    }
 
     const tplPath = path.resolve(ROOT, tpl.path_file);
     if (!fs.existsSync(tplPath)) {
       return res.status(400).json({ success: false, message: 'File template tidak ditemukan di server.' });
     }
 
-    const rawName = kandidat.profil.nama_romaji || kandidat.profil.user_nama || 'CV';
-    const safeName = String(rawName).replace(/[^A-Za-z0-9 _.-]+/g, '_').trim() || 'CV';
-    // Nama file hasil generate: "CV_Nama Kandidat.xlsx" (tanpa angka timestamp).
-    let outName = `CV_${safeName}.xlsx`;
-    // Kalau nama itu sudah dipakai kandidat lain, pakai nama unik supaya file tidak tertimpa.
-    const [pemakai] = await pool.query(
-      'SELECT id FROM cv_generated WHERE file_name = ? AND kandidat_id <> ? LIMIT 1',
-      [outName, kandidatId]
-    );
-    if (pemakai.length > 0) outName = `CV_${safeName}_${Date.now()}.xlsx`;
-    const outPath = path.join(GEN_DIR, outName);
-    const relOut = relFromRoot(outPath);
-
-    const result = await renderTemplate(tplPath, kandidat, outPath, { bahasa, fixedKeys });
-    if (terjemahan.warning) {
-      result.warnings = [terjemahan.warning, ...(result.warnings || [])];
+    const berhasil = [];
+    const gagal = [];
+    for (const id of ids) {
+      try {
+        const hasil = await generateForKandidat({
+          kandidatId: id,
+          tpl,
+          bahasa,
+          overrides: {},
+          createdBy,
+        });
+        berhasil.push(hasil);
+      } catch (err) {
+        gagal.push({ kandidat_id: id, message: err.message || 'Gagal generate' });
+      }
     }
 
-    const [insert] = await pool.query(
-      `INSERT INTO cv_generated (kandidat_id, cv_template_id, file_name, path_file, warnings, bahasa, created_by)
-       VALUES (?,?,?,?,?,?,?)`,
-      [
-        kandidatId,
-        tpl.id,
-        outName,
-        relOut,
-        JSON.stringify(result.warnings || []),
-        bahasa,
-        req.user ? req.user.id : null,
-      ]
-    );
+    if (!berhasil.length) {
+      return res.status(400).json({
+        success: false,
+        message: `Semua kandidat gagal digenerate (${gagal.length}).`,
+        data: { gagal },
+      });
+    }
 
-    res.json({
-      success: true,
-      message: 'CV berhasil digenerate',
-      data: {
-        id: insert.insertId,
-        cv_template_id: tpl.id,
-        template_nama: tpl.nama_template,
-        kandidat_id: Number(kandidatId),
-        bahasa,
-        bahasa_label: labelBahasa(bahasa),
-        file_name: outName,
-        path_file: relOut,
-        download_url: `/uploads/cv-generated/${outName}`,
-        warnings: result.warnings || [],
-        missing: result.missing || [],
-        filled: result.filled || 0,
-      },
+    // Ringkasan ikut di dalam ZIP supaya admin tahu kandidat mana yang gagal.
+    const ringkasan = [
+      `Template : ${tpl.nama_template}`,
+      `Tanggal  : ${new Date().toLocaleString('id-ID')}`,
+      `Bahasa   : ${labelBahasa(bahasa)}`,
+      `Berhasil : ${berhasil.length}`,
+      `Gagal    : ${gagal.length}`,
+      '',
+      '=== BERHASIL ===',
+      ...berhasil.map((h, i) => `${i + 1}. ${h.nama} -> ${h.file_name}`),
+    ];
+    if (gagal.length) {
+      ringkasan.push('', '=== GAGAL ===');
+      gagal.forEach((g, i) => ringkasan.push(`${i + 1}. Kandidat ID ${g.kandidat_id}: ${g.message}`));
+    }
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    const zipName = `CV_Massal_${stamp}.zip`;
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${zipName}"`);
+    res.setHeader('X-CV-Batch-Success', String(berhasil.length));
+    res.setHeader('X-CV-Batch-Failed', String(gagal.length));
+
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    archive.on('warning', (err) => console.warn('ZIP warning:', err));
+    archive.on('error', (err) => {
+      console.error('ZIP error:', err);
+      try {
+        res.destroy(err);
+      } catch (e) {
+        /* abaikan */
+      }
     });
+
+    archive.pipe(res);
+    for (const h of berhasil) {
+      archive.file(h.outPath, { name: h.file_name });
+    }
+    archive.append(ringkasan.join('\r\n'), { name: '_ringkasan.txt' });
+    await archive.finalize();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: err.message || 'Server error' });
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: err.message || 'Server error' });
+    }
   }
 };
 
@@ -600,6 +748,7 @@ module.exports = {
   remove,
   downloadTemplate,
   generate,
+  generateBatch,
   history,
   downloadGenerated,
   preview,

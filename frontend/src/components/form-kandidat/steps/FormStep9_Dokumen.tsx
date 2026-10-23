@@ -47,8 +47,9 @@ export function FormStep9_Dokumen({
       </div>
 
       <p className="text-xs sm:text-sm text-muted-foreground -mt-2">
-        Format: JPG, PNG, PDF, MP4. Dokumen bertanda <span className="text-red-500">*</span> wajib
-        diupload, sisanya (Sertifikat JFT, Dokumen Lainnya) opsional.
+        Format: JPG, PNG, PDF, MP4 (Pas Foto hanya JPG/PNG). Dokumen bertanda{" "}
+        <span className="text-red-500">*</span> wajib diupload, sisanya (Sertifikat JFT, Dokumen
+        Lainnya) opsional.
       </p>
 
       {errors.dokumen && (
@@ -134,14 +135,25 @@ export function FormStep9_Dokumen({
                   type="file"
                   className="hidden"
                   disabled={isUploading || isSubmitted}
-                  accept="image/jpeg,image/png,application/pdf,video/mp4"
+                  accept={
+                    dt.key === "pas_foto"
+                      ? "image/jpeg,image/png"
+                      : "image/jpeg,image/png,application/pdf,video/mp4"
+                  }
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
 
+                    if (dt.key === "pas_foto" && !/\.(jpe?g|png)$/i.test(file.name)) {
+                      alert("Pas foto hanya boleh berformat JPG atau PNG");
+                      e.target.value = "";
+                      return;
+                    }
+
                     const MAX_SIZE = 500 * 1024;
                     if (file.size > MAX_SIZE) {
                       alert("Ukuran file terlalu besar. Maksimal 500KB");
+                      e.target.value = "";
                       return;
                     }
 
